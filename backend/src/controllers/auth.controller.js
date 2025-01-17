@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
+import cloudinary from "../lib/cloudinary.js";
 export const signup = async (req, res) => {
   const { fullname, email, password } = req.body;
   try {
@@ -76,5 +77,41 @@ export const logout = (req, res) => {
       error.message
     );
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const updateprofile = async (req, res) => {
+  try {
+    const { profilePic } = req.body;
+    if (!profilePic) {
+      return res
+        .status(400)
+        .json({ message: "please provide valid profile pic" });
+    }
+    const userPic = await cloudinary.uploader.upload(profilePic);
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        profilePic: userPic.secure_url,
+      },
+      { new: true }
+    );
+    res.status(200).json({ message: "Profile picture updated successfully" });
+  } catch (err) {
+    console.log(
+      "error occured in  authcontroller of update profile ",
+      err.message
+    );
+    res.status(500).json({ message: "Internal error occured" });
+  }
+};
+export const checkUser = (req, res) => {
+  try {
+    res.status(200).json(req.user);
+  } catch (err) {
+    console.log(
+      "something went wrong while checking the user in auth checkuser",
+      err.message
+    );
+    res.status(500).json({ message: "Internal server error " });
   }
 };
