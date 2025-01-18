@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { AuthImagePattern } from "../components/AuthImagePattern";
+import toast from "react-hot-toast";
 import {
   Eye,
   EyeOff,
@@ -13,14 +15,31 @@ import { Link } from "react-router-dom";
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
+    fullname: "",
     email: "",
     password: "",
   });
   const { signup, isSigningIn } = useAuthStore();
-  const validateForm = () => {};
+  const validateForm = () => {
+    if (!formData.fullname.trim()) return toast.error("Full-name is required");
+    if (!formData.email.trim()) return toast.error("Email is required");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      return toast.error("Please enter a valid email address");
+    }
+    if (!formData.password) return toast.error("Password must be filled");
+    if (formData.password.length < 6) {
+      return toast.error("Password length must be of 6 characters");
+    }
+    return true;
+  };
   const handleSubmit = (e) => {
     e.preventDefault();
+    const validate = validateForm();
+
+    if (validate) {
+      signup(formData);
+    }
   };
   return (
     //  making the ui for the righ Sidebar
@@ -56,9 +75,9 @@ export default function SignupPage() {
                   type="text"
                   className={`input input-bordered w-full pl-10`}
                   placeholder="Your name"
-                  value={formData.fullName}
+                  value={formData.fullname}
                   onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
+                    setFormData({ ...formData, fullname: e.target.value })
                   }
                 />
               </div>
@@ -73,7 +92,7 @@ export default function SignupPage() {
                   <Mail className="size-5 text-base-content/40" />
                 </div>
                 <input
-                  type="email"
+                  // type="email"
                   className={`input input-bordered w-full pl-10`}
                   placeholder="you@example.com"
                   value={formData.email}
@@ -140,6 +159,10 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
+      <AuthImagePattern
+        title="Join our community"
+        subtitle="Connect with friends, share moments, and stay in touch with your loved ones."
+      />
     </div>
   );
 }
