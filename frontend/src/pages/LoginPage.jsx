@@ -11,7 +11,6 @@ const LoginPage = () => {
     password: "",
   });
   const { login, isLoggingIn } = useAuthStore();
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     login(formData);
@@ -100,7 +99,7 @@ const LoginPage = () => {
                   Loading...
                 </>
               ) : (
-                "Sign in"
+                "Login"
               )}
             </button>
           </form>
