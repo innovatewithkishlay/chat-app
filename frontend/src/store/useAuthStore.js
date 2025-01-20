@@ -53,7 +53,6 @@ const useAuthStore = create((set) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
-      // console.log(res);
       set({ authUser: res.data });
       if (res.statusText == "OK") {
         toast.success("Logged in successfully");
@@ -71,5 +70,6 @@ const useAuthStore = create((set) => ({
       set({ isLoggingIn: false });
     }
   },
+  updateProfile: async (data) => {},
 }));
 export { useAuthStore };
