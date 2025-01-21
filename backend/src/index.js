@@ -1,13 +1,13 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 const app = express();
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
-dotenv.config();
 import cors from "cors";
 import { router as authRoutes } from "./routes/auth.route.js";
 import { router as messageRoutes } from "./routes/message.route.js";
 import { connectDb } from "./lib/db.js";
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(
   cors({

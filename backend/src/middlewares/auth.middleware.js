@@ -24,7 +24,7 @@ export const protectRoute = async (req, res, next) => {
   } catch (err) {
     console.log(
       "erro occured in while veryfying the cookies in auth middleware",
-      err.messsage
+      err
     );
     res.status(500).json({ message: "Internal server error " });
   }

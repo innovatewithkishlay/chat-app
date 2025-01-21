@@ -32,6 +32,7 @@ export const signup = async (req, res) => {
         fullname: newUser.fullname,
         email: newUser.email,
         profilePic: newUser.profilePic,
+        about: "",
       });
     } else {
       res
@@ -81,31 +82,33 @@ export const logout = (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-export const updateprofile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
-    const { profilePic } = req.body;
-    if (!profilePic) {
-      return res
-        .status(400)
-        .json({ message: "please provide valid profile pic" });
+    const { profilePic, fullname, about } = req.body;
+    const userId = req.user._id;
+    const updateData = {};
+    if (profilePic) {
+      const uploadResponse = await cloudinary.uploader.upload(profilePic);
+      updateData.profilePic = uploadResponse.secure_url;
     }
-    const userPic = await cloudinary.uploader.upload(profilePic);
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      {
-        profilePic: userPic.secure_url,
-      },
-      { new: true }
-    );
-    res.status(200).json({ message: "Profile picture updated successfully" });
-  } catch (err) {
-    console.log(
-      "error occured in  authcontroller of update profile ",
-      err.message
-    );
-    res.status(500).json({ message: "Internal error occured" });
+    if (fullname) {
+      updateData.fullname = fullname;
+    }
+    if (about) {
+      updateData.about = about;
+    }
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    });
+
+    console.log(updatedUser);
+    res.status(200).json(updatedUser); // Return the updated user info
+  } catch (error) {
+    console.log("Error in update profile:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
+
 export const checkUser = (req, res) => {
   try {
     res.status(200).json(req.user);
