@@ -53,6 +53,8 @@ const useAuthStore = create((set) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
+      console.log(res);
+
       set({ authUser: res.data });
       if (res.statusText == "OK") {
         toast.success("Logged in successfully");
@@ -61,10 +63,11 @@ const useAuthStore = create((set) => ({
       if (error.response && error.response.status === 400) {
         toast.error(error.response.data.message);
       } else {
-        toast.error("Something went wrong. Please try again.");
+        toast.error("Something went wrong in login route  . Please try again.");
+        console.log(error);
       }
 
-      console.log("Error inside login useAuthStore:", error.message);
+      console.log("Error inside login useAuthStore:", error);
     } finally {
       set({ isLoggingIn: false });
     }
