@@ -12,7 +12,6 @@ const NoChatSelected = () => {
             </div>
           </div>
         </div>
-
         {/* Welcome Text */}
         <h2 className="text-2xl font-bold">Welcome to Chatty!</h2>
         <p className="text-base-content/60">
