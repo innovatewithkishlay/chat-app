@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
-const app = express();
+import { app, server } from "../src/lib/socket.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { router as authRoutes } from "./routes/auth.route.js";
@@ -15,11 +15,11 @@ app.use(
     credentials: true,
   })
 );
-const port = process.env.PORT || 6000;
+const port = process.env.PORT || 8000;
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log("app is lisining at port ", port);
   connectDb();
 });
