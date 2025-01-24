@@ -2,9 +2,16 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
+import { isValidEmailDomain } from "../lib/utils/domainValidator.js";
 export const signup = async (req, res) => {
   const { fullname, email, password } = req.body;
   try {
+    if (!isValidEmailDomain(email)) {
+      return res.status(400).json({
+        message:
+          "Invalid email domain. Please use a valid domain like gmail.com, yahoo.com, etc.",
+      });
+    }
     if (password.length < 6) {
       return res
         .status(400)
