@@ -5,8 +5,8 @@ A simple chat application built with Node.js, Express, and Socket.IO, allowing u
 ## Preview
 
 <p align="center">
-  <img src="chatwithoutchatcontainer.png" alt="Settings Page" width="300" title="This is unselected chat section." />
-  <img src="chat.png" alt="Chat Interface" width="300" title="This is the Chat Interface." />
+  <img src="chatwithoutchatcontainer.png" alt="Settings Page" width="300" title="This is unselected chat Interface." />
+  <img src="chat.png" alt="Chat Interface" width="300" title="This is the selected Chat Interface." />
   <img src="profile.png" alt="Profile Page" width="300" title="This is the Profile Page." />
   <img src="setting.png" alt="Settings Page" width="300" title="This is the Settings Page." />
 </p>
