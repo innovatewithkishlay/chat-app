@@ -1,82 +1,78 @@
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios";
+import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
-const useAuthStore = create((set) => ({
+import { io } from "socket.io-client";
+
+const BASE_URL =
+  import.meta.env.MODE === "development" ? "http://localhost:5100" : "/";
+
+export const useAuthStore = create((set, get) => ({
   authUser: null,
-  isSigningIn: false,
+  isSigningUp: false,
   isLoggingIn: false,
   isUpdatingProfile: false,
-  onlineUser: [],
   isCheckingAuth: true,
+  onlineUsers: [],
+  socket: null,
+
   checkAuth: async () => {
     try {
-      const user = await axiosInstance("/auth/check");
-      set({ authUser: user.data });
+      const res = await axiosInstance.get("/auth/check");
+
+      set({ authUser: res.data });
+      get().connectSocket();
     } catch (error) {
-      console.log(
-        "something went wrong inside the useauthstore inside frotend folder insde the store folder ",
-        error
-      );
+      console.log("Error in checkAuth:", error);
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
     }
   },
+
   signup: async (data) => {
-    set({ isSigningIn: true });
+    set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
       set({ authUser: res.data });
       toast.success("Account created successfully");
+      get().connectSocket();
     } catch (error) {
-      console.error(
-        "Something went wrong inside the useAuthStore in frontend",
-        error
-      );
+      toast.error(error.response.data.message);
     } finally {
-      set({ isSigningIn: false });
+      set({ isSigningUp: false });
     }
   },
-  logout: async () => {
-    try {
-      await axiosInstance.post("/auth/logout");
-      set({ authUser: null });
-      toast.success("Logged-out successfully");
-    } catch (error) {
-      console.log(
-        "something went wrong inside the userAuthstore in logout function",
-        error.message
-      );
-    }
-  },
+
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
-      console.log(res);
-
       set({ authUser: res.data });
-      if (res.statusText == "OK") {
-        toast.success("Logged in successfully");
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 400) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Something went wrong in login route  . Please try again.");
-        console.log(error);
-      }
+      toast.success("Logged in successfully");
 
-      console.log("Error inside login useAuthStore:", error);
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response.data.message);
     } finally {
       set({ isLoggingIn: false });
     }
   },
+
+  logout: async () => {
+    try {
+      await axiosInstance.post("/auth/logout");
+      set({ authUser: null });
+      toast.success("Logged out successfully");
+      get().disconnectSocket();
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
       const res = await axiosInstance.put("/auth/update-profile", data);
-      console.log("Update profile response:", res);
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -86,5 +82,26 @@ const useAuthStore = create((set) => ({
       set({ isUpdatingProfile: false });
     }
   },
+
+  connectSocket: () => {
+    const { authUser } = get();
+    if (!authUser || get().socket?.connected) return;
+
+    const socket = io(BASE_URL, {
+      query: {
+        userId: authUser._id,
+      },
+    });
+    socket.connect();
+
+    set({ socket: socket });
+
+    socket.on("getOnlineUsers", (userIds) => {
+      set({ onlineUsers: userIds });
+    });
+  },
+  disconnectSocket: () => {
+    if (get().socket?.connected) get().socket.disconnect();
+  },
 }));
-export { useAuthStore };
+``;
