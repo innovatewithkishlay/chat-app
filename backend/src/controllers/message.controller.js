@@ -36,35 +36,36 @@ export const getMessages = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 export const sendMessage = async (req, res) => {
   try {
     const { text, image } = req.body;
-    console.log("Request Body:", req.body);
-
     const { id: recieverId } = req.params;
-    console.log("Receiver ID:", recieverId);
-
-    const senderId = req.user?._id;
-    console.log("Sender ID:", senderId);
+    const senderId = req.user._id;
 
     let imageUrl;
     if (image) {
-      const imageUpload = await cloudinary.uploader.upload(image);
-      imageUrl = imageUpload.secure_url;
-      console.log("Uploaded Image URL:", imageUrl);
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResponse.secure_url;
     }
 
     const newMessage = new Message({
-      recieverId,
       senderId,
+      recieverId,
       text,
       image: imageUrl,
     });
 
-    await newMessage.save(); // Save the message to the database
-    res.status(201).json(newMessage); // Respond with the saved message
+    await newMessage.save();
+
+    const receiverSocketId = getReceiverSocketId(recieverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
+    res.status(201).json(newMessage);
   } catch (error) {
-    console.error("Error in sendMessage:", error.message, error.stack); // Log the full error
-    res.status(500).json({ message: "Internal server error" });
+    console.log("Error in sendMessage controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
