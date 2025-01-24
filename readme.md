@@ -4,17 +4,20 @@ A simple chat application built with Node.js, Express, and Socket.IO, allowing u
 
 ## Preview
 
-### Chat Interface
-
-![Chat Interface](chat.png)
-
-### Profile Page
-
-![Profile Page](profile.png)
-
-### Settings Page
-
-![Settings Page](setting.png)
+<div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+  <div style="text-align: center;">
+    <img src="chat.png" alt="Chat Interface" width="300" />
+    <p><b>Chat Interface</b></p>
+  </div>
+  <div style="text-align: center;">
+    <img src="profile.png" alt="Profile Page" width="300" />
+    <p><b>Profile Page</b></p>
+  </div>
+  <div style="text-align: center;">
+    <img src="setting.png" alt="Settings Page" width="300" />
+    <p><b>Settings Page</b></p>
+  </div>
+</div>
 
 ## Features
 
