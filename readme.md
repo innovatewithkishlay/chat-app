@@ -2,6 +2,20 @@
 
 A simple chat application built with Node.js, Express, and Socket.IO, allowing users to connect and communicate in real-time.
 
+## Preview
+
+### Chat Interface
+
+![Chat Interface](chat.png)
+
+### Profile Page
+
+![Profile Page](profile.png)
+
+### Settings Page
+
+![Settings Page](setting.png)
+
 ## Features
 
 - **User Authentication**: Secure authentication using `bcryptjs` and `jsonwebtoken`.
