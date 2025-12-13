@@ -7,7 +7,10 @@ const ICE_SERVERS = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:global.stun.twilio.com:3478" },
+        { urls: "stun:stun.stunprotocol.org:3478" },
+        { urls: "stun:stun.framasoft.org:3478" },
     ],
+    iceCandidatePoolSize: 10,
 };
 
 
@@ -56,6 +59,14 @@ export const useVideoCallStore = create((set, get) => ({
             peer.ontrack = (event) => {
                 console.log("PEER: Received remote track");
                 set({ remoteStream: event.streams[0] });
+            };
+
+            // Monitor Connection State
+            peer.oniceconnectionstatechange = () => {
+                console.log("PEER: Connection State:", peer.iceConnectionState);
+                if (peer.iceConnectionState === "disconnected" || peer.iceConnectionState === "failed") {
+                    toast.error("Connection lost. Poor network.");
+                }
             };
 
             // Create Offer
