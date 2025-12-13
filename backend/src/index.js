@@ -40,6 +40,10 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/conversations", conversationRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Backend is running! v1.0.1");
+});
+
 // Reminder Cron
 setInterval(async () => {
   try {
