@@ -10,17 +10,7 @@ const ICE_SERVERS = {
     ],
 };
 
-import { create } from "zustand";
-import { useAuthStore } from "./useAuthStore";
-import toast from "react-hot-toast";
 
-// WebRTC Configuration
-const ICE_SERVERS = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:global.stun.twilio.com:3478" },
-    ],
-};
 
 export const useVideoCallStore = create((set, get) => ({
     // STRICT STATE MACHINE: "IDLE" | "OUTGOING" | "INCOMING" | "CONNECTED" | "ENDED"
