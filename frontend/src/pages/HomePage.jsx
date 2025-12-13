@@ -13,18 +13,8 @@ const HomePage = () => {
   const { callStatus } = useVideoCallStore();
 
   useEffect(() => {
-    const { socket } = useAuthStore.getState();
-    if (!socket) return;
-
-    const handleCallUser = (data) => {
-      useVideoCallStore.getState().setIncomingCall(data);
-    };
-
-    socket.on("callUser", handleCallUser);
-
-    return () => {
-      socket.off("callUser", handleCallUser);
-    };
+    useVideoCallStore.getState().initializeListeners();
+    return () => useVideoCallStore.getState().cleanupListeners();
   }, []);
 
   return (
@@ -41,7 +31,7 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-      {callStatus !== "idle" && <VideoCall />}
+      {callStatus !== "IDLE" && <VideoCall />}
     </div>
   );
 };

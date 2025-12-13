@@ -4,7 +4,6 @@ import { useVideoCallStore } from "../store/useVideoCallStore";
 import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff } from "lucide-react";
 
 const VideoCall = () => {
-    const { authUser, socket } = useAuthStore();
     const {
         callStatus,
         localStream,
@@ -34,18 +33,14 @@ const VideoCall = () => {
         }
     }, [remoteStream]);
 
-    const handleEndCall = () => {
-        endCall();
-    };
-
-    if (callStatus === "idle") return null;
+    if (callStatus === "IDLE") return null;
 
     return (
         <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
             <div className="relative w-full max-w-4xl aspect-video bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800">
 
                 {/* Remote Video */}
-                {callStatus === "connected" && (
+                {callStatus === "CONNECTED" && (
                     <video
                         ref={remoteVideoRef}
                         autoPlay
@@ -55,12 +50,12 @@ const VideoCall = () => {
                 )}
 
                 {/* Incoming Call UI */}
-                {callStatus === "incoming" && (
+                {callStatus === "INCOMING" && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
                         <div className="text-center p-8 bg-zinc-800 rounded-xl">
                             <div className="size-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                                 <img
-                                    src="/avatar.png" // Placeholder, ideally fetch user info
+                                    src="/avatar.png" // Placeholder
                                     className="size-20 rounded-full object-cover"
                                 />
                             </div>
@@ -79,7 +74,7 @@ const VideoCall = () => {
                 )}
 
                 {/* Calling UI */}
-                {callStatus === "calling" && (
+                {callStatus === "OUTGOING" && (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
                             <div className="size-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
@@ -94,7 +89,7 @@ const VideoCall = () => {
                 )}
 
                 {/* Local Video */}
-                {callStatus !== "incoming" && (
+                {callStatus !== "INCOMING" && (
                     <div className="absolute bottom-4 right-4 w-48 aspect-video bg-zinc-800 rounded-lg border border-zinc-700 shadow-lg overflow-hidden">
                         <video
                             ref={localVideoRef}
@@ -107,7 +102,7 @@ const VideoCall = () => {
                 )}
 
                 {/* Controls */}
-                {callStatus === "connected" && (
+                {callStatus === "CONNECTED" && (
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
                         <button onClick={toggleMic} className={`btn btn-circle btn-ghost ${!isMicOn ? "bg-red-500/20 text-red-500" : "bg-zinc-800 text-white"} hover:bg-zinc-700`}>
                             {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
@@ -115,16 +110,16 @@ const VideoCall = () => {
                         <button onClick={toggleCamera} className={`btn btn-circle btn-ghost ${!isCameraOn ? "bg-red-500/20 text-red-500" : "bg-zinc-800 text-white"} hover:bg-zinc-700`}>
                             {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
                         </button>
-                        <button onClick={handleEndCall} className="btn btn-circle btn-error text-white">
+                        <button onClick={endCall} className="btn btn-circle btn-error text-white">
                             <PhoneOff size={24} />
                         </button>
                     </div>
                 )}
 
                 {/* Cancel Call Button (for caller) */}
-                {callStatus === "calling" && (
+                {callStatus === "OUTGOING" && (
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-                        <button onClick={handleEndCall} className="btn btn-circle btn-error text-white">
+                        <button onClick={endCall} className="btn btn-circle btn-error text-white">
                             <PhoneOff size={24} />
                         </button>
                     </div>

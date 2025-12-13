@@ -13,36 +13,14 @@ const ChatHeader = ({ onOpenMemory }) => {
   const { onlineUsers = [], authUser } = useAuthStore();
   const [showProModal, setShowProModal] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
-  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
 
   const isGroup = !!selectedUser.members;
   const isPro = authUser.plan === "PRO";
-
-  useEffect(() => {
-    const handleStartCall = () => setIsVideoCallActive(true);
-    const handleEndCall = () => setIsVideoCallActive(false);
-
-    window.addEventListener("startVideoCall", handleStartCall);
-    window.addEventListener("endVideoCall", handleEndCall);
-
-    return () => {
-      window.removeEventListener("startVideoCall", handleStartCall);
-      window.removeEventListener("endVideoCall", handleEndCall);
-    };
-  }, []);
-
-  const handleVideoCall = async () => {
+  const handleVideoCall = () => {
     if (!isPro) {
       setShowProModal(true);
       return;
     }
-    // Check if receiver is eligible
-    const eligible = await useChatStore.getState().checkVideoCallEligibility(selectedUser._id);
-    if (!eligible) {
-      toast.error("Receiver is not eligible for video calls (needs PRO plan)");
-      return;
-    }
-
     useVideoCallStore.getState().startCall(selectedUser._id, selectedUser.fullname);
   };
 
@@ -133,7 +111,7 @@ const ChatHeader = ({ onOpenMemory }) => {
         </div>
       </div>
 
-      {isVideoCallActive && <VideoCall />}
+
     </div>
   );
 };

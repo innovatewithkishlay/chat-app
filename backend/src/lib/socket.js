@@ -104,77 +104,77 @@ io.on("connection", async (socket) => {
   });
 
   // WebRTC Signaling
-  // WebRTC Signaling
-  socket.on("callUser", async (data) => {
+  // --- WebRTC Signaling (Strict State Machine) ---
+
+  // 1. Initiate Call
+  socket.on("call:initiate", async (data) => {
+    // data: { userToCall, signalData, from, name }
     try {
       const receiverSocketId = getReceiverSocketId(data.userToCall);
       const sender = socket.user;
 
-      // Check if sender is PRO
+      // Eligibility Check (Sender)
       if (sender.plan !== "PRO") {
-        socket.emit("callRejected", { reason: "You must be PRO to make a video call." });
+        socket.emit("call:error", { message: "You must be PRO to make a video call." });
         return;
       }
 
-      // Check if receiver is PRO
+      // Eligibility Check (Receiver)
       const receiver = await User.findById(data.userToCall);
       if (!receiver || receiver.plan !== "PRO") {
-        socket.emit("callRejected", { reason: "The other user is not eligible for video calls." });
+        socket.emit("call:error", { message: "The other user is not eligible (needs PRO)." });
         return;
       }
 
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("callUser", {
+        // Emit INCOMING to receiver
+        io.to(receiverSocketId).emit("call:incoming", {
           signal: data.signalData,
           from: data.from,
           name: data.name,
         });
       } else {
-        socket.emit("callRejected", { reason: "User is offline." });
+        socket.emit("call:error", { message: "User is offline." });
       }
     } catch (error) {
-      console.error("Error in callUser socket event:", error);
-      socket.emit("callRejected", { reason: "Call failed." });
+      console.error("Error in call:initiate:", error);
+      socket.emit("call:error", { message: "Failed to initiate call." });
     }
   });
 
-  socket.on("answerCall", async (data) => {
-    try {
-      const receiverSocketId = getReceiverSocketId(data.to);
-      const receiver = socket.user;
-
-      // Check if receiver (who is answering) is PRO
-      if (receiver.plan !== "PRO") {
-        socket.emit("callEnded", { reason: "You must be PRO to answer video calls." });
-        return;
-      }
-
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("callAccepted", data.signal);
-      }
-    } catch (error) {
-      console.error("Error in answerCall:", error);
-    }
-  });
-
-  socket.on("rejectCall", (data) => {
+  // 2. Accept Call
+  socket.on("call:accept", (data) => {
+    // data: { signal, to }
     const receiverSocketId = getReceiverSocketId(data.to);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("callRejected", { reason: "Call rejected by user." });
+      io.to(receiverSocketId).emit("call:accepted", { signal: data.signal });
     }
   });
 
-  socket.on("endCall", (data) => {
+  // 3. Reject Call
+  socket.on("call:reject", (data) => {
+    // data: { to }
     const receiverSocketId = getReceiverSocketId(data.to);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("callEnded", { reason: "Call ended." });
+      io.to(receiverSocketId).emit("call:rejected", { reason: "Call rejected." });
     }
   });
 
-  socket.on("iceCandidate", (data) => {
+  // 4. End Call
+  socket.on("call:end", (data) => {
+    // data: { to }
     const receiverSocketId = getReceiverSocketId(data.to);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("iceCandidate", data.candidate);
+      io.to(receiverSocketId).emit("call:ended", { reason: "Call ended." });
+    }
+  });
+
+  // 5. Signaling (ICE Candidates)
+  socket.on("call:signal", (data) => {
+    // data: { to, candidate }
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("call:signal", { candidate: data.candidate });
     }
   });
 
