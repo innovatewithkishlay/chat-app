@@ -155,30 +155,18 @@ const MessageInput = () => {
   };
 
   const startRecording = async () => {
+    toast.success("Audio functionality coming soon!");
+    return;
+    /* 
+    // Original recording logic disabled for now
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      const chunks = [];
-
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingDuration(0);
-      timerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-
+      // ...
     } catch (err) {
       console.error("Error accessing microphone:", err);
       toast.error("Could not access microphone");
     }
+    */
   };
 
   const stopRecording = () => {
