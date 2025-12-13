@@ -5,7 +5,7 @@ import { searchUsers, activateProTemp, updateMood } from "../controllers/user.co
 const router = express.Router();
 
 router.get("/search", protectRoute, searchUsers);
-router.post("/activate-pro", protectRoute, activateProTemp);
+router.post("/activate-pro-temp", protectRoute, activateProTemp);
 router.put("/mood", protectRoute, updateMood);
 
 export default router;

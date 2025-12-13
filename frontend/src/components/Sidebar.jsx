@@ -89,27 +89,27 @@ const Sidebar = () => {
   if (isConversationsLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-20 lg:w-80 border-r border-base-300 flex flex-col transition-all duration-300 bg-base-100/50 backdrop-blur-lg">
+    <aside className="h-full w-full lg:w-80 border-r border-base-300 flex flex-col transition-all duration-300 bg-base-100/50 backdrop-blur-lg">
       {showMoodSelector && <MoodSelector isOpen={showMoodSelector} onClose={() => setShowMoodSelector(false)} />}
 
       <div className="border-b border-base-300 w-full p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="size-6 text-primary" />
-            <span className="font-bold text-lg hidden lg:block tracking-tight">Messages</span>
+            <span className="font-bold text-lg block tracking-tight">Messages</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowMoodSelector(true)} className="btn btn-ghost btn-circle btn-sm hidden lg:flex" title="Set Mood">
+            <button onClick={() => setShowMoodSelector(true)} className="btn btn-ghost btn-circle btn-sm flex" title="Set Mood">
               <Smile size={18} />
             </button>
-            <div className="badge badge-sm badge-primary/10 text-primary border-none font-medium hidden lg:flex">
+            <div className="badge badge-sm badge-primary/10 text-primary border-none font-medium flex">
               {authUser?.plan || "FREE"}
             </div>
           </div>
         </div>
 
         {/* Search Input */}
-        <div className="relative hidden lg:block group">
+        <div className="relative block group">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="size-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
           </div>
@@ -156,7 +156,7 @@ const Sidebar = () => {
         </div>
 
         {/* Create Group & Filter */}
-        <div className="hidden lg:flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <label className="cursor-pointer flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
             <input
               type="checkbox"
@@ -244,7 +244,7 @@ const Sidebar = () => {
                       </div>
                     )}
                   </div>
-                  <div className="hidden lg:block text-left min-w-0 flex-1">
+                  <div className="block text-left min-w-0 flex-1">
                     <div className="font-medium truncate text-sm">{friend.fullname}</div>
                     <div className="text-xs text-zinc-400">@{friend.username}</div>
                   </div>
@@ -294,7 +294,7 @@ const Sidebar = () => {
                       className="size-10 object-cover rounded-full"
                     />
                   </div>
-                  <div className="hidden lg:block text-left min-w-0 flex-1">
+                  <div className="block text-left min-w-0 flex-1">
                     <div className="font-medium truncate text-sm">{user.fullname}</div>
                     <div className="text-xs text-zinc-400">@{user.username}</div>
                   </div>
@@ -335,7 +335,7 @@ const Sidebar = () => {
                         className="size-10 object-cover rounded-full"
                       />
                     </div>
-                    <div className="hidden lg:block text-left min-w-0 flex-1">
+                    <div className="block text-left min-w-0 flex-1">
                       <div className="font-medium truncate text-sm">{group.name}</div>
                       <div className="text-xs opacity-70">{group.members.length} members</div>
                     </div>
@@ -385,7 +385,7 @@ const Sidebar = () => {
                     )}
                   </div>
 
-                  <div className="hidden lg:block text-left min-w-0 flex-1">
+                  <div className="block text-left min-w-0 flex-1">
                     <div className="flex justify-between items-baseline">
                       <div className="font-medium truncate text-sm">{otherUser.fullname}</div>
                       {lastMessage && (

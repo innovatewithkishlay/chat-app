@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Video, Lock, Settings, BrainCircuit } from "lucide-react";
+import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
@@ -58,76 +58,82 @@ const ChatHeader = ({ onOpenMemory }) => {
       {showGroupSettings && <GroupSettingsModal onClose={() => setShowGroupSettings(false)} />}
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => isGroup && setShowGroupSettings(true)}>
-          {/* Avatar */}
-          <div className="avatar">
-            <div className="size-10 rounded-full relative">
-              <img
-                src={isGroup ? (selectedUser.avatar || "/avatar.png") : (selectedUser.profilePic || "/avatar.png")}
-                alt={isGroup ? selectedUser.name : selectedUser.fullname}
-              />
+        <div className="flex items-center gap-3">
+          {/* Back Button (Mobile) */}
+          <button onClick={() => setSelectedUser(null)} className="lg:hidden btn btn-ghost btn-circle btn-sm">
+            <ArrowLeft size={20} />
+          </button>
+
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => isGroup && setShowGroupSettings(true)}>
+            {/* Avatar */}
+            <div className="avatar">
+              <div className="size-10 rounded-full relative">
+                <img
+                  src={isGroup ? (selectedUser.avatar || "/avatar.png") : (selectedUser.profilePic || "/avatar.png")}
+                  alt={isGroup ? selectedUser.name : selectedUser.fullname}
+                />
+              </div>
+            </div>
+
+            {/* User/Group info */}
+            <div>
+              <h3 className="font-medium flex items-center gap-2">
+                {isGroup ? selectedUser.name : selectedUser.fullname}
+              </h3>
+              <p className="text-sm text-base-content/70">
+                {isGroup
+                  ? `${selectedUser.members.length} members`
+                  : (onlineUsers.includes(selectedUser._id)
+                    ? "Online"
+                    : `Last seen ${selectedUser.lastSeen ? new Date(selectedUser.lastSeen).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : "Offline"}`
+                  )
+                }
+              </p>
             </div>
           </div>
 
-          {/* User/Group info */}
-          <div>
-            <h3 className="font-medium flex items-center gap-2">
-              {isGroup ? selectedUser.name : selectedUser.fullname}
-            </h3>
-            <p className="text-sm text-base-content/70">
-              {isGroup
-                ? `${selectedUser.members.length} members`
-                : (onlineUsers.includes(selectedUser._id)
-                  ? "Online"
-                  : `Last seen ${selectedUser.lastSeen ? new Date(selectedUser.lastSeen).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : "Offline"}`
-                )
-              }
-            </p>
+          {/* Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Memory Button */}
+            <button onClick={onOpenMemory} className="btn btn-ghost btn-circle btn-sm" title="Chat Memory">
+              <BrainCircuit size={18} />
+            </button>
+
+            {!isGroup && (
+              <button
+                onClick={handleVideoCall}
+                className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
+              >
+                {isPro ? <Video size={18} /> : <Lock size={16} />}
+              </button>
+            )}
+
+            {isGroup && (
+              <>
+                <button
+                  onClick={() => setShowGroupSettings(true)}
+                  className="btn btn-circle btn-sm btn-ghost"
+                  title="Group Settings"
+                >
+                  <Settings size={18} />
+                </button>
+                <button
+                  onClick={handleLeaveGroup}
+                  className="btn btn-sm btn-error btn-outline"
+                >
+                  Leave
+                </button>
+              </>
+            )}
+
+            <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-circle btn-sm">
+              <X size={20} />
+            </button>
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Memory Button */}
-          <button onClick={onOpenMemory} className="btn btn-ghost btn-circle btn-sm" title="Chat Memory">
-            <BrainCircuit size={18} />
-          </button>
-
-          {!isGroup && (
-            <button
-              onClick={handleVideoCall}
-              className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
-            >
-              {isPro ? <Video size={18} /> : <Lock size={16} />}
-            </button>
-          )}
-
-          {isGroup && (
-            <>
-              <button
-                onClick={() => setShowGroupSettings(true)}
-                className="btn btn-circle btn-sm btn-ghost"
-                title="Group Settings"
-              >
-                <Settings size={18} />
-              </button>
-              <button
-                onClick={handleLeaveGroup}
-                className="btn btn-sm btn-error btn-outline"
-              >
-                Leave
-              </button>
-            </>
-          )}
-
-          <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-circle btn-sm">
-            <X size={20} />
-          </button>
-        </div>
+        {isVideoCallActive && <VideoCall />}
       </div>
-
-      {isVideoCallActive && <VideoCall />}
-    </div>
-  );
+      );
 };
-export default ChatHeader;
+      export default ChatHeader;
