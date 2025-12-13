@@ -23,6 +23,8 @@ export const useVideoCallStore = create((set, get) => ({
     isMicOn: true,
     isCameraOn: true,
 
+    iceCandidateQueue: [], // Queue for early arrival candidates
+
     // --- Actions ---
 
     startCall: async (userToCall, userName) => {
@@ -52,6 +54,7 @@ export const useVideoCallStore = create((set, get) => ({
 
             // Handle Remote Stream
             peer.ontrack = (event) => {
+                console.log("PEER: Received remote track");
                 set({ remoteStream: event.streams[0] });
             };
 
@@ -76,7 +79,7 @@ export const useVideoCallStore = create((set, get) => ({
 
     acceptCall: async () => {
         const { socket } = useAuthStore.getState();
-        const { incomingCallData } = get();
+        const { incomingCallData, iceCandidateQueue } = get();
         if (!socket || !incomingCallData) return;
 
         set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from });
@@ -97,6 +100,7 @@ export const useVideoCallStore = create((set, get) => ({
             };
 
             peer.ontrack = (event) => {
+                console.log("PEER: Received remote track");
                 set({ remoteStream: event.streams[0] });
             };
 
@@ -109,6 +113,12 @@ export const useVideoCallStore = create((set, get) => ({
 
             // Emit Accept Event
             socket.emit("call:accept", { signal: answer, to: incomingCallData.from });
+
+            // Process Queue
+            iceCandidateQueue.forEach(candidate => {
+                peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
+            });
+            set({ iceCandidateQueue: [] });
 
         } catch (error) {
             console.error("Error accepting call:", error);
@@ -168,6 +178,7 @@ export const useVideoCallStore = create((set, get) => ({
             peerConnection: null,
             incomingCallData: null,
             activeCallUserId: null,
+            iceCandidateQueue: []
         });
     },
 
@@ -207,10 +218,16 @@ export const useVideoCallStore = create((set, get) => ({
         });
 
         socket.on("call:accepted", async (data) => {
-            const { peerConnection, callStatus } = get();
+            const { peerConnection, callStatus, iceCandidateQueue } = get();
             if (callStatus === "OUTGOING" && peerConnection) {
                 set({ callStatus: "CONNECTED" });
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+
+                // Process Queue
+                iceCandidateQueue.forEach(candidate => {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
+                });
+                set({ iceCandidateQueue: [] });
             }
         });
 
@@ -232,6 +249,9 @@ export const useVideoCallStore = create((set, get) => ({
                 } catch (e) {
                     console.error("Error adding ICE candidate", e);
                 }
+            } else {
+                // Queue candidate if remote description not set yet
+                set(state => ({ iceCandidateQueue: [...state.iceCandidateQueue, data.candidate] }));
             }
         });
 
