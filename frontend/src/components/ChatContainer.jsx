@@ -127,7 +127,7 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative bg-base-100/50 backdrop-blur-sm">
+    <div className="flex-1 flex flex-col overflow-hidden relative bg-base-100/50 backdrop-blur-sm h-full min-h-0">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#4f4f4f_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
@@ -143,7 +143,7 @@ const ChatContainer = () => {
         onClose={() => setIsMemoryOpen(false)}
       />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10" ref={containerRef}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 min-h-0" ref={containerRef}>
         <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
 
         {messages.map((message) => {
