@@ -36,7 +36,7 @@ const VideoCall = () => {
     if (callStatus === "IDLE") return null;
 
     return (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/90 z-[9999] flex flex-col items-center justify-center p-4">
             <div className="relative w-full max-w-4xl aspect-video bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800">
 
                 {/* Remote Video */}
