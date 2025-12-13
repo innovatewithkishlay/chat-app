@@ -398,6 +398,7 @@ export const useChatStore = create((set, get) => ({
 
   subscribeToMessages: () => {
     const { selectedUser } = get();
+    get().unsubscribeFromMessages(); // Prevent duplicates
     const socket = useAuthStore.getState().socket;
 
     socket.on("newMessage", (newMessage) => {

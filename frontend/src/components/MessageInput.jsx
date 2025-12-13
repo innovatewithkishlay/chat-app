@@ -1,13 +1,20 @@
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, Send, X } from "lucide-react";
+import { Image, Send, X, Smile, Mic, StopCircle, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const timerRef = useRef(null);
   const { sendMessage, sendGroupMessage, selectedUser, conversations, sentRequests, sendTalkRequest, friends } = useChatStore();
   const { authUser, socket } = useAuthStore();
   const typingTimeoutRef = useRef(null);
@@ -26,6 +33,8 @@ const MessageInput = () => {
 
   // Check if friends (only for 1-1 chats)
   const isFriend = !isGroup && friends.some((f) => f._id === selectedUser._id);
+
+  const EMOJIS = ["😀", "😂", "😍", "🥺", "😭", "😡", "👍", "❤️", "🎉", "🔥", "🤔", "👀", "🙌", "💀", "💩", "🤡"];
 
   if (!isGroup && !isFriend) {
     return (
@@ -76,31 +85,46 @@ const MessageInput = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!text.trim() && !imagePreview) return;
+    if (!text.trim() && !imagePreview && !audioBlob) return;
 
     try {
-      if (isGroup) {
-        await sendGroupMessage(selectedUser._id, {
-          text: text.trim(),
-          image: imagePreview,
-        });
+      let content = {
+        text: text.trim(),
+        image: imagePreview,
+      };
+
+      if (audioBlob) {
+        // Convert audio blob to base64
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          content.image = reader.result; // Sending audio as "image" field for now
+          await send(content);
+        };
       } else {
-        await sendMessage({
-          text: text.trim(),
-          image: imagePreview,
-        });
+        await send(content);
       }
 
-      // Clear form
-      setText("");
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-
-      // Stop typing immediately (only for 1-1 for now)
-      if (socket && !isGroup) socket.emit("stopTyping", { receiverId: selectedUser._id });
     } catch (error) {
       console.error("Failed to send message:", error);
     }
+  };
+
+  const send = async (content) => {
+    if (isGroup) {
+      await sendGroupMessage(selectedUser._id, content);
+    } else {
+      await sendMessage(content);
+    }
+
+    // Clear form
+    setText("");
+    setImagePreview(null);
+    setAudioBlob(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Stop typing immediately (only for 1-1 for now)
+    if (socket && !isGroup) socket.emit("stopTyping", { receiverId: selectedUser._id });
   };
 
   const handleTyping = (e) => {
@@ -118,12 +142,8 @@ const MessageInput = () => {
   };
 
   const handleImageClick = () => {
-    // Check limits
     const isFree = authUser.plan === "FREE";
     const imagesSent = authUser.usage?.imagesSent || 0;
-
-    // Hardcoded limit check for UI feedback (should match backend config)
-    // Ideally fetch config or use limits from authUser if backend sent them
     const limit = isFree ? 2 : 100;
 
     if (imagesSent >= limit) {
@@ -134,8 +154,72 @@ const MessageInput = () => {
     fileInputRef.current?.click();
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      const chunks = [];
+
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        setAudioBlob(blob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      toast.error("Could not access microphone");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(timerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    stopRecording();
+    setAudioBlob(null);
+  };
+
+  const formatDuration = (sec) => {
+    const min = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${min}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   return (
-    <div className="p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50">
+    <div className="p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative">
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <div className="absolute bottom-20 left-4 bg-base-100 border border-base-300 shadow-xl rounded-xl p-2 grid grid-cols-4 gap-2 z-50">
+          {EMOJIS.map(emoji => (
+            <button
+              key={emoji}
+              onClick={() => {
+                setText(prev => prev + emoji);
+                setShowEmojiPicker(false);
+              }}
+              className="text-2xl hover:bg-base-200 p-2 rounded-lg transition-colors"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2 animate-in slide-in-from-bottom-2">
           <div className="relative">
@@ -156,15 +240,35 @@ const MessageInput = () => {
         </div>
       )}
 
+      {audioBlob && (
+        <div className="mb-3 flex items-center gap-3 bg-base-200/50 p-2 rounded-xl w-fit">
+          <audio src={URL.createObjectURL(audioBlob)} controls className="h-8 w-48" />
+          <button onClick={() => setAudioBlob(null)} className="btn btn-ghost btn-xs text-error">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-        <div className="flex-1 flex gap-2 relative">
+        <div className="flex-1 flex gap-2 relative items-center">
+
+          <button
+            type="button"
+            className={`btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-primary transition-colors`}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <Smile size={20} />
+          </button>
+
           <input
             type="text"
             className="w-full input input-bordered rounded-xl input-sm sm:input-md bg-base-200/50 focus:bg-base-200 transition-all border-transparent focus:border-primary/20"
-            placeholder="Type a message..."
+            placeholder={isRecording ? "Recording audio..." : "Type a message..."}
             value={text}
             onChange={handleTyping}
+            disabled={isRecording}
           />
+
           <input
             type="file"
             accept="image/*"
@@ -175,20 +279,36 @@ const MessageInput = () => {
 
           <button
             type="button"
-            className={`hidden sm:flex btn btn-circle btn-sm btn-ghost absolute right-2 top-1/2 -translate-y-1/2
-                     ${imagePreview ? "text-emerald-500" : "text-zinc-400 hover:text-zinc-300"}`}
+            className={`hidden sm:flex btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
             onClick={handleImageClick}
+            disabled={isRecording}
           >
             <Image size={20} />
           </button>
         </div>
-        <button
-          type="submit"
-          className="btn btn-sm btn-circle btn-primary shadow-lg hover:scale-105 transition-transform"
-          disabled={!text.trim() && !imagePreview}
-        >
-          <Send size={18} />
-        </button>
+
+        {text.trim() || imagePreview || audioBlob ? (
+          <button
+            type="submit"
+            className="btn btn-sm btn-circle btn-primary shadow-lg hover:scale-105 transition-transform"
+          >
+            <Send size={18} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`btn btn-sm btn-circle ${isRecording ? "btn-error animate-pulse" : "btn-ghost text-zinc-400"}`}
+            onClick={isRecording ? stopRecording : startRecording}
+          >
+            {isRecording ? <StopCircle size={20} /> : <Mic size={20} />}
+          </button>
+        )}
+
+        {isRecording && (
+          <span className="text-error text-xs font-mono absolute -top-6 right-4 bg-base-100 px-2 py-1 rounded border border-error/20">
+            {formatDuration(recordingDuration)}
+          </span>
+        )}
       </form>
     </div>
   );
