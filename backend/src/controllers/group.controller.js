@@ -128,7 +128,7 @@ export const leaveGroup = async (req, res) => {
 export const sendGroupMessage = async (req, res) => {
     try {
         const { groupId } = req.params;
-        const { text, image } = req.body;
+        const { text, image, audio } = req.body;
         const senderId = req.user._id;
 
         const group = await Group.findById(groupId);
@@ -141,13 +141,24 @@ export const sendGroupMessage = async (req, res) => {
         }
 
         let imageUrl;
-        // if (image) { ... } // Add image upload logic if needed
+        let messageType = "text";
+
+        if (image) {
+            const uploadResponse = await cloudinary.uploader.upload(image);
+            imageUrl = uploadResponse.secure_url;
+            messageType = "image";
+        } else if (audio) {
+            const uploadResponse = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
+            imageUrl = uploadResponse.secure_url;
+            messageType = "audio";
+        }
 
         const newMessage = new Message({
             senderId,
             groupId,
             text,
             image: imageUrl,
+            type: messageType,
         });
 
         await newMessage.save();

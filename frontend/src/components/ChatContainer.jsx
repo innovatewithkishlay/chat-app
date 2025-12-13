@@ -192,11 +192,17 @@ const ChatContainer = () => {
                     `}
                 >
                   {message.image && !message.isDeleted && (
-                    <img
-                      src={message.image}
-                      alt="Attachment"
-                      className="sm:max-w-[200px] rounded-md mb-2 border border-base-content/10"
-                    />
+                    <>
+                      {message.type === "audio" || message.image.match(/\.(webm|mp3|wav)$/i) ? (
+                        <audio controls src={message.image} className="mb-2 max-w-[200px]" />
+                      ) : (
+                        <img
+                          src={message.image}
+                          alt="Attachment"
+                          className="sm:max-w-[200px] rounded-md mb-2 border border-base-content/10"
+                        />
+                      )}
+                    </>
                   )}
 
                   {/* Intent Label */}
