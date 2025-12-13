@@ -91,49 +91,50 @@ const ChatHeader = ({ onOpenMemory }) => {
               </p>
             </div>
           </div>
-
-          {/* Buttons */}
-          <div className="flex items-center gap-2">
-            {/* Memory Button */}
-            <button onClick={onOpenMemory} className="btn btn-ghost btn-circle btn-sm" title="Chat Memory">
-              <BrainCircuit size={18} />
-            </button>
-
-            {!isGroup && (
-              <button
-                onClick={handleVideoCall}
-                className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
-              >
-                {isPro ? <Video size={18} /> : <Lock size={16} />}
-              </button>
-            )}
-
-            {isGroup && (
-              <>
-                <button
-                  onClick={() => setShowGroupSettings(true)}
-                  className="btn btn-circle btn-sm btn-ghost"
-                  title="Group Settings"
-                >
-                  <Settings size={18} />
-                </button>
-                <button
-                  onClick={handleLeaveGroup}
-                  className="btn btn-sm btn-error btn-outline"
-                >
-                  Leave
-                </button>
-              </>
-            )}
-
-            <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-circle btn-sm">
-              <X size={20} />
-            </button>
-          </div>
         </div>
 
-        {isVideoCallActive && <VideoCall />}
+        {/* Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Memory Button */}
+          <button onClick={onOpenMemory} className="btn btn-ghost btn-circle btn-sm" title="Chat Memory">
+            <BrainCircuit size={18} />
+          </button>
+
+          {!isGroup && (
+            <button
+              onClick={handleVideoCall}
+              className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
+            >
+              {isPro ? <Video size={18} /> : <Lock size={16} />}
+            </button>
+          )}
+
+          {isGroup && (
+            <>
+              <button
+                onClick={() => setShowGroupSettings(true)}
+                className="btn btn-circle btn-sm btn-ghost"
+                title="Group Settings"
+              >
+                <Settings size={18} />
+              </button>
+              <button
+                onClick={handleLeaveGroup}
+                className="btn btn-sm btn-error btn-outline"
+              >
+                Leave
+              </button>
+            </>
+          )}
+
+          <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-circle btn-sm">
+            <X size={20} />
+          </button>
+        </div>
       </div>
-      );
+
+      {isVideoCallActive && <VideoCall />}
+    </div>
+  );
 };
-      export default ChatHeader;
+export default ChatHeader;
