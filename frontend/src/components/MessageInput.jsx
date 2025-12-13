@@ -204,15 +204,16 @@ const MessageInput = () => {
     <div className="p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative">
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="absolute bottom-20 left-4 bg-base-100 border border-base-300 shadow-xl rounded-xl p-2 grid grid-cols-4 gap-2 z-50">
+        <div className="fixed bottom-20 left-4 md:left-auto bg-base-100 border border-base-300 shadow-xl rounded-xl p-2 grid grid-cols-4 gap-2 z-[9999]">
           {EMOJIS.map(emoji => (
             <button
               key={emoji}
+              type="button"
               onClick={() => {
                 setText(prev => prev + emoji);
                 setShowEmojiPicker(false);
               }}
-              className="text-2xl hover:bg-base-200 p-2 rounded-lg transition-colors"
+              className="text-2xl hover:bg-base-200 p-2 rounded-lg transition-colors cursor-pointer"
             >
               {emoji}
             </button>
