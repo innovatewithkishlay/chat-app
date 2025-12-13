@@ -96,21 +96,7 @@ const ChatContainer = () => {
     setEditText("");
   };
 
-  // Video Call Listeners
-  useEffect(() => {
-    const { socket } = useAuthStore.getState();
-    if (!socket) return;
 
-    const handleCallUser = (data) => {
-      useVideoCallStore.getState().setIncomingCall(data);
-    };
-
-    socket.on("callUser", handleCallUser);
-
-    return () => {
-      socket.off("callUser", handleCallUser);
-    };
-  }, []);
 
   useEffect(() => {
     if (isGroup) return;
@@ -337,7 +323,7 @@ const ChatContainer = () => {
       </div>
 
       <MessageInput />
-      {callStatus !== "idle" && <VideoCall />}
+
     </div>
   );
 };
