@@ -108,13 +108,16 @@ io.on("connection", async (socket) => {
 
   // 1. Initiate Call
   socket.on("call:initiate", async (data) => {
+    console.log("SOCKET: call:initiate received", data);
     // data: { userToCall, signalData, from, name }
     try {
       const receiverSocketId = getReceiverSocketId(data.userToCall);
       const sender = socket.user;
+      console.log("SOCKET: Sender:", sender._id, "Receiver ID:", data.userToCall, "Receiver Socket:", receiverSocketId);
 
       // Eligibility Check (Sender)
       if (sender.plan !== "PRO") {
+        console.log("SOCKET: Sender not PRO");
         socket.emit("call:error", { message: "You must be PRO to make a video call." });
         return;
       }
@@ -122,18 +125,21 @@ io.on("connection", async (socket) => {
       // Eligibility Check (Receiver)
       const receiver = await User.findById(data.userToCall);
       if (!receiver || receiver.plan !== "PRO") {
+        console.log("SOCKET: Receiver not PRO or not found");
         socket.emit("call:error", { message: "The other user is not eligible (needs PRO)." });
         return;
       }
 
       if (receiverSocketId) {
         // Emit INCOMING to receiver
+        console.log("SOCKET: Emitting call:incoming to", receiverSocketId);
         io.to(receiverSocketId).emit("call:incoming", {
           signal: data.signalData,
           from: data.from,
           name: data.name,
         });
       } else {
+        console.log("SOCKET: Receiver offline");
         socket.emit("call:error", { message: "User is offline." });
       }
     } catch (error) {

@@ -202,6 +202,7 @@ export const useVideoCallStore = create((set, get) => ({
         socket.off("call:error");
 
         socket.on("call:incoming", (data) => {
+            console.log("FRONTEND: call:incoming received", data);
             get().setIncomingCall(data);
         });
 
