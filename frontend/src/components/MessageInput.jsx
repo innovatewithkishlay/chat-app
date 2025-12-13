@@ -197,11 +197,12 @@ const MessageInput = () => {
             <button
               key={emoji}
               type="button"
-              onClick={() => {
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent focus loss
+                e.stopPropagation();
                 setText(prev => prev + emoji);
-                setShowEmojiPicker(false);
               }}
-              className="text-2xl hover:bg-base-200 p-2 rounded-lg transition-colors cursor-pointer"
+              className="text-2xl hover:bg-base-200 p-2 rounded-lg transition-colors cursor-pointer active:scale-95"
             >
               {emoji}
             </button>
