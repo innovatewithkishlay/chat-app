@@ -23,6 +23,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
+      "https://chatify-hgj2.onrender.com",
       process.env.CLIENT_URL,
     ].filter(Boolean),
     credentials: true,
