@@ -3,8 +3,9 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import { isValidEmailDomain } from "../lib/utils/domainValidator.js";
+
 export const signup = async (req, res) => {
-  const { fullname, email, password } = req.body;
+  const { fullname, email, password, username } = req.body;
   try {
     if (!isValidEmailDomain(email) || password.length < 6) {
       return res.status(400).json({
@@ -14,11 +15,17 @@ export const signup = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    if (!username) {
+      return res.status(400).json({ message: "Username is required." });
+    }
+
+    // Check for existing user by email OR username
+    const user = await User.findOne({ $or: [{ email }, { username }] });
     if (user) {
-      return res
-        .status(400)
-        .json({ message: "User with this email already exists." });
+      const message = user.email === email
+        ? "User with this email already exists."
+        : "Username is already taken.";
+      return res.status(400).json({ message });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -26,6 +33,7 @@ export const signup = async (req, res) => {
     const newUser = new User({
       fullname,
       email,
+      username,
       hashedPassword,
       password: hashedPassword,
     });
@@ -37,6 +45,7 @@ export const signup = async (req, res) => {
         _id: newUser._id,
         fullname: newUser.fullname,
         email: newUser.email,
+        username: newUser.username,
         profilePic: newUser.profilePic,
         about: "",
       });
@@ -100,6 +109,7 @@ export const logout = (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 export const updateProfile = async (req, res) => {
   try {
     const { profilePic, fullname, about } = req.body;
@@ -119,7 +129,6 @@ export const updateProfile = async (req, res) => {
       new: true,
     });
 
-    console.log(updatedUser);
     res.status(200).json(updatedUser); // Return the updated user info
   } catch (error) {
     console.log("Error in update profile:", error);
