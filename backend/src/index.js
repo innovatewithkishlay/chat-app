@@ -66,7 +66,22 @@ setInterval(async () => {
   } catch (error) {
     console.error("Error in reminder cron:", error);
   }
+} catch (error) {
+  console.error("Error in reminder cron:", error);
+}
 }, 60000);
+
+import path from "path";
+
+const __dirname = path.resolve();
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
+  });
+}
 
 server.listen(port, () => {
   console.log("app is lisining at port ", port);

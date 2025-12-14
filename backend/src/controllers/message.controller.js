@@ -186,7 +186,7 @@ export const sendMessage = async (req, res) => {
         title: `New message from ${req.user.fullname}`,
         body: text || (image ? "Sent an image" : (audio ? "Sent an audio message" : "Sent a message")),
         icon: "/icon-192x192.png", // Ensure this exists in frontend public
-        url: `/chat`, // Or specific conversation URL
+        url: `/`, // Redirect to home page where chat lives
       });
 
       subscriptions.forEach(sub => {
