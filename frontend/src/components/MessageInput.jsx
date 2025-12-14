@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X, Smile, Mic, StopCircle, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import EmojiPicker from "emoji-picker-react";
 
 const MessageInput = () => {
   const [text, setText] = useState("");
@@ -15,6 +16,8 @@ const MessageInput = () => {
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const timerRef = useRef(null);
+  const inputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
   const { sendMessage, sendGroupMessage, selectedUser, conversations, sentRequests, sendTalkRequest, friends } = useChatStore();
   const { authUser, socket } = useAuthStore();
   const typingTimeoutRef = useRef(null);
@@ -34,7 +37,22 @@ const MessageInput = () => {
   // Check if friends (only for 1-1 chats)
   const isFriend = !isGroup && friends.some((f) => f._id === selectedUser._id);
 
-  const EMOJIS = ["😀", "😂", "😍", "🥺", "😭", "😡", "👍", "❤️", "🎉", "🔥", "🤔", "👀", "🙌", "💀", "💩", "🤡"];
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   if (!isGroup && !isFriend) {
     return (
@@ -84,7 +102,7 @@ const MessageInput = () => {
   };
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!text.trim() && !imagePreview && !audioBlob) return;
 
     try {
@@ -122,6 +140,7 @@ const MessageInput = () => {
     setImagePreview(null);
     setAudioBlob(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setShowEmojiPicker(false); // Close picker on send
 
     // Stop typing immediately (only for 1-1 for now)
     if (socket && !isGroup) socket.emit("stopTyping", { receiverId: selectedUser._id });
@@ -157,16 +176,6 @@ const MessageInput = () => {
   const startRecording = async () => {
     toast.success("Audio functionality coming soon!");
     return;
-    /* 
-    // Original recording logic disabled for now
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // ...
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-      toast.error("Could not access microphone");
-    }
-    */
   };
 
   const stopRecording = () => {
@@ -177,36 +186,45 @@ const MessageInput = () => {
     }
   };
 
-  const cancelRecording = () => {
-    stopRecording();
-    setAudioBlob(null);
-  };
-
   const formatDuration = (sec) => {
     const min = Math.floor(sec / 60);
     const s = sec % 60;
     return `${min}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const handleEmojiClick = (emojiObject) => {
+    const cursor = inputRef.current.selectionStart;
+    const msg = text.slice(0, cursor) + emojiObject.emoji + text.slice(cursor);
+    setText(msg);
+
+    // Restore cursor position after state update
+    setTimeout(() => {
+      inputRef.current.selectionStart = cursor + emojiObject.emoji.length;
+      inputRef.current.selectionEnd = cursor + emojiObject.emoji.length;
+      inputRef.current.focus();
+    }, 0);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   return (
     <div className="p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative">
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="fixed bottom-20 left-4 md:left-auto bg-base-100 border border-base-300 shadow-xl rounded-xl p-2 grid grid-cols-4 gap-2 z-[9999]">
-          {EMOJIS.map(emoji => (
-            <button
-              key={emoji}
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault(); // Prevent focus loss
-                e.stopPropagation();
-                setText(prev => prev + emoji);
-              }}
-              className="text-2xl hover:bg-base-200 p-2 rounded-lg transition-colors cursor-pointer active:scale-95"
-            >
-              {emoji}
-            </button>
-          ))}
+        <div
+          ref={emojiPickerRef}
+          className="absolute bottom-20 left-4 z-[9999] shadow-2xl rounded-xl border border-base-300"
+        >
+          <EmojiPicker
+            onEmojiClick={handleEmojiClick}
+            theme="auto"
+            lazyLoadEmojis={true}
+          />
         </div>
       )}
 
@@ -244,18 +262,23 @@ const MessageInput = () => {
 
           <button
             type="button"
-            className={`btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-primary transition-colors`}
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className={`btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-primary transition-colors ${showEmojiPicker ? "text-primary bg-base-200" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowEmojiPicker(!showEmojiPicker);
+            }}
           >
             <Smile size={20} />
           </button>
 
           <input
+            ref={inputRef}
             type="text"
             className="w-full input input-bordered rounded-xl input-sm sm:input-md bg-base-200/50 focus:bg-base-200 transition-all border-transparent focus:border-primary/20"
             placeholder={isRecording ? "Recording audio..." : "Type a message..."}
             value={text}
             onChange={handleTyping}
+            onKeyDown={handleKeyDown}
             disabled={isRecording}
           />
 
