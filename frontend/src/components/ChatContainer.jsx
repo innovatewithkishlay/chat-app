@@ -91,11 +91,43 @@ const ChatContainer = () => {
     setShowScrollButton(false);
   };
 
-  // ... (GSAP effect - keep existing)
+  // GSAP Animation for new messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsgId = messages[messages.length - 1]._id;
+      const element = document.getElementById(`msg-${lastMsgId}`);
+      if (element) {
+        gsap.fromTo(element, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 });
+      }
+    }
+  }, [messages]);
 
-  // ... (handleScrollToMessage, edit logic - keep existing)
+  const handleScrollToMessage = (messageId) => {
+    const element = document.getElementById(`msg-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.classList.add("bg-base-200/50");
+      setTimeout(() => element.classList.remove("bg-base-200/50"), 2000);
+    }
+  };
 
-  // ... (video call effect - keep existing)
+  const handleEditStart = (message) => {
+    setEditingMessageId(message._id);
+    setEditText(message.text);
+  };
+
+  const handleEditCancel = () => {
+    setEditingMessageId(null);
+    setEditText("");
+  };
+
+  const handleEditSave = async (messageId) => {
+    if (editText.trim()) {
+      await editMessage(messageId, editText);
+      setEditingMessageId(null);
+      setEditText("");
+    }
+  };
 
   // Typing Indicator Logic
   const currentTypingUsers = typingUsers.filter(u => {
