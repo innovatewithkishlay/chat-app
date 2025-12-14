@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft } from "lucide-react";
+import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
+import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import ProModal from "./ProModal";
 import GroupSettingsModal from "./GroupSettingsModal";
 import VideoCall from "./VideoCall";
@@ -16,12 +17,21 @@ const ChatHeader = ({ onOpenMemory }) => {
 
   const isGroup = !!selectedUser.members;
   const isPro = authUser.plan === "PRO";
+
   const handleVideoCall = () => {
     if (!isPro) {
       setShowProModal(true);
       return;
     }
     useVideoCallStore.getState().startCall(selectedUser._id, selectedUser.fullname);
+  };
+
+  const handleVoiceCall = () => {
+    if (!isPro) {
+      setShowProModal(true);
+      return;
+    }
+    useVoiceCallStore.getState().startCall(selectedUser._id, selectedUser.fullname);
   };
 
   const handleLeaveGroup = async () => {
@@ -79,12 +89,23 @@ const ChatHeader = ({ onOpenMemory }) => {
           </button>
 
           {!isGroup && (
-            <button
-              onClick={handleVideoCall}
-              className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
-            >
-              {isPro ? <Video size={18} /> : <Lock size={16} />}
-            </button>
+            <>
+              <button
+                onClick={handleVoiceCall}
+                className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
+                title="Voice Call"
+              >
+                {isPro ? <Phone size={18} /> : <Lock size={16} />}
+              </button>
+
+              <button
+                onClick={handleVideoCall}
+                className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
+                title="Video Call"
+              >
+                {isPro ? <Video size={18} /> : <Lock size={16} />}
+              </button>
+            </>
           )}
 
           {isGroup && (

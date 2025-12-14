@@ -184,6 +184,75 @@ io.on("connection", async (socket) => {
     }
   });
 
+  // --- Voice Call Signaling ---
+
+  // 1. Initiate Voice Call
+  socket.on("voice:call:initiate", async (data) => {
+    console.log("SOCKET: voice:call:initiate received", data);
+    try {
+      const receiverSocketId = getReceiverSocketId(data.userToCall);
+      const sender = socket.user;
+
+      // Eligibility Check (Sender)
+      if (sender.plan !== "PRO") {
+        socket.emit("voice:call:error", { message: "You must be PRO to make a voice call." });
+        return;
+      }
+
+      // Eligibility Check (Receiver)
+      const receiver = await User.findById(data.userToCall);
+      if (!receiver || receiver.plan !== "PRO") {
+        socket.emit("voice:call:error", { message: "The other user is not eligible (needs PRO)." });
+        return;
+      }
+
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("voice:call:incoming", {
+          signal: data.signalData,
+          from: data.from,
+          name: data.name,
+        });
+      } else {
+        socket.emit("voice:call:error", { message: "User is offline." });
+      }
+    } catch (error) {
+      console.error("Error in voice:call:initiate:", error);
+      socket.emit("voice:call:error", { message: "Failed to initiate call." });
+    }
+  });
+
+  // 2. Accept Voice Call
+  socket.on("voice:call:accept", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("voice:call:accepted", { signal: data.signal });
+    }
+  });
+
+  // 3. Reject Voice Call
+  socket.on("voice:call:reject", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("voice:call:rejected", { reason: "Call rejected." });
+    }
+  });
+
+  // 4. End Voice Call
+  socket.on("voice:call:end", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("voice:call:ended", { reason: "Call ended." });
+    }
+  });
+
+  // 5. Signaling (ICE Candidates)
+  socket.on("voice:call:signal", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("voice:call:signal", { candidate: data.candidate });
+    }
+  });
+
   socket.on("disconnect", async () => {
     console.log("A user disconnected", socket.id);
     delete userSocketMap[userId];

@@ -10,8 +10,9 @@ import gsap from "gsap";
 import ChatMemory from "./ChatMemory";
 import TimelineScrubber from "./TimelineScrubber";
 import HealthIndicator from "./HealthIndicator";
-import VideoCall from "./VideoCall";
+import VoiceCall from "./VoiceCall";
 import { useVideoCallStore } from "../store/useVideoCallStore";
+import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import MessageStatus from "./MessageStatus";
 
 const ChatContainer = () => {
@@ -30,6 +31,7 @@ const ChatContainer = () => {
   } = useChatStore();
   const { authUser } = useAuthStore();
   const { callStatus } = useVideoCallStore();
+  const { callStatus: voiceCallStatus } = useVoiceCallStore();
   const messageEndRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -108,10 +110,14 @@ const ChatContainer = () => {
       }
     };
 
+    // Initialize Voice Call Listeners
+    useVoiceCallStore.getState().initializeListeners();
+
     window.addEventListener("startVideoCall", handleStartCall);
 
     return () => {
       window.removeEventListener("startVideoCall", handleStartCall);
+      useVoiceCallStore.getState().cleanupListeners();
     };
   }, [selectedUser, isGroup]);
 
@@ -145,6 +151,8 @@ const ChatContainer = () => {
         isOpen={isMemoryOpen}
         onClose={() => setIsMemoryOpen(false)}
       />
+
+      <VoiceCall />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 min-h-0" ref={containerRef}>
         <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
