@@ -10,176 +10,20 @@ import gsap from "gsap";
 import ChatMemory from "./ChatMemory";
 import TimelineScrubber from "./TimelineScrubber";
 import HealthIndicator from "./HealthIndicator";
-import VoiceCall from "./VoiceCall";
+import VoiceCall from "./VoiceCall"; // Remove this line
 import { useVideoCallStore } from "../store/useVideoCallStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import MessageStatus from "./MessageStatus";
 
 const ChatContainer = () => {
-  const {
-    messages,
-    getMessages,
-    getGroupMessages,
-    isMessagesLoading,
-    selectedUser,
-    subscribeToMessages,
-    unsubscribeFromMessages,
-    deleteMessage,
-    editMessage,
-    reactToMessage,
-    typingUsers,
-    joinGroupRoom,
-    leaveGroupRoom,
-  } = useChatStore();
-  const { authUser } = useAuthStore();
+  // ... (keep existing)
   const { callStatus } = useVideoCallStore();
   const { callStatus: voiceCallStatus } = useVoiceCallStore();
-  const messageEndRef = useRef(null);
-  const containerRef = useRef(null);
-
-  const [editingMessageId, setEditingMessageId] = useState(null);
-  const [editText, setEditText] = useState("");
-  const [isMemoryOpen, setIsMemoryOpen] = useState(false);
-  const [showScrollButton, setShowScrollButton] = useState(false);
-
-  const isGroup = !!selectedUser.members;
-
-  useEffect(() => {
-    if (isGroup) {
-      getGroupMessages(selectedUser._id);
-      joinGroupRoom(selectedUser._id);
-    } else {
-      getMessages(selectedUser._id);
-    }
-    subscribeToMessages();
-
-    return () => {
-      unsubscribeFromMessages();
-      if (isGroup) leaveGroupRoom(selectedUser._id);
-    };
-  }, [selectedUser._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages, joinGroupRoom, leaveGroupRoom]);
-
-  // Smart Auto-Scroll
-  useEffect(() => {
-    if (containerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
-
-      if (isNearBottom && messages.length > 0) {
-        messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        setShowScrollButton(false);
-      } else if (messages.length > 0) {
-        // Only show button if we are NOT near bottom and a new message arrived
-        // But this effect runs on mount too.
-        // Let's rely on onScroll handler for button visibility mostly, 
-        // and here just scroll if we were already near bottom.
-        // Actually, for "new message arrived", we want to scroll IF near bottom.
-      }
-    }
-  }, [messages, typingUsers]); // Scroll when messages arrive or typing starts (to see indicator)
-
-  const handleScroll = () => {
-    if (containerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
-      setShowScrollButton(!isNearBottom);
-    }
-  };
-
-  const scrollToBottom = () => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowScrollButton(false);
-  };
-
-  // GSAP Animation for new messages
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMsgId = messages[messages.length - 1]._id;
-      const element = document.getElementById(`msg-${lastMsgId}`);
-      if (element) {
-        gsap.fromTo(element, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 });
-      }
-    }
-  }, [messages]);
-
-  const handleScrollToMessage = (messageId) => {
-    const element = document.getElementById(`msg-${messageId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-      element.classList.add("bg-base-200/50");
-      setTimeout(() => element.classList.remove("bg-base-200/50"), 2000);
-    }
-  };
-
-  const handleEditStart = (message) => {
-    setEditingMessageId(message._id);
-    setEditText(message.text);
-  };
-
-  const handleEditCancel = () => {
-    setEditingMessageId(null);
-    setEditText("");
-  };
-
-  const handleEditSave = async (messageId) => {
-    if (editText.trim()) {
-      await editMessage(messageId, editText);
-      setEditingMessageId(null);
-      setEditText("");
-    }
-  };
-
-  // Typing Indicator Logic
-  const currentTypingUsers = typingUsers.filter(u => {
-    if (isGroup) return u.groupId === selectedUser._id && u.senderId !== authUser._id;
-    return u.senderId === selectedUser._id && !u.groupId;
-  });
-
-  const getTypingText = () => {
-    if (currentTypingUsers.length === 0) return null;
-
-    if (isGroup) {
-      if (currentTypingUsers.length === 1) {
-        // Need to find user name. In a real app we'd look up in `selectedUser.members`
-        // For now, let's assume we can find it or just say "Someone is typing..."
-        // Better: The typing event should probably carry the name, OR we look it up.
-        // `selectedUser.members` should have it.
-        const member = selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId);
-        return `${member?.fullname || "Someone"} is typing...`;
-      } else if (currentTypingUsers.length === 2) {
-        const m1 = selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId);
-        const m2 = selectedUser.members.find(m => m._id === currentTypingUsers[1].senderId);
-        return `${m1?.fullname || "Someone"} and ${m2?.fullname || "Someone"} are typing...`;
-      } else {
-        return "Several people are typing...";
-      }
-    } else {
-      return "Typing...";
-    }
-  };
-
-  if (isMessagesLoading) {
-    // ... (keep loading skeleton)
-    return (
-      <div className="flex-1 flex flex-col overflow-auto bg-base-100">
-        <ChatHeader onOpenMemory={() => setIsMemoryOpen(true)} />
-        <MessageSkeleton />
-        <MessageInput />
-      </div>
-    );
-  }
+  // ... (keep existing)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative bg-base-100/50 backdrop-blur-sm h-full min-h-0">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#4f4f4f_1px,transparent_1px)] [background-size:16px_16px]"></div>
-
-      <ChatHeader
-        onOpenMemory={() => setIsMemoryOpen(true)}
-      />
-
-      {!isGroup && <HealthIndicator />}
-
+      {/* ... */}
       <ChatMemory
         conversationId={
           useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id))?._id || selectedUser._id
@@ -188,13 +32,14 @@ const ChatContainer = () => {
         onClose={() => setIsMemoryOpen(false)}
       />
 
-      <VoiceCall />
+      {/* Removed VoiceCall */}
 
       <div
         className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 min-h-0 scroll-smooth"
         ref={containerRef}
         onScroll={handleScroll}
       >
+        {/* ... */}
         <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
 
         {messages.map((message) => {

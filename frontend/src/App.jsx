@@ -10,12 +10,34 @@ import { useAuthStore } from "./store/useAuthStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import { useThemeStore } from "./store/useThemeStore";
+import { useChatStore } from "./store/useChattingStore";
+import { useVideoCallStore } from "./store/useVideoCallStore";
+import { useVoiceCallStore } from "./store/useVoiceCallStore";
+import VideoCall from "./components/VideoCall";
+import VoiceCall from "./components/VoiceCall";
+
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
-  const { theme, setTheme } = useThemeStore();
+  const { theme } = useThemeStore();
+  const { callStatus } = useVideoCallStore();
+  const { callStatus: voiceCallStatus } = useVoiceCallStore();
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (authUser) {
+      useVideoCallStore.getState().initializeListeners();
+      useVoiceCallStore.getState().initializeListeners();
+      useChatStore.getState().subscribeToPush();
+    }
+    return () => {
+      useVideoCallStore.getState().cleanupListeners();
+      useVoiceCallStore.getState().cleanupListeners();
+    };
+  }, [authUser]);
+
   console.log({ authUser });
   if (isCheckingAuth && !authUser)
     return (
@@ -46,6 +68,8 @@ const App = () => {
         />
       </Routes>
       <Toaster />
+      {authUser && callStatus !== "IDLE" && <VideoCall />}
+      {authUser && voiceCallStatus !== "IDLE" && <VoiceCall />}
     </div>
   );
 };

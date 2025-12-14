@@ -5,18 +5,9 @@ import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer.jsx";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { useVideoCallStore } from "../store/useVideoCallStore";
-import VideoCall from "../components/VideoCall";
 
 const HomePage = () => {
   const { selectedUser } = useChatStore();
-  const { callStatus } = useVideoCallStore();
-
-  useEffect(() => {
-    useVideoCallStore.getState().initializeListeners();
-    useChatStore.getState().subscribeToPush(); // Request notification permission
-    return () => useVideoCallStore.getState().cleanupListeners();
-  }, []);
 
   return (
     <div className="h-screen bg-base-200">
@@ -32,7 +23,6 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-      {callStatus !== "IDLE" && <VideoCall />}
     </div>
   );
 };
