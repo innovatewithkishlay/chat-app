@@ -39,6 +39,7 @@ const Sidebar = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
+  const listRef = useRef(null);
 
   const handleAction = async (id, actionFn) => {
     if (loadingId) return;
