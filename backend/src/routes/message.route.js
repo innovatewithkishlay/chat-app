@@ -7,7 +7,6 @@ import {
   deleteMessage,
   markMessagesAsSeen,
   editMessage,
-  editMessage,
   reactToMessage,
   clearChat,
   deleteChat,
