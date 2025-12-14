@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone } from "lucide-react";
+import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone, Trash2 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
@@ -104,6 +104,18 @@ const ChatHeader = ({ onOpenMemory }) => {
                 title="Video Call"
               >
                 {isPro ? <Video size={18} /> : <Lock size={16} />}
+              </button>
+
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to clear this chat?")) {
+                    useChatStore.getState().clearChat(selectedUser._id);
+                  }
+                }}
+                className="btn btn-ghost btn-circle btn-sm text-error"
+                title="Clear Chat"
+              >
+                <Trash2 size={20} />
               </button>
             </>
           )}

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile } from "lucide-react";
+import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2 } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
@@ -431,7 +431,7 @@ const Sidebar = () => {
                       className="p-1 hover:bg-base-200 rounded text-error"
                       title="Delete Chat"
                     >
-                      <X size={14} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </button>

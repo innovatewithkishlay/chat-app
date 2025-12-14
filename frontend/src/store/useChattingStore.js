@@ -525,20 +525,11 @@ export const useChatStore = create((set, get) => ({
       }
     });
 
-    socket.on("messageDeleted", ({ messageId, isSoft }) => {
-      if (isSoft) {
-        set((state) => ({
-          messages: state.messages.map((m) =>
-            m._id === messageId
-              ? { ...m, text: "This message was deleted", image: null, isDeleted: true }
-              : m
-          ),
-        }));
-      } else {
-        set({
-          messages: get().messages.filter((m) => m._id !== messageId),
-        });
-      }
+    socket.on("messageDeleted", ({ messageId }) => {
+      // Always remove the message completely as per user request
+      set({
+        messages: get().messages.filter((m) => m._id !== messageId),
+      });
     });
 
     socket.on("messageUpdated", (updatedMessage) => {
