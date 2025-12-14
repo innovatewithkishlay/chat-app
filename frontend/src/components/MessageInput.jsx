@@ -28,13 +28,13 @@ const MessageInput = () => {
 
   useEffect(() => {
     return () => {
-      if (isTypingRef.current) {
+      if (isTypingRef.current && selectedUser) {
         sendTypingStop(selectedUser._id, isGroup ? selectedUser._id : null);
         isTypingRef.current = false;
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [selectedUser._id, isGroup, sendTypingStop]);
+  }, [selectedUser, isGroup, sendTypingStop]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];

@@ -26,7 +26,7 @@ const ChatContainer = () => {
       {/* ... */}
       <ChatMemory
         conversationId={
-          useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id))?._id || selectedUser._id
+          useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser?._id))?._id || selectedUser?._id
         }
         isOpen={isMemoryOpen}
         onClose={() => setIsMemoryOpen(false)}
