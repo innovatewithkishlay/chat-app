@@ -126,11 +126,13 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post("/requests/accept", { requestId });
       const { conversation } = res.data;
+      const newFriend = conversation.participants.find(p => p._id !== useAuthStore.getState().authUser._id);
 
       set((state) => ({
         talkRequests: state.talkRequests.filter((r) => r._id !== requestId),
         conversations: [conversation, ...state.conversations],
-        selectedUser: conversation.participants.find(p => p._id !== useAuthStore.getState().authUser._id)
+        friends: [...state.friends, newFriend],
+        selectedUser: newFriend
       }));
       toast.success("Request accepted");
     } catch (error) {
