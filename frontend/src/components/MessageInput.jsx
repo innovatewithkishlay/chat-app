@@ -11,6 +11,8 @@ const MessageInput = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
+  const [isSending, setIsSending] = useState(false);
+
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const timerRef = useRef(null);
@@ -84,7 +86,9 @@ const MessageInput = () => {
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!text.trim() && !imagePreview && !audioBlob) return;
+    if (isSending) return;
 
+    setIsSending(true);
     try {
       let content = {
         text: text.trim(),
@@ -105,6 +109,8 @@ const MessageInput = () => {
 
     } catch (error) {
       console.error("Failed to send message:", error);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -220,7 +226,7 @@ const MessageInput = () => {
             value={text}
             onChange={handleTyping}
             onKeyDown={handleKeyDown}
-            disabled={isRecording}
+            disabled={isRecording || isSending}
           />
 
           <input
@@ -235,7 +241,7 @@ const MessageInput = () => {
             type="button"
             className={`hidden sm:flex btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
             onClick={handleImageClick}
-            disabled={isRecording}
+            disabled={isRecording || isSending}
           >
             <Image size={20} />
           </button>
@@ -244,15 +250,17 @@ const MessageInput = () => {
         {text.trim() || imagePreview || audioBlob ? (
           <button
             type="submit"
+            disabled={isSending}
             className="btn btn-sm btn-circle btn-primary shadow-lg hover:scale-105 transition-transform"
           >
-            <Send size={18} />
+            {isSending ? <span className="loading loading-spinner loading-xs"></span> : <Send size={18} />}
           </button>
         ) : (
           <button
             type="button"
             className={`btn btn-sm btn-circle ${isRecording ? "btn-error animate-pulse" : "btn-ghost text-zinc-400"}`}
             onClick={isRecording ? stopRecording : startRecording}
+            disabled={isSending}
           >
             {isRecording ? <StopCircle size={20} /> : <Mic size={20} />}
           </button>

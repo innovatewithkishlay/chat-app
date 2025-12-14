@@ -12,6 +12,12 @@ export const sendTalkRequest = async (req, res) => {
             return res.status(400).json({ message: "You cannot send a request to yourself." });
         }
 
+        // Check if already friends
+        const sender = await User.findById(senderId);
+        if (sender.friends.includes(receiverId)) {
+            return res.status(400).json({ message: "You are already friends with this user." });
+        }
+
         // Check if conversation already exists
         const existingConversation = await Conversation.findOne({
             participants: { $all: [senderId, receiverId] },
@@ -50,8 +56,10 @@ export const sendTalkRequest = async (req, res) => {
 
         await newRequest.save();
 
-        // Populate sender info for real-time update
-        const populatedRequest = await TalkRequest.findById(newRequest._id).populate("sender", "fullname username profilePic");
+        // Populate sender and receiver info for real-time update and response
+        const populatedRequest = await TalkRequest.findById(newRequest._id)
+            .populate("sender", "fullname username profilePic")
+            .populate("receiver", "fullname username profilePic");
 
         // Socket: Notify receiver
         const receiverSocketId = getReceiverSocketId(receiverId);

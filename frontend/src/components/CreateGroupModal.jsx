@@ -6,8 +6,10 @@ const CreateGroupModal = ({ onClose }) => {
     const { friends, createGroup } = useChatStore();
     const [groupName, setGroupName] = useState("");
     const [selectedFriends, setSelectedFriends] = useState([]);
+    const [isCreating, setIsCreating] = useState(false);
 
     const toggleFriend = (friendId) => {
+        if (isCreating) return;
         if (selectedFriends.includes(friendId)) {
             setSelectedFriends(selectedFriends.filter((id) => id !== friendId));
         } else {
@@ -18,9 +20,15 @@ const CreateGroupModal = ({ onClose }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!groupName.trim() || selectedFriends.length === 0) return;
+        if (isCreating) return;
 
-        await createGroup({ name: groupName, members: selectedFriends });
-        onClose();
+        setIsCreating(true);
+        try {
+            await createGroup({ name: groupName, members: selectedFriends });
+            onClose();
+        } finally {
+            setIsCreating(false);
+        }
     };
 
     return (
@@ -28,7 +36,7 @@ const CreateGroupModal = ({ onClose }) => {
             <div className="bg-base-100 rounded-lg p-6 w-full max-w-md shadow-xl">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Create New Group</h2>
-                    <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
+                    <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost" disabled={isCreating}>
                         <X className="size-5" />
                     </button>
                 </div>
@@ -45,6 +53,7 @@ const CreateGroupModal = ({ onClose }) => {
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value)}
                             required
+                            disabled={isCreating}
                         />
                     </div>
 
@@ -60,7 +69,7 @@ const CreateGroupModal = ({ onClose }) => {
                                     <div
                                         key={friend._id}
                                         className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedFriends.includes(friend._id) ? "bg-primary/10" : "hover:bg-base-200"
-                                            }`}
+                                            } ${isCreating ? "opacity-50 cursor-not-allowed" : ""}`}
                                         onClick={() => toggleFriend(friend._id)}
                                     >
                                         <div className="relative">
@@ -91,9 +100,9 @@ const CreateGroupModal = ({ onClose }) => {
                     <button
                         type="submit"
                         className="btn btn-primary w-full"
-                        disabled={!groupName.trim() || selectedFriends.length === 0}
+                        disabled={!groupName.trim() || selectedFriends.length === 0 || isCreating}
                     >
-                        Create Group
+                        {isCreating ? <span className="loading loading-spinner loading-sm"></span> : "Create Group"}
                     </button>
                 </form>
             </div>

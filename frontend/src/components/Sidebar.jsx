@@ -37,9 +37,17 @@ const Sidebar = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState("chats"); // "chats" | "friends" | "requests"
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showMoodSelector, setShowMoodSelector] = useState(false);
+  const [loadingId, setLoadingId] = useState(null);
 
-  const listRef = useRef(null);
+  const handleAction = async (id, actionFn) => {
+    if (loadingId) return;
+    setLoadingId(id);
+    try {
+      await actionFn(id);
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   useEffect(() => {
     getTalkRequests();
@@ -210,16 +218,18 @@ const Sidebar = () => {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => acceptTalkRequest(request._id)}
+                      onClick={() => handleAction(request._id, acceptTalkRequest)}
+                      disabled={loadingId === request._id}
                       className="btn btn-xs btn-primary flex-1"
                     >
-                      Accept
+                      {loadingId === request._id ? <span className="loading loading-spinner loading-xs"></span> : "Accept"}
                     </button>
                     <button
-                      onClick={() => rejectTalkRequest(request._id)}
+                      onClick={() => handleAction(request._id, rejectTalkRequest)}
+                      disabled={loadingId === request._id}
                       className="btn btn-xs btn-ghost flex-1 hover:bg-error/10 hover:text-error"
                     >
-                      Reject
+                      {loadingId === request._id ? <span className="loading loading-spinner loading-xs"></span> : "Reject"}
                     </button>
                   </div>
                 </div>
@@ -272,13 +282,14 @@ const Sidebar = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (window.confirm("Are you sure you want to remove this friend?")) {
-                          removeFriend(friend._id);
+                          handleAction(friend._id, removeFriend);
                         }
                       }}
+                      disabled={loadingId === friend._id}
                       className="btn btn-xs btn-square btn-ghost text-error"
                       title="Remove Friend"
                     >
-                      <X className="size-4" />
+                      {loadingId === friend._id ? <span className="loading loading-spinner loading-xs"></span> : <X className="size-4" />}
                     </button>
                   </div>
                 </div>
@@ -308,11 +319,20 @@ const Sidebar = () => {
                     <div className="text-xs text-zinc-400">@{user.username}</div>
                   </div>
                   <button
-                    onClick={() => sendTalkRequest(user._id)}
+                    onClick={() => handleAction(user._id, sendTalkRequest)}
+                    disabled={loadingId === user._id || sentRequests.some(r => r.receiver._id === user._id) || friends.some(f => f._id === user._id)}
                     className="btn btn-xs btn-circle btn-primary"
                     title="Send Talk Request"
                   >
-                    <UserPlus className="size-4" />
+                    {loadingId === user._id ? (
+                      <span className="loading loading-spinner loading-xs"></span>
+                    ) : sentRequests.some(r => r.receiver._id === user._id) ? (
+                      <Inbox className="size-4 opacity-50" />
+                    ) : friends.some(f => f._id === user._id) ? (
+                      <MessageSquare className="size-4" />
+                    ) : (
+                      <UserPlus className="size-4" />
+                    )}
                   </button>
                 </div>
               ))
@@ -425,13 +445,14 @@ const Sidebar = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (window.confirm("Delete this chat?")) {
-                          useChatStore.getState().deleteChat(conversation._id);
+                          handleAction(conversation._id, useChatStore.getState().deleteChat);
                         }
                       }}
+                      disabled={loadingId === conversation._id}
                       className="p-1 hover:bg-base-200 rounded text-error"
                       title="Delete Chat"
                     >
-                      <Trash2 size={14} />
+                      {loadingId === conversation._id ? <span className="loading loading-spinner loading-xs"></span> : <Trash2 size={14} />}
                     </button>
                   </div>
                 </button>
@@ -453,3 +474,4 @@ const Sidebar = () => {
   );
 };
 export default Sidebar;
+

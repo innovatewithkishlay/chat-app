@@ -15,6 +15,10 @@ const ChatHeader = ({ onOpenMemory }) => {
   const [showProModal, setShowProModal] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
 
+  const [isClearing, setIsClearing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
   const isGroup = !!selectedUser.members;
   const isPro = authUser.plan === "PRO";
 
@@ -35,8 +39,41 @@ const ChatHeader = ({ onOpenMemory }) => {
   };
 
   const handleLeaveGroup = async () => {
+    if (isLeaving) return;
     if (window.confirm("Are you sure you want to leave this group?")) {
-      await leaveGroup(selectedUser._id);
+      setIsLeaving(true);
+      try {
+        await leaveGroup(selectedUser._id);
+      } finally {
+        setIsLeaving(false);
+      }
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (isClearing) return;
+    if (window.confirm("Are you sure you want to clear this chat?")) {
+      setIsClearing(true);
+      try {
+        await useChatStore.getState().clearChat(selectedUser._id);
+      } finally {
+        setIsClearing(false);
+      }
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (isDeleting) return;
+    if (window.confirm("Are you sure you want to delete this chat? It will be hidden until a new message arrives.")) {
+      setIsDeleting(true);
+      try {
+        const conversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id));
+        if (conversation) {
+          await useChatStore.getState().deleteChat(conversation._id);
+        }
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -107,15 +144,12 @@ const ChatHeader = ({ onOpenMemory }) => {
               </button>
 
               <button
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to clear this chat?")) {
-                    useChatStore.getState().clearChat(selectedUser._id);
-                  }
-                }}
+                onClick={handleClearChat}
+                disabled={isClearing}
                 className="btn btn-ghost btn-circle btn-sm text-error"
                 title="Clear Chat"
               >
-                <Trash2 size={20} />
+                {isClearing ? <span className="loading loading-spinner loading-xs"></span> : <Trash2 size={20} />}
               </button>
             </>
           )}
@@ -128,25 +162,13 @@ const ChatHeader = ({ onOpenMemory }) => {
               {!isGroup && (
                 <>
                   <li>
-                    <button onClick={() => {
-                      if (window.confirm("Are you sure you want to clear this chat? Messages will be removed for you.")) {
-                        useChatStore.getState().clearChat(selectedUser._id);
-                      }
-                    }} className="text-error">
-                      Clear Chat
+                    <button onClick={handleClearChat} disabled={isClearing} className="text-error">
+                      {isClearing ? "Clearing..." : "Clear Chat"}
                     </button>
                   </li>
                   <li>
-                    <button onClick={() => {
-                      if (window.confirm("Are you sure you want to delete this chat? It will be hidden until a new message arrives.")) {
-                        // We need conversationId. Let's find it from store.
-                        const conversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id));
-                        if (conversation) {
-                          useChatStore.getState().deleteChat(conversation._id);
-                        }
-                      }
-                    }} className="text-error">
-                      Delete Chat
+                    <button onClick={handleDeleteChat} disabled={isDeleting} className="text-error">
+                      {isDeleting ? "Deleting..." : "Delete Chat"}
                     </button>
                   </li>
                 </>
@@ -157,7 +179,9 @@ const ChatHeader = ({ onOpenMemory }) => {
                     <button onClick={() => setShowGroupSettings(true)}>Group Settings</button>
                   </li>
                   <li>
-                    <button onClick={handleLeaveGroup} className="text-error">Leave Group</button>
+                    <button onClick={handleLeaveGroup} disabled={isLeaving} className="text-error">
+                      {isLeaving ? "Leaving..." : "Leave Group"}
+                    </button>
                   </li>
                 </>
               )}

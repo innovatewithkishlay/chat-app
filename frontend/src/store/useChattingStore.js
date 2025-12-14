@@ -596,17 +596,23 @@ export const useChatStore = create((set, get) => ({
     });
 
     socket.on("newTalkRequest", (newRequest) => {
-      toast.success(`New talk request from ${newRequest.sender.fullname}`);
-      set((state) => ({
-        talkRequests: [newRequest, ...state.talkRequests],
-      }));
+      set((state) => {
+        if (state.talkRequests.some(r => r._id === newRequest._id)) return state;
+        toast.success(`New talk request from ${newRequest.sender.fullname}`);
+        return {
+          talkRequests: [newRequest, ...state.talkRequests],
+        };
+      });
     });
 
     socket.on("talkRequestAccepted", ({ conversation }) => {
-      toast.success("Your talk request was accepted!");
-      set((state) => ({
-        conversations: [conversation, ...state.conversations],
-      }));
+      set((state) => {
+        if (state.conversations.some(c => c._id === conversation._id)) return state;
+        toast.success("Your talk request was accepted!");
+        return {
+          conversations: [conversation, ...state.conversations],
+        };
+      });
     });
 
     socket.on("callUser", (data) => {
@@ -638,10 +644,12 @@ export const useChatStore = create((set, get) => ({
     });
 
     socket.on("newFriend", (newFriend) => {
-      set((state) => ({
-        friends: [...state.friends, newFriend],
-      }));
-      toast.success(`You are now friends with ${newFriend.fullname}`);
+      set((state) => {
+        if (state.friends.some(f => f._id === newFriend._id)) return state;
+        return {
+          friends: [...state.friends, newFriend],
+        };
+      });
     });
 
     socket.on("friendRemoved", (friendId) => {
