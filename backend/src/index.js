@@ -66,9 +66,7 @@ setInterval(async () => {
   } catch (error) {
     console.error("Error in reminder cron:", error);
   }
-} catch (error) {
-  console.error("Error in reminder cron:", error);
-}
+
 }, 60000);
 
 import path from "path";
