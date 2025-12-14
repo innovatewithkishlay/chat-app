@@ -14,6 +14,7 @@ const HomePage = () => {
 
   useEffect(() => {
     useVideoCallStore.getState().initializeListeners();
+    useChatStore.getState().subscribeToPush(); // Request notification permission
     return () => useVideoCallStore.getState().cleanupListeners();
   }, []);
 

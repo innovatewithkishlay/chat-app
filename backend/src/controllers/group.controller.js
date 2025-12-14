@@ -167,10 +167,32 @@ export const sendGroupMessage = async (req, res) => {
             .populate("senderId", "fullname username profilePic");
 
         // Notify all members
-        group.members.forEach((memberId) => {
+        const webpush = await import("../lib/webpush.js").then(m => m.default);
+        const Subscription = await import("../models/subscription.model.js").then(m => m.default);
+
+        group.members.forEach(async (memberId) => {
             const socketId = getReceiverSocketId(memberId);
             if (socketId) {
                 io.to(socketId).emit("newGroupMessage", populatedMessage);
+            } else {
+                // Offline member, send push
+                if (memberId.toString() !== senderId.toString()) {
+                    const subscriptions = await Subscription.find({ userId: memberId });
+                    const payload = JSON.stringify({
+                        title: `New message in ${group.name}`,
+                        body: text || (image ? "Sent an image" : (audio ? "Sent an audio message" : "Sent a message")),
+                        icon: "/icon-192x192.png",
+                        url: `/chat`,
+                    });
+
+                    subscriptions.forEach(sub => {
+                        webpush.sendNotification(sub, payload).catch(err => {
+                            if (err.statusCode === 410) {
+                                Subscription.findByIdAndDelete(sub._id);
+                            }
+                        });
+                    });
+                }
             }
         });
 

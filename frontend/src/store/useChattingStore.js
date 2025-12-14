@@ -3,6 +3,21 @@ import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export const useChatStore = create((set, get) => ({
   messages: [],
   conversations: [],
@@ -396,6 +411,33 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  subscribeToPush: async () => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+
+      const registration = await navigator.serviceWorker.ready;
+
+      // Fetch VAPID Key
+      const configRes = await axiosInstance.get("/notifications/config");
+      const vapidPublicKey = configRes.data.vapidPublicKey;
+
+      const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedVapidKey,
+      });
+
+      await axiosInstance.post("/notifications/subscribe", subscription);
+      console.log("Push notification subscribed");
+    } catch (error) {
+      console.error("Error subscribing to push:", error);
+    }
+  },
+
   subscribeToMessages: () => {
     const { selectedUser } = get();
     get().unsubscribeFromMessages(); // Prevent duplicates
@@ -415,6 +457,14 @@ export const useChatStore = create((set, get) => ({
           ? `New message from ${senderName}: ${newMessage.text || "Sent an attachment"}`
           : `New message from ${senderName}`;
         toast.success(toastMessage);
+
+        // Local System Notification if tab is hidden
+        if (document.visibilityState === "hidden" && Notification.permission === "granted") {
+          new Notification(`New message from ${senderName}`, {
+            body: showPreview ? (newMessage.text || "Sent an attachment") : "You have a new message",
+            icon: "/vite.svg", // Use app icon
+          });
+        }
       }
     });
 

@@ -39,6 +39,9 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/conversations", conversationRoutes);
+import notificationRoutes from "./routes/notification.route.js";
+app.use("/api/notifications", notificationRoutes);
+import "./lib/webpush.js";
 
 // Reminder Cron
 setInterval(async () => {

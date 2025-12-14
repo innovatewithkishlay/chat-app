@@ -115,6 +115,27 @@ export const sendMessage = async (req, res) => {
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
       io.to(receiverSocketId).emit("conversationUpdated", populatedConversation);
+    } else {
+      // User is offline, send push notification
+      const subscriptions = await import("../models/subscription.model.js").then(m => m.default.find({ userId: recieverId }));
+      const webpush = await import("../lib/webpush.js").then(m => m.default);
+
+      const payload = JSON.stringify({
+        title: `New message from ${req.user.fullname}`,
+        body: text || (image ? "Sent an image" : (audio ? "Sent an audio message" : "Sent a message")),
+        icon: "/icon-192x192.png", // Ensure this exists in frontend public
+        url: `/chat`, // Or specific conversation URL
+      });
+
+      subscriptions.forEach(sub => {
+        webpush.sendNotification(sub, payload).catch(err => {
+          console.error("Error sending push:", err);
+          if (err.statusCode === 410) {
+            // Subscription expired, delete it
+            import("../models/subscription.model.js").then(m => m.default.findByIdAndDelete(sub._id));
+          }
+        });
+      });
     }
 
     // Emit to sender as well to update their sidebar (move to top, show last message)
