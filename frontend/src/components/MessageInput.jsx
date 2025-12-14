@@ -1,9 +1,8 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, Send, X, Smile, Mic, StopCircle, Trash2 } from "lucide-react";
+import { Image, Send, X, Mic, StopCircle, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
-import EmojiPicker from "emoji-picker-react";
 
 const MessageInput = () => {
   const [text, setText] = useState("");
@@ -11,13 +10,11 @@ const MessageInput = () => {
   const [audioBlob, setAudioBlob] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const timerRef = useRef(null);
   const inputRef = useRef(null);
-  const emojiPickerRef = useRef(null);
   const { sendMessage, sendGroupMessage, selectedUser, conversations, sentRequests, sendTalkRequest, friends } = useChatStore();
   const { authUser, socket } = useAuthStore();
   const typingTimeoutRef = useRef(null);
@@ -36,23 +33,6 @@ const MessageInput = () => {
 
   // Check if friends (only for 1-1 chats)
   const isFriend = !isGroup && friends.some((f) => f._id === selectedUser._id);
-
-  // Close emoji picker when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
-        setShowEmojiPicker(false);
-      }
-    };
-
-    if (showEmojiPicker) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showEmojiPicker]);
 
   if (!isGroup && !isFriend) {
     return (
@@ -140,7 +120,6 @@ const MessageInput = () => {
     setImagePreview(null);
     setAudioBlob(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    setShowEmojiPicker(false); // Close picker on send
 
     // Stop typing immediately (only for 1-1 for now)
     if (socket && !isGroup) socket.emit("stopTyping", { receiverId: selectedUser._id });
@@ -192,19 +171,6 @@ const MessageInput = () => {
     return `${min}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const handleEmojiClick = (emojiObject) => {
-    const cursor = inputRef.current.selectionStart;
-    const msg = text.slice(0, cursor) + emojiObject.emoji + text.slice(cursor);
-    setText(msg);
-
-    // Restore cursor position after state update
-    setTimeout(() => {
-      inputRef.current.selectionStart = cursor + emojiObject.emoji.length;
-      inputRef.current.selectionEnd = cursor + emojiObject.emoji.length;
-      inputRef.current.focus();
-    }, 0);
-  };
-
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -214,20 +180,6 @@ const MessageInput = () => {
 
   return (
     <div className="p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative">
-      {/* Emoji Picker */}
-      {showEmojiPicker && (
-        <div
-          ref={emojiPickerRef}
-          className="absolute bottom-20 left-4 z-[9999] shadow-2xl rounded-xl border border-base-300"
-        >
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            theme="auto"
-            lazyLoadEmojis={true}
-          />
-        </div>
-      )}
-
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2 animate-in slide-in-from-bottom-2">
           <div className="relative">
@@ -259,17 +211,6 @@ const MessageInput = () => {
 
       <form onSubmit={handleSendMessage} className="flex items-center gap-3">
         <div className="flex-1 flex gap-2 relative items-center">
-
-          <button
-            type="button"
-            className={`btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-primary transition-colors ${showEmojiPicker ? "text-primary bg-base-200" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowEmojiPicker(!showEmojiPicker);
-            }}
-          >
-            <Smile size={20} />
-          </button>
 
           <input
             ref={inputRef}
