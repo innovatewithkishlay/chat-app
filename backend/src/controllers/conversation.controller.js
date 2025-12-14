@@ -3,11 +3,19 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
 
 export const addMemory = async (req, res) => {
     try {
-        const { id: conversationId } = req.params;
+        const { id } = req.params; // Can be conversationId OR userId
         const { text, referenceMsgId } = req.body;
         const userId = req.user._id;
 
-        const conversation = await Conversation.findById(conversationId);
+        let conversation = await Conversation.findById(id);
+
+        if (!conversation) {
+            // Try finding conversation where 'id' is the other participant
+            conversation = await Conversation.findOne({
+                participants: { $all: [userId, id] },
+            });
+        }
+
         if (!conversation) return res.status(404).json({ message: "Conversation not found" });
 
         // Check if user is participant
@@ -23,7 +31,7 @@ export const addMemory = async (req, res) => {
         conversation.participants.forEach(participantId => {
             const socketId = getReceiverSocketId(participantId);
             if (socketId) {
-                io.to(socketId).emit("memoryUpdated", { conversationId, memory: conversation.memory });
+                io.to(socketId).emit("memoryUpdated", { conversationId: conversation._id, memory: conversation.memory });
             }
         });
 
@@ -36,10 +44,18 @@ export const addMemory = async (req, res) => {
 
 export const removeMemory = async (req, res) => {
     try {
-        const { id: conversationId, memoryId } = req.params;
+        const { id, memoryId } = req.params; // Can be conversationId OR userId
         const userId = req.user._id;
 
-        const conversation = await Conversation.findById(conversationId);
+        let conversation = await Conversation.findById(id);
+
+        if (!conversation) {
+            // Try finding conversation where 'id' is the other participant
+            conversation = await Conversation.findOne({
+                participants: { $all: [userId, id] },
+            });
+        }
+
         if (!conversation) return res.status(404).json({ message: "Conversation not found" });
 
         if (!conversation.participants.includes(userId)) {
@@ -53,7 +69,7 @@ export const removeMemory = async (req, res) => {
         conversation.participants.forEach(participantId => {
             const socketId = getReceiverSocketId(participantId);
             if (socketId) {
-                io.to(socketId).emit("memoryUpdated", { conversationId, memory: conversation.memory });
+                io.to(socketId).emit("memoryUpdated", { conversationId: conversation._id, memory: conversation.memory });
             }
         });
 

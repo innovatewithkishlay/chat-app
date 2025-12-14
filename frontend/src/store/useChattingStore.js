@@ -361,17 +361,20 @@ export const useChatStore = create((set, get) => ({
   addMemory: async (conversationId, text, referenceMsgId) => {
     try {
       const res = await axiosInstance.post(`/conversations/${conversationId}/memory`, { text, referenceMsgId });
-      // Optimistic or wait for socket
+      set({ chatMemory: res.data });
+      toast.success("Memory added");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to add memory");
     }
   },
 
   removeMemory: async (conversationId, memoryId) => {
     try {
-      await axiosInstance.delete(`/conversations/${conversationId}/memory/${memoryId}`);
+      const res = await axiosInstance.delete(`/conversations/${conversationId}/memory/${memoryId}`);
+      set({ chatMemory: res.data });
+      toast.success("Memory removed");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to remove memory");
     }
   },
 
@@ -652,17 +655,8 @@ export const useChatStore = create((set, get) => ({
     });
 
     socket.on("memoryUpdated", ({ conversationId, memory }) => {
-      // If we are in this conversation, update memory
-      // We need to know if the current selectedUser corresponds to this conversation
-      // For 1-1, selectedUser._id is the other user, but conversationId is the conversation _id.
-      // We need to check if the conversation is the one we are viewing.
-      // Or we can just update the conversation in the list and if it's selected, update chatMemory.
       set(state => {
         const updatedConversations = state.conversations.map(c => c._id === conversationId ? { ...c, memory } : c);
-
-        // Check if currently selected conversation matches
-        // This is tricky because selectedUser is a User object, not Conversation.
-        // But we can find the conversation.
         const currentConv = updatedConversations.find(c => c.participants.some(p => p._id === state.selectedUser?._id));
 
         if (currentConv && currentConv._id === conversationId) {

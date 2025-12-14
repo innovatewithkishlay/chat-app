@@ -138,7 +138,10 @@ const ChatContainer = () => {
       {!isGroup && <HealthIndicator />}
 
       <ChatMemory
-        conversationId={selectedUser._id}
+        conversationId={
+          // Try to find the conversation ID from the store, otherwise fallback to selectedUser._id (which backend now handles)
+          useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id))?._id || selectedUser._id
+        }
         isOpen={isMemoryOpen}
         onClose={() => setIsMemoryOpen(false)}
       />
