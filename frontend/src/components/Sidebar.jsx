@@ -37,6 +37,7 @@ const Sidebar = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState("chats"); // "chats" | "friends" | "requests"
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
 
   const handleAction = async (id, actionFn) => {
