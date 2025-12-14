@@ -5,6 +5,7 @@ import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
+import CallHistory from "./CallHistory";
 import gsap from "gsap";
 
 const Sidebar = () => {
@@ -153,6 +154,12 @@ const Sidebar = () => {
               <span className="absolute top-1 right-1 size-2 bg-error rounded-full animate-pulse" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("calls")}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${activeTab === "calls" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
+          >
+            Calls
+          </button>
         </div>
 
         {/* Create Group & Filter */}
@@ -177,7 +184,9 @@ const Sidebar = () => {
       </div>
 
       <div className="overflow-y-auto w-full flex-1 p-2" ref={listRef}>
-        {activeTab === "requests" ? (
+        {activeTab === "calls" ? (
+          <CallHistory />
+        ) : activeTab === "requests" ? (
           // Requests View
           <>
             {talkRequests.length === 0 ? (

@@ -5,6 +5,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import CallHistory from "../models/callHistory.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +16,7 @@ const io = new Server(server, {
       "http://localhost:5173",
       "http://localhost:5174",
       "https://chatify-hgj2.onrender.com",
+      "https://touki.onrender.com",
       process.env.CLIENT_URL,
     ].filter(Boolean),
     credentials: true,
@@ -130,6 +132,19 @@ io.on("connection", async (socket) => {
         return;
       }
 
+      // Create Call History Entry
+      const newCall = new CallHistory({
+        callType: "VIDEO",
+        caller: sender._id,
+        receiver: receiver._id,
+        participants: [sender._id, receiver._id],
+        status: "INITIATED",
+      });
+      await newCall.save();
+
+      // Send callId to sender so they can reference it later
+      socket.emit("call:created", { callId: newCall._id });
+
       if (receiverSocketId) {
         // Emit INCOMING to receiver
         console.log("SOCKET: Emitting call:incoming to", receiverSocketId);
@@ -137,10 +152,16 @@ io.on("connection", async (socket) => {
           signal: data.signalData,
           from: data.from,
           name: data.name,
+          callId: newCall._id,
         });
       } else {
         console.log("SOCKET: Receiver offline");
         socket.emit("call:error", { message: "User is offline." });
+
+        // Mark as MISSED immediately if offline
+        newCall.status = "MISSED";
+        newCall.endedAt = new Date();
+        await newCall.save();
       }
     } catch (error) {
       console.error("Error in call:initiate:", error);
@@ -149,27 +170,59 @@ io.on("connection", async (socket) => {
   });
 
   // 2. Accept Call
-  socket.on("call:accept", (data) => {
-    // data: { signal, to }
+  socket.on("call:accept", async (data) => {
+    // data: { signal, to, callId }
     const receiverSocketId = getReceiverSocketId(data.to);
+
+    if (data.callId) {
+      await CallHistory.findByIdAndUpdate(data.callId, {
+        status: "ONGOING",
+        startedAt: new Date(),
+      });
+    }
+
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("call:accepted", { signal: data.signal });
+      io.to(receiverSocketId).emit("call:accepted", { signal: data.signal, callId: data.callId });
     }
   });
 
   // 3. Reject Call
-  socket.on("call:reject", (data) => {
-    // data: { to }
+  socket.on("call:reject", async (data) => {
+    // data: { to, callId }
     const receiverSocketId = getReceiverSocketId(data.to);
+
+    if (data.callId) {
+      await CallHistory.findByIdAndUpdate(data.callId, {
+        status: "REJECTED",
+        endedAt: new Date(),
+        endedBy: socket.user._id,
+      });
+    }
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("call:rejected", { reason: "Call rejected." });
     }
   });
 
   // 4. End Call
-  socket.on("call:end", (data) => {
-    // data: { to }
+  socket.on("call:end", async (data) => {
+    // data: { to, callId }
     const receiverSocketId = getReceiverSocketId(data.to);
+
+    if (data.callId) {
+      const call = await CallHistory.findById(data.callId);
+      if (call) {
+        const endedAt = new Date();
+        const duration = call.startedAt ? Math.round((endedAt - new Date(call.startedAt)) / 1000) : 0;
+
+        call.status = "ENDED";
+        call.endedAt = endedAt;
+        call.duration = duration;
+        call.endedBy = socket.user._id;
+        await call.save();
+      }
+    }
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("call:ended", { reason: "Call ended." });
     }
@@ -206,14 +259,31 @@ io.on("connection", async (socket) => {
         return;
       }
 
+      // Create Call History Entry
+      const newCall = new CallHistory({
+        callType: "VOICE",
+        caller: sender._id,
+        receiver: receiver._id,
+        participants: [sender._id, receiver._id],
+        status: "INITIATED",
+      });
+      await newCall.save();
+
+      socket.emit("voice:call:created", { callId: newCall._id });
+
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("voice:call:incoming", {
           signal: data.signalData,
           from: data.from,
           name: data.name,
+          callId: newCall._id,
         });
       } else {
         socket.emit("voice:call:error", { message: "User is offline." });
+
+        newCall.status = "MISSED";
+        newCall.endedAt = new Date();
+        await newCall.save();
       }
     } catch (error) {
       console.error("Error in voice:call:initiate:", error);
@@ -222,24 +292,56 @@ io.on("connection", async (socket) => {
   });
 
   // 2. Accept Voice Call
-  socket.on("voice:call:accept", (data) => {
+  socket.on("voice:call:accept", async (data) => {
     const receiverSocketId = getReceiverSocketId(data.to);
+
+    if (data.callId) {
+      await CallHistory.findByIdAndUpdate(data.callId, {
+        status: "ONGOING",
+        startedAt: new Date(),
+      });
+    }
+
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("voice:call:accepted", { signal: data.signal });
+      io.to(receiverSocketId).emit("voice:call:accepted", { signal: data.signal, callId: data.callId });
     }
   });
 
   // 3. Reject Voice Call
-  socket.on("voice:call:reject", (data) => {
+  socket.on("voice:call:reject", async (data) => {
     const receiverSocketId = getReceiverSocketId(data.to);
+
+    if (data.callId) {
+      await CallHistory.findByIdAndUpdate(data.callId, {
+        status: "REJECTED",
+        endedAt: new Date(),
+        endedBy: socket.user._id,
+      });
+    }
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("voice:call:rejected", { reason: "Call rejected." });
     }
   });
 
   // 4. End Voice Call
-  socket.on("voice:call:end", (data) => {
+  socket.on("voice:call:end", async (data) => {
     const receiverSocketId = getReceiverSocketId(data.to);
+
+    if (data.callId) {
+      const call = await CallHistory.findById(data.callId);
+      if (call) {
+        const endedAt = new Date();
+        const duration = call.startedAt ? Math.round((endedAt - new Date(call.startedAt)) / 1000) : 0;
+
+        call.status = "ENDED";
+        call.endedAt = endedAt;
+        call.duration = duration;
+        call.endedBy = socket.user._id;
+        await call.save();
+      }
+    }
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("voice:call:ended", { reason: "Call ended." });
     }

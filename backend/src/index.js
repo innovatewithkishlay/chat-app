@@ -24,6 +24,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:5174",
       "https://chatify-hgj2.onrender.com",
+      "https://touki.onrender.com",
       process.env.CLIENT_URL,
     ].filter(Boolean),
     credentials: true,
@@ -39,6 +40,8 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/conversations", conversationRoutes);
+import callHistoryRoutes from "./routes/callHistory.route.js";
+app.use("/api/calls", callHistoryRoutes);
 import notificationRoutes from "./routes/notification.route.js";
 app.use("/api/notifications", notificationRoutes);
 import "./lib/webpush.js";
