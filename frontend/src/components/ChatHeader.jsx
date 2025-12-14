@@ -108,23 +108,49 @@ const ChatHeader = ({ onOpenMemory }) => {
             </>
           )}
 
-          {isGroup && (
-            <>
-              <button
-                onClick={() => setShowGroupSettings(true)}
-                className="btn btn-circle btn-sm btn-ghost"
-                title="Group Settings"
-              >
-                <Settings size={18} />
-              </button>
-              <button
-                onClick={handleLeaveGroup}
-                className="btn btn-sm btn-error btn-outline"
-              >
-                Leave
-              </button>
-            </>
-          )}
+          <div className="dropdown dropdown-end">
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm">
+              <Settings size={20} />
+            </div>
+            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+              {!isGroup && (
+                <>
+                  <li>
+                    <button onClick={() => {
+                      if (window.confirm("Are you sure you want to clear this chat? Messages will be removed for you.")) {
+                        useChatStore.getState().clearChat(selectedUser._id);
+                      }
+                    }} className="text-error">
+                      Clear Chat
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => {
+                      if (window.confirm("Are you sure you want to delete this chat? It will be hidden until a new message arrives.")) {
+                        // We need conversationId. Let's find it from store.
+                        const conversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id));
+                        if (conversation) {
+                          useChatStore.getState().deleteChat(conversation._id);
+                        }
+                      }
+                    }} className="text-error">
+                      Delete Chat
+                    </button>
+                  </li>
+                </>
+              )}
+              {isGroup && (
+                <>
+                  <li>
+                    <button onClick={() => setShowGroupSettings(true)}>Group Settings</button>
+                  </li>
+                  <li>
+                    <button onClick={handleLeaveGroup} className="text-error">Leave Group</button>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
 
           <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-circle btn-sm">
             <X size={20} />

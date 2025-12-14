@@ -20,6 +20,17 @@ export const useCallHistoryStore = create((set, get) => ({
         }
     },
 
+    clearCallHistory: async () => {
+        try {
+            await axiosInstance.post("/calls/clear");
+            set({ calls: [] });
+            toast.success("Call history cleared");
+        } catch (error) {
+            console.error("Failed to clear call history:", error);
+            toast.error("Failed to clear call history");
+        }
+    },
+
     subscribeToCallUpdates: () => {
         const socket = useAuthStore.getState().socket;
         if (!socket) return;

@@ -447,12 +447,15 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
 
     socket.on("newMessage", (newMessage) => {
-      const { selectedUser, showNotifications, showPreview } = get();
+      const { selectedUser, showNotifications, showPreview, messages } = get();
       const isChatOpen = selectedUser && selectedUser._id === newMessage.senderId;
 
       if (isChatOpen) {
+        // Prevent duplicates
+        if (messages.some(m => m._id === newMessage._id)) return;
+
         set({
-          messages: [...get().messages, newMessage],
+          messages: [...messages, newMessage],
         });
       } else if (showNotifications) {
         const senderName = newMessage.senderId.fullname || "User";
@@ -472,12 +475,15 @@ export const useChatStore = create((set, get) => ({
     });
 
     socket.on("newGroupMessage", (newMessage) => {
-      const { selectedUser, groups, showNotifications, showPreview } = get();
+      const { selectedUser, groups, showNotifications, showPreview, messages } = get();
       const isGroupOpen = selectedUser && selectedUser._id === newMessage.groupId;
 
       if (isGroupOpen) {
+        // Prevent duplicates
+        if (messages.some(m => m._id === newMessage._id)) return;
+
         set({
-          messages: [...get().messages, newMessage],
+          messages: [...messages, newMessage],
         });
       } else if (showNotifications) {
         const groupName = groups.find(g => g._id === newMessage.groupId)?.name || "Group";
@@ -674,6 +680,20 @@ export const useChatStore = create((set, get) => ({
       }));
     });
 
+    socket.on("chat:cleared", ({ userToChatId }) => {
+      const { selectedUser } = get();
+      if (selectedUser && selectedUser._id === userToChatId) {
+        set({ messages: [] });
+      }
+    });
+
+    socket.on("conversation:deleted", ({ conversationId }) => {
+      set((state) => ({
+        conversations: state.conversations.filter((c) => c._id !== conversationId),
+        selectedUser: state.selectedUser && state.conversations.find(c => c._id === conversationId)?.participants.some(p => p._id === state.selectedUser._id) ? null : state.selectedUser
+      }));
+    });
+
     socket.on("reminderTriggered", (reminder) => {
       toast(`⏰ Reminder: ${reminder.messageId.text || "Check this message"}`, {
         duration: 6000,
@@ -712,6 +732,32 @@ export const useChatStore = create((set, get) => ({
     socket.off("memoryUpdated");
     socket.off("userUpdated");
     socket.off("reminderTriggered");
+    socket.off("chat:cleared");
+    socket.off("conversation:deleted");
     socket.off("connect");
+  },
+
+  clearChat: async (userId) => {
+    try {
+      await axiosInstance.post(`/messages/clear/${userId}`);
+      set({ messages: [] });
+      toast.success("Chat cleared");
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
+  deleteChat: async (conversationId) => {
+    try {
+      await axiosInstance.post(`/messages/delete/${conversationId}`);
+      set((state) => ({
+        conversations: state.conversations.filter((c) => c._id !== conversationId),
+        selectedUser: null,
+        messages: [],
+      }));
+      toast.success("Chat deleted");
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
   },
 }));

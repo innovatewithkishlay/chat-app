@@ -7,7 +7,10 @@ import {
   deleteMessage,
   markMessagesAsSeen,
   editMessage,
+  editMessage,
   reactToMessage,
+  clearChat,
+  deleteChat,
 } from "../controllers/message.controller.js";
 import { checkUploadLimits } from "../middlewares/limit.middleware.js";
 
@@ -20,5 +23,7 @@ router.put("/mark-seen/:id", protectRoute, markMessagesAsSeen);
 router.delete("/:id", protectRoute, deleteMessage);
 router.put("/edit/:id", protectRoute, editMessage);
 router.put("/react/:id", protectRoute, reactToMessage);
+router.post("/clear/:id", protectRoute, clearChat);
+router.post("/delete/:id", protectRoute, deleteChat);
 
 export { router };

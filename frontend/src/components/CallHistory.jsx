@@ -50,7 +50,19 @@ const CallHistory = () => {
 
     return (
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            <h2 className="text-2xl font-bold mb-6 px-2">Call History</h2>
+            <div className="flex items-center justify-between mb-6 px-2">
+                <h2 className="text-2xl font-bold">Call History</h2>
+                <button
+                    onClick={() => {
+                        if (window.confirm("Clear all call history?")) {
+                            useCallHistoryStore.getState().clearCallHistory();
+                        }
+                    }}
+                    className="btn btn-ghost btn-sm text-error"
+                >
+                    Clear History
+                </button>
+            </div>
 
             {calls.map((call) => {
                 const isCaller = call.caller._id === authUser._id;

@@ -11,6 +11,7 @@ export const getConversations = async (req, res) => {
     const userId = req.user._id;
     const conversations = await Conversation.find({
       participants: userId,
+      hiddenFor: { $ne: userId }, // Filter out hidden conversations
     })
       .populate({
         path: "participants",
@@ -21,13 +22,30 @@ export const getConversations = async (req, res) => {
       })
       .sort({ updatedAt: -1 });
 
-    // Transform data to be frontend-friendly if needed, 
-    // but sending the raw conversation object with populated fields is usually fine.
-    // The frontend will need to filter out the current user from participants.
-
     res.status(200).json(conversations);
   } catch (error) {
     console.error("Error in getConversations: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteChat = async (req, res) => {
+  try {
+    const { id: conversationId } = req.params;
+    const userId = req.user._id;
+
+    await Conversation.findByIdAndUpdate(conversationId, {
+      $addToSet: { hiddenFor: userId }
+    });
+
+    const socketId = getReceiverSocketId(userId);
+    if (socketId) {
+      io.to(socketId).emit("conversation:deleted", { conversationId });
+    }
+
+    res.status(200).json({ message: "Chat deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteChat: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -42,11 +60,51 @@ export const getMessages = async (req, res) => {
         { senderId: myId, recieverId: userToChatId },
         { senderId: userToChatId, recieverId: myId },
       ],
+      deletedFor: { $ne: myId }, // Filter out messages deleted for me
+      isDeleted: { $ne: true }, // Filter out messages deleted for everyone
     });
 
     res.status(200).json(messages);
   } catch (error) {
     console.log("Error in getMessages controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const clearChat = async (req, res) => {
+  try {
+    const { id: userToChatId } = req.params;
+    const myId = req.user._id;
+
+    // Find all messages between these two users
+    const messages = await Message.find({
+      $or: [
+        { senderId: myId, recieverId: userToChatId },
+        { senderId: userToChatId, recieverId: myId },
+      ],
+    });
+
+    // Add myId to deletedFor array for each message
+    // Using updateMany is more efficient
+    await Message.updateMany(
+      {
+        $or: [
+          { senderId: myId, recieverId: userToChatId },
+          { senderId: userToChatId, recieverId: myId },
+        ],
+      },
+      { $addToSet: { deletedFor: myId } }
+    );
+
+    // Notify myself via socket to clear UI immediately (though frontend should do it optimistically)
+    const socketId = getReceiverSocketId(myId);
+    if (socketId) {
+      io.to(socketId).emit("chat:cleared", { userToChatId });
+    }
+
+    res.status(200).json({ message: "Chat cleared successfully" });
+  } catch (error) {
+    console.log("Error in clearChat controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -103,6 +161,10 @@ export const sendMessage = async (req, res) => {
     // Increment unread count for receiver
     const currentUnread = conversation.unreadCount.get(recieverId.toString()) || 0;
     conversation.unreadCount.set(recieverId.toString(), currentUnread + 1);
+
+    // Unhide conversation for receiver if they hid it
+    // We remove recieverId from hiddenFor array
+    conversation.hiddenFor = conversation.hiddenFor.filter(id => id.toString() !== recieverId.toString());
 
     await conversation.save();
 
@@ -165,10 +227,9 @@ export const deleteMessage = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized to delete this message" });
     }
 
-    // Soft delete
+    // Soft delete but hide completely
     message.isDeleted = true;
-    message.text = "This message was deleted";
-    message.image = null;
+    // We don't change text/image, just mark as deleted so it can be filtered out
     await message.save();
 
     // Notify receiver/group
@@ -184,14 +245,20 @@ export const deleteMessage = async (req, res) => {
         group.members.forEach(memberId => {
           const socketId = getReceiverSocketId(memberId);
           if (socketId) {
-            io.to(socketId).emit("messageDeleted", { messageId, isSoft: true });
+            io.to(socketId).emit("messageDeleted", { messageId, isSoft: false });
           }
         });
       }
     } else {
       const receiverSocketId = getReceiverSocketId(message.recieverId);
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("messageDeleted", { messageId, isSoft: true });
+        io.to(receiverSocketId).emit("messageDeleted", { messageId, isSoft: false });
+      }
+
+      // Also emit to sender to remove it from their view immediately
+      const senderSocketId = getReceiverSocketId(userId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messageDeleted", { messageId, isSoft: false });
       }
     }
 

@@ -418,6 +418,22 @@ const Sidebar = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Hover Actions */}
+                  <div className="hidden group-hover:flex absolute right-2 top-2 bg-base-100 rounded-lg shadow-sm border border-base-200 p-1 gap-1 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm("Delete this chat?")) {
+                          useChatStore.getState().deleteChat(conversation._id);
+                        }
+                      }}
+                      className="p-1 hover:bg-base-200 rounded text-error"
+                      title="Delete Chat"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </button>
               );
             })}

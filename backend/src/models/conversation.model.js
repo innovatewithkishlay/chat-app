@@ -24,6 +24,12 @@ const conversationSchema = new mongoose.Schema(
                 updatedAt: { type: Date, default: Date.now }
             }
         ],
+        hiddenFor: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
     },
     { timestamps: true }
 );
