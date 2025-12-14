@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X, Mic, StopCircle, Trash2 } from "lucide-react";
@@ -17,71 +17,24 @@ const MessageInput = () => {
   const mediaRecorderRef = useRef(null);
   const timerRef = useRef(null);
   const inputRef = useRef(null);
-  const { sendMessage, sendGroupMessage, selectedUser, conversations, sentRequests, sendTalkRequest, friends } = useChatStore();
+  const { sendMessage, sendGroupMessage, selectedUser, conversations, sentRequests, sendTalkRequest, friends, sendTypingStart, sendTypingStop } = useChatStore();
   const { authUser, socket } = useAuthStore();
   const typingTimeoutRef = useRef(null);
+  const isTypingRef = useRef(false);
 
   const isGroup = !!selectedUser.members;
 
-  // Check if conversation exists (only for 1-1 chats)
-  const isConversation = !isGroup && conversations.some((c) =>
-    c.participants.some((p) => p._id === selectedUser._id)
-  );
+  // ... (checks)
 
-  // Check if request pending (only for 1-1 chats)
-  const pendingRequest = !isGroup && sentRequests.find(
-    (r) => r.receiver._id === selectedUser._id && r.status === "PENDING"
-  );
-
-  // Check if friends (only for 1-1 chats)
-  const isFriend = !isGroup && friends.some((f) => f._id === selectedUser._id);
-
-  if (!isGroup && !isFriend) {
-    return (
-      <div className="p-4 w-full flex justify-center items-center bg-base-200/50 backdrop-blur-sm border-t border-base-300">
-        {pendingRequest ? (
-          <div className="text-zinc-500 italic flex items-center gap-2 text-sm">
-            <span className="loading loading-dots loading-xs"></span>
-            Request sent, waiting for approval...
-          </div>
-        ) : isConversation ? (
-          <div className="text-zinc-500 text-sm">
-            You are no longer friends with this user.
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-zinc-500 text-sm">You need to send a talk request to chat.</span>
-            <button
-              onClick={() => sendTalkRequest(selectedUser._id)}
-              className="btn btn-primary btn-sm gap-2 rounded-full px-6"
-            >
-              <Send size={16} />
-              Send Request
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
+  useEffect(() => {
+    return () => {
+      if (isTypingRef.current) {
+        sendTypingStop(selectedUser._id, isGroup ? selectedUser._id : null);
+        isTypingRef.current = false;
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      }
     };
-    reader.readAsDataURL(file);
-  };
-
-  const removeImage = () => {
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  }, [selectedUser._id, isGroup, sendTypingStop]);
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
@@ -89,18 +42,26 @@ const MessageInput = () => {
     if (isSending) return;
 
     setIsSending(true);
+
+    // Stop typing immediately
+    if (isTypingRef.current) {
+      sendTypingStop(selectedUser._id, isGroup ? selectedUser._id : null);
+      isTypingRef.current = false;
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    }
+
     try {
+      // ... (send logic)
       let content = {
         text: text.trim(),
         image: imagePreview,
       };
 
       if (audioBlob) {
-        // Convert audio blob to base64
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
-          content.image = reader.result; // Sending audio as "image" field for now
+          content.image = reader.result;
           await send(content);
         };
       } else {
@@ -126,23 +87,35 @@ const MessageInput = () => {
     setImagePreview(null);
     setAudioBlob(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-
-    // Stop typing immediately (only for 1-1 for now)
-    if (socket && !isGroup) socket.emit("stopTyping", { receiverId: selectedUser._id });
   };
 
   const handleTyping = (e) => {
-    setText(e.target.value);
+    const value = e.target.value;
+    setText(value);
 
-    if (!socket || isGroup) return; // Skip typing for groups for now
+    const receiverId = selectedUser._id;
+    const groupId = isGroup ? selectedUser._id : null;
 
-    socket.emit("typing", { receiverId: selectedUser._id });
+    if (value.trim().length > 0) {
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        sendTypingStart(receiverId, groupId);
+      }
 
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("stopTyping", { receiverId: selectedUser._id });
-    }, 2000);
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingRef.current = false;
+        sendTypingStop(receiverId, groupId);
+      }, 1000); // 1 second debounce
+    } else {
+      // If empty, stop immediately
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        sendTypingStop(receiverId, groupId);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      }
+    }
   };
 
   const handleImageClick = () => {

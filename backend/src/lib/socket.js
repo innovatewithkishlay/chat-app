@@ -56,8 +56,6 @@ io.use(async (socket, next) => {
   }
 });
 
-// ... (existing imports)
-
 io.on("connection", async (socket) => {
   console.log("A user connected", socket.id);
 
@@ -91,17 +89,42 @@ io.on("connection", async (socket) => {
     console.error("Error marking messages as delivered:", error);
   }
 
+  // --- Group & Typing Logic ---
+
+  socket.on("joinGroup", (groupId) => {
+    socket.join(groupId);
+  });
+
+  socket.on("leaveGroup", (groupId) => {
+    socket.leave(groupId);
+  });
+
   socket.on("typing", (data) => {
-    const receiverSocketId = getReceiverSocketId(data.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("typing", { senderId: userId });
+    if (data.groupId) {
+      // Broadcast to everyone in the group room EXCEPT the sender
+      socket.to(data.groupId).emit("typing", {
+        senderId: userId,
+        groupId: data.groupId
+      });
+    } else {
+      const receiverSocketId = getReceiverSocketId(data.receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("typing", { senderId: userId });
+      }
     }
   });
 
   socket.on("stopTyping", (data) => {
-    const receiverSocketId = getReceiverSocketId(data.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("stopTyping", { senderId: userId });
+    if (data.groupId) {
+      socket.to(data.groupId).emit("stopTyping", {
+        senderId: userId,
+        groupId: data.groupId
+      });
+    } else {
+      const receiverSocketId = getReceiverSocketId(data.receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("stopTyping", { senderId: userId });
+      }
     }
   });
 
