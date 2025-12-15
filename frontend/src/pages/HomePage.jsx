@@ -11,9 +11,9 @@ const HomePage = () => {
 
   return (
     <div className="h-screen bg-base-200">
-      <div className="flex items-center justify-center pt-20 px-4">
-        <div className="bg-base-100 rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-8rem)]">
-          <div className="flex h-full rounded-lg overflow-hidden">
+      <div className="flex items-center justify-center pt-16 px-0 lg:pt-20 lg:px-4">
+        <div className="bg-base-100 rounded-none lg:rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-4rem)] lg:h-[calc(100vh-8rem)]">
+          <div className="flex h-full rounded-none lg:rounded-lg overflow-hidden">
             <div className={`${!selectedUser ? 'block' : 'hidden'} lg:block w-full lg:w-80`}>
               <Sidebar />
             </div>
