@@ -82,13 +82,16 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser } = get();
     get().unsubscribeFromMessages(); // Prevent duplicates
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
 
     socket.on("newMessage", (newMessage) => {
       const { selectedUser, showNotifications, showPreview, messages } = get();
       const isChatOpen = selectedUser && selectedUser._id === newMessage.senderId;
 
       if (isChatOpen) {
+        // Prevent duplicates
         if (messages.some(m => m._id === newMessage._id)) return;
+
         set({ messages: [...messages, newMessage] });
 
         // Stop typing indicator for this user immediately
@@ -116,7 +119,9 @@ export const useChatStore = create((set, get) => ({
       const isGroupOpen = selectedUser && selectedUser._id === newMessage.groupId;
 
       if (isGroupOpen) {
+        // Prevent duplicates
         if (messages.some(m => m._id === newMessage._id)) return;
+
         set({ messages: [...messages, newMessage] });
 
         // Stop typing indicator for this user immediately
@@ -633,7 +638,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   setSelectedUser: async (selectedUser) => {
-    set({ selectedUser });
+    set({ selectedUser, typingUsers: [] }); // Clear typing users when switching chats
     if (selectedUser && selectedUser.email) {
       try {
         await axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`);
@@ -757,6 +762,7 @@ export const useChatStore = create((set, get) => ({
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
     socket.off("newMessage");
     socket.off("newGroupMessage");
     socket.off("newGroup");

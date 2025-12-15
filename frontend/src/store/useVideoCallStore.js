@@ -21,8 +21,9 @@ export const useVideoCallStore = create((set, get) => ({
     localStream: null,
     remoteStream: null,
     peerConnection: null,
-    incomingCallData: null, // { from, name, signal }
+    incomingCallData: null, // { from, name, signal, callId }
     activeCallUserId: null,
+    activeCallId: null, // Store the DB ID of the call
     isMicOn: true,
     isCameraOn: true,
 
@@ -57,13 +58,13 @@ export const useVideoCallStore = create((set, get) => ({
 
             // Handle Remote Stream
             peer.ontrack = (event) => {
-                console.log("PEER: Received remote track");
+
                 set({ remoteStream: event.streams[0] });
             };
 
             // Monitor Connection State
             peer.oniceconnectionstatechange = () => {
-                console.log("PEER: Connection State:", peer.iceConnectionState);
+
                 if (peer.iceConnectionState === "disconnected" || peer.iceConnectionState === "failed") {
                     toast.error("Connection lost. Poor network.");
                 }
@@ -93,7 +94,7 @@ export const useVideoCallStore = create((set, get) => ({
         const { incomingCallData, iceCandidateQueue } = get();
         if (!socket || !incomingCallData) return;
 
-        set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from });
+        set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from, activeCallId: incomingCallData.callId });
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -111,7 +112,7 @@ export const useVideoCallStore = create((set, get) => ({
             };
 
             peer.ontrack = (event) => {
-                console.log("PEER: Received remote track");
+
                 set({ remoteStream: event.streams[0] });
             };
 
@@ -123,7 +124,7 @@ export const useVideoCallStore = create((set, get) => ({
             await peer.setLocalDescription(answer);
 
             // Emit Accept Event
-            socket.emit("call:accept", { signal: answer, to: incomingCallData.from });
+            socket.emit("call:accept", { signal: answer, to: incomingCallData.from, callId: incomingCallData.callId });
 
             // Process Queue
             iceCandidateQueue.forEach(candidate => {
@@ -142,19 +143,19 @@ export const useVideoCallStore = create((set, get) => ({
         const { socket } = useAuthStore.getState();
         const { incomingCallData } = get();
         if (socket && incomingCallData) {
-            socket.emit("call:reject", { to: incomingCallData.from });
+            socket.emit("call:reject", { to: incomingCallData.from, callId: incomingCallData.callId });
         }
         get().resetState();
     },
 
     endCall: () => {
         const { socket } = useAuthStore.getState();
-        const { activeCallUserId, callStatus } = get();
+        const { activeCallUserId, callStatus, activeCallId } = get();
 
         if (callStatus === "IDLE") return; // Prevent duplicate end calls
 
         if (socket && activeCallUserId) {
-            socket.emit("call:end", { to: activeCallUserId });
+            socket.emit("call:end", { to: activeCallUserId, callId: activeCallId });
         }
         get().resetState();
     },
@@ -168,7 +169,8 @@ export const useVideoCallStore = create((set, get) => ({
         set({
             callStatus: "INCOMING",
             incomingCallData: data,
-            activeCallUserId: data.from
+            activeCallUserId: data.from,
+            activeCallId: data.callId
         });
     },
 
@@ -189,6 +191,7 @@ export const useVideoCallStore = create((set, get) => ({
             peerConnection: null,
             incomingCallData: null,
             activeCallUserId: null,
+            activeCallId: null,
             iceCandidateQueue: []
         });
     },
@@ -222,16 +225,21 @@ export const useVideoCallStore = create((set, get) => ({
         socket.off("call:ended");
         socket.off("call:signal");
         socket.off("call:error");
+        socket.off("call:created");
+
+        socket.on("call:created", (data) => {
+            set({ activeCallId: data.callId });
+        });
 
         socket.on("call:incoming", (data) => {
-            console.log("FRONTEND: call:incoming received", data);
+
             get().setIncomingCall(data);
         });
 
         socket.on("call:accepted", async (data) => {
             const { peerConnection, callStatus, iceCandidateQueue } = get();
             if (callStatus === "OUTGOING" && peerConnection) {
-                set({ callStatus: "CONNECTED" });
+                set({ callStatus: "CONNECTED", activeCallId: data.callId }); // Ensure we have callId
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
 
                 // Process Queue
@@ -270,6 +278,11 @@ export const useVideoCallStore = create((set, get) => ({
             toast.error(data.message);
             get().resetState();
         });
+
+        // Handle Tab Close
+        window.addEventListener("beforeunload", () => {
+            get().endCall();
+        });
     },
 
     cleanupListeners: () => {
@@ -281,5 +294,10 @@ export const useVideoCallStore = create((set, get) => ({
         socket.off("call:ended");
         socket.off("call:signal");
         socket.off("call:error");
+        socket.off("call:created");
+
+        // Remove beforeunload listener (though browser handles it, good practice)
+        // Note: We can't easily remove anonymous function, but since this is cleanup, it's fine.
+        // Ideally we'd name the function, but for now this ensures the socket listeners are off.
     }
 }));

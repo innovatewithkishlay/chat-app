@@ -385,11 +385,13 @@ const Sidebar = () => {
               if (!otherUser) return null;
 
               return (
-                <button
+                <div
                   key={conversation._id}
                   onClick={() => setSelectedUser(otherUser)}
+                  role="button"
+                  tabIndex={0}
                   className={`
-                  w-full p-2 flex items-center gap-3 rounded-xl transition-all mb-1 group
+                  w-full p-2 flex items-center gap-3 rounded-xl transition-all mb-1 group cursor-pointer
                   ${selectedUser?._id === otherUser._id
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-base-200/50"
@@ -457,7 +459,7 @@ const Sidebar = () => {
                       {loadingId === conversation._id ? <span className="loading loading-spinner loading-xs"></span> : <Trash2 size={14} />}
                     </button>
                   </div>
-                </button>
+                </div>
               );
             })}
 

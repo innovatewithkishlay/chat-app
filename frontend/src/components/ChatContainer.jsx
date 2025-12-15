@@ -10,7 +10,6 @@ import gsap from "gsap";
 import ChatMemory from "./ChatMemory";
 import TimelineScrubber from "./TimelineScrubber";
 import HealthIndicator from "./HealthIndicator";
-import VoiceCall from "./VoiceCall"; // Remove this line
 import { useVideoCallStore } from "../store/useVideoCallStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import MessageStatus from "./MessageStatus";
@@ -52,13 +51,13 @@ const ChatContainer = () => {
     } else {
       getMessages(selectedUser._id);
     }
-    subscribeToMessages();
+    // subscribeToMessages(); // Handled globally in App.jsx
 
     return () => {
-      unsubscribeFromMessages();
+      // unsubscribeFromMessages(); // Handled globally in App.jsx
       if (isGroup) leaveGroupRoom(selectedUser._id);
     };
-  }, [selectedUser?._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages, joinGroupRoom, leaveGroupRoom]);
+  }, [selectedUser?._id, isGroup, getMessages, getGroupMessages, joinGroupRoom, leaveGroupRoom]);
 
   // Smart Auto-Scroll
   useEffect(() => {
@@ -89,6 +88,13 @@ const ChatContainer = () => {
   // GSAP Animation for new messages
   useEffect(() => {
     if (messages.length > 0) {
+      // Check if it's a bulk load (initial fetch) or single new message
+      // We can infer this: if the last message is new, animate it.
+      // But for initial load, we want to stagger ALL visible messages.
+      // However, animating 50 messages might be heavy.
+      // Let's just animate the container entry or the last few.
+
+      // For now, keep the single message animation for new messages.
       const lastMsgId = messages[messages.length - 1]._id;
       const element = document.getElementById(`msg-${lastMsgId}`);
       if (element) {
@@ -96,6 +102,38 @@ const ChatContainer = () => {
       }
     }
   }, [messages]);
+
+  // Initial Stagger Animation
+  useLayoutEffect(() => {
+    if (messages.length > 0 && containerRef.current) {
+      // Animate the last 10 messages on load
+      const visibleMessages = containerRef.current.querySelectorAll('.chat');
+      const lastFew = Array.from(visibleMessages).slice(-10);
+      gsap.fromTo(lastFew,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" }
+      );
+    }
+  }, [selectedUser?._id]); // Only run when user changes (and messages load)
+
+  // Typing Indicator Logic
+  const currentTypingUsers = typingUsers.filter(u => {
+    if (isGroup) return u.groupId === selectedUser?._id && u.senderId !== authUser._id;
+    return u.senderId === selectedUser?._id && !u.groupId;
+  });
+
+  // GSAP Animation for Typing Indicator
+  useEffect(() => {
+    if (currentTypingUsers.length > 0) {
+      const element = document.getElementById("typing-indicator");
+      if (element) {
+        gsap.fromTo(element,
+          { opacity: 0, y: 10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power2.out" }
+        );
+      }
+    }
+  }, [currentTypingUsers.length]);
 
   const handleScrollToMessage = (messageId) => {
     const element = document.getElementById(`msg-${messageId}`);
@@ -105,30 +143,6 @@ const ChatContainer = () => {
       setTimeout(() => element.classList.remove("bg-base-200/50"), 2000);
     }
   };
-
-  const handleEditStart = (message) => {
-    setEditingMessageId(message._id);
-    setEditText(message.text);
-  };
-
-  const handleEditCancel = () => {
-    setEditingMessageId(null);
-    setEditText("");
-  };
-
-  const handleEditSave = async (messageId) => {
-    if (editText.trim()) {
-      await editMessage(messageId, editText);
-      setEditingMessageId(null);
-      setEditText("");
-    }
-  };
-
-  // Typing Indicator Logic
-  const currentTypingUsers = typingUsers.filter(u => {
-    if (isGroup) return u.groupId === selectedUser?._id && u.senderId !== authUser._id;
-    return u.senderId === selectedUser?._id && !u.groupId;
-  });
 
   const getTypingText = () => {
     if (currentTypingUsers.length === 0) return null;
@@ -351,7 +365,7 @@ const ChatContainer = () => {
         })}
 
         {currentTypingUsers.length > 0 && (
-          <div className="chat chat-start animate-pulse">
+          <div className="chat chat-start" id="typing-indicator">
             <div className="chat-image avatar">
               <div className="size-10 rounded-full border">
                 <img

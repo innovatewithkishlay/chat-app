@@ -31,14 +31,16 @@ const App = () => {
       useVideoCallStore.getState().initializeListeners();
       useVoiceCallStore.getState().initializeListeners();
       useChatStore.getState().subscribeToPush();
+      useChatStore.getState().subscribeToMessages();
     }
     return () => {
       useVideoCallStore.getState().cleanupListeners();
       useVoiceCallStore.getState().cleanupListeners();
+      useChatStore.getState().unsubscribeFromMessages();
     };
   }, [authUser]);
 
-  console.log({ authUser });
+
   if (isCheckingAuth && !authUser)
     return (
       <div className="flex items-center justify-center h-screen">
