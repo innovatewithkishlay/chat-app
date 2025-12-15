@@ -161,7 +161,15 @@ const ChatContainer = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative bg-base-100/50 backdrop-blur-sm h-full min-h-0">
-      {/* ... */}
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#4f4f4f_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+      <ChatHeader
+        onOpenMemory={() => setIsMemoryOpen(true)}
+      />
+
+      {!isGroup && <HealthIndicator />}
+
       <ChatMemory
         conversationId={
           useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser?._id))?._id || selectedUser?._id
@@ -169,8 +177,6 @@ const ChatContainer = () => {
         isOpen={isMemoryOpen}
         onClose={() => setIsMemoryOpen(false)}
       />
-
-      {/* Removed VoiceCall */}
 
       <div
         className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 min-h-0 scroll-smooth"
@@ -198,7 +204,7 @@ const ChatContainer = () => {
                     src={
                       isMyMessage
                         ? authUser.profilePic || "/avatar.png"
-                        : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser.profilePic || "/avatar.png")
+                        : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")
                     }
                     alt="profile pic"
                   />
