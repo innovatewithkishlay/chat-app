@@ -44,9 +44,22 @@ import callHistoryRoutes from "./routes/callHistory.route.js";
 app.use("/api/calls", callHistoryRoutes);
 import notificationRoutes from "./routes/notification.route.js";
 app.use("/api/notifications", notificationRoutes);
+
+// Productivity Suite Routes
+import kanbanRoutes from "./routes/kanban.route.js";
+import noteRoutes from "./routes/note.route.js";
+import pollRoutes from "./routes/poll.route.js";
+import scheduledMessageRoutes from "./routes/scheduledMessage.route.js";
+import { processScheduledMessages } from "./controllers/scheduledMessage.controller.js";
+
+app.use("/api/kanban", kanbanRoutes);
+app.use("/api/notes", noteRoutes);
+app.use("/api/polls", pollRoutes);
+app.use("/api/scheduled-messages", scheduledMessageRoutes);
+
 import "./lib/webpush.js";
 
-// Reminder Cron
+// Reminder & Scheduled Message Cron
 setInterval(async () => {
   try {
     const now = new Date();
@@ -63,8 +76,12 @@ setInterval(async () => {
         await reminder.save();
       }
     }
+
+    // Process Scheduled Messages
+    await processScheduledMessages();
+
   } catch (error) {
-    console.error("Error in reminder cron:", error);
+    console.error("Error in cron job:", error);
   }
 
 }, 60000);
