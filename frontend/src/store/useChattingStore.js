@@ -33,6 +33,7 @@ export const useChatStore = create((set, get) => ({
   isConversationsLoading: false,
   isMessagesLoading: false,
   typingUsers: [], // Array of { senderId, groupId (optional) }
+  currentTypingUsers: [], // Derived state for UI
 
   // Notification Settings
   showNotifications: localStorage.getItem("showNotifications") !== "false",

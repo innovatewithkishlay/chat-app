@@ -32,8 +32,12 @@ export const useProductivityStore = create((set, get) => ({
             const res = await axiosInstance.get(`/kanban/${conversationId}`);
             set({ board: res.data.board, tasks: res.data.tasks });
         } catch (error) {
-            console.error("Error fetching board:", error);
-            toast.error("Failed to load board");
+            if (error.response && error.response.status === 404) {
+                set({ board: null, tasks: [] });
+            } else {
+                console.error("Error fetching board:", error);
+                toast.error("Failed to load board");
+            }
         } finally {
             set({ isBoardLoading: false });
         }
