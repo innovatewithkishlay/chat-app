@@ -16,10 +16,148 @@ import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import MessageStatus from "./MessageStatus";
 
 const ChatContainer = () => {
-  // ... (keep existing)
+  const {
+    messages,
+    getMessages,
+    getGroupMessages,
+    isMessagesLoading,
+    selectedUser,
+    subscribeToMessages,
+    unsubscribeFromMessages,
+    deleteMessage,
+    editMessage,
+    reactToMessage,
+    typingUsers,
+    joinGroupRoom,
+    leaveGroupRoom,
+  } = useChatStore();
+  const { authUser } = useAuthStore();
   const { callStatus } = useVideoCallStore();
   const { callStatus: voiceCallStatus } = useVoiceCallStore();
-  // ... (keep existing)
+  const messageEndRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [isMemoryOpen, setIsMemoryOpen] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const isGroup = !!selectedUser?.members;
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    if (isGroup) {
+      getGroupMessages(selectedUser._id);
+      joinGroupRoom(selectedUser._id);
+    } else {
+      getMessages(selectedUser._id);
+    }
+    subscribeToMessages();
+
+    return () => {
+      unsubscribeFromMessages();
+      if (isGroup) leaveGroupRoom(selectedUser._id);
+    };
+  }, [selectedUser?._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages, joinGroupRoom, leaveGroupRoom]);
+
+  // Smart Auto-Scroll
+  useEffect(() => {
+    if (containerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+
+      if (isNearBottom && messages.length > 0) {
+        messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        setShowScrollButton(false);
+      }
+    }
+  }, [messages, typingUsers]);
+
+  const handleScroll = () => {
+    if (containerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      setShowScrollButton(!isNearBottom);
+    }
+  };
+
+  const scrollToBottom = () => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setShowScrollButton(false);
+  };
+
+  // GSAP Animation for new messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsgId = messages[messages.length - 1]._id;
+      const element = document.getElementById(`msg-${lastMsgId}`);
+      if (element) {
+        gsap.fromTo(element, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 });
+      }
+    }
+  }, [messages]);
+
+  const handleScrollToMessage = (messageId) => {
+    const element = document.getElementById(`msg-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.classList.add("bg-base-200/50");
+      setTimeout(() => element.classList.remove("bg-base-200/50"), 2000);
+    }
+  };
+
+  const handleEditStart = (message) => {
+    setEditingMessageId(message._id);
+    setEditText(message.text);
+  };
+
+  const handleEditCancel = () => {
+    setEditingMessageId(null);
+    setEditText("");
+  };
+
+  const handleEditSave = async (messageId) => {
+    if (editText.trim()) {
+      await editMessage(messageId, editText);
+      setEditingMessageId(null);
+      setEditText("");
+    }
+  };
+
+  // Typing Indicator Logic
+  const currentTypingUsers = typingUsers.filter(u => {
+    if (isGroup) return u.groupId === selectedUser?._id && u.senderId !== authUser._id;
+    return u.senderId === selectedUser?._id && !u.groupId;
+  });
+
+  const getTypingText = () => {
+    if (currentTypingUsers.length === 0) return null;
+
+    if (isGroup) {
+      if (currentTypingUsers.length === 1) {
+        const member = selectedUser?.members?.find(m => m._id === currentTypingUsers[0].senderId);
+        return `${member?.fullname || "Someone"} is typing...`;
+      } else if (currentTypingUsers.length === 2) {
+        const m1 = selectedUser?.members?.find(m => m._id === currentTypingUsers[0].senderId);
+        const m2 = selectedUser?.members?.find(m => m._id === currentTypingUsers[1].senderId);
+        return `${m1?.fullname || "Someone"} and ${m2?.fullname || "Someone"} are typing...`;
+      } else {
+        return "Several people are typing...";
+      }
+    } else {
+      return "Typing...";
+    }
+  };
+
+  if (isMessagesLoading) {
+    return (
+      <div className="flex-1 flex flex-col overflow-auto bg-base-100">
+        <ChatHeader onOpenMemory={() => setIsMemoryOpen(true)} />
+        <MessageSkeleton />
+        <MessageInput />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative bg-base-100/50 backdrop-blur-sm h-full min-h-0">
