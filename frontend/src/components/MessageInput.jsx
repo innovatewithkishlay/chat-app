@@ -1,10 +1,11 @@
 import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, Send, X, Mic, StopCircle, Trash2, Smile } from "lucide-react";
+import { Image, Send, X, Mic, StopCircle, Trash2, Smile, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 import EmojiPicker from "emoji-picker-react";
 import gsap from "gsap";
+import ScheduledMessagesModal from "./productivity/ScheduledMessagesModal";
 
 const MessageInput = () => {
   const [text, setText] = useState("");
@@ -13,6 +14,7 @@ const MessageInput = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -219,6 +221,8 @@ const MessageInput = () => {
         </div>
       )}
 
+      {showScheduleModal && <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />}
+
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2 animate-in slide-in-from-bottom-2">
           <div className="relative">
@@ -268,6 +272,16 @@ const MessageInput = () => {
             disabled={isRecording || isSending}
           >
             <Image size={20} />
+          </button>
+
+          <button
+            type="button"
+            className={`hidden sm:flex btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
+            onClick={() => setShowScheduleModal(true)}
+            disabled={isRecording || isSending}
+            title="Schedule Message"
+          >
+            <Clock size={20} />
           </button>
         </div>
 
