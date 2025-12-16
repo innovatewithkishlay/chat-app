@@ -30,7 +30,7 @@ app.use(
     credentials: true,
   })
 );
-const port = process.env.PORT || 8000;
+const port = 5001;
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
