@@ -46,15 +46,31 @@ const NotesList = () => {
     const activeNote = useProductivityStore((state) => state.activeNote);
     const isNotesLoading = useProductivityStore((state) => state.isNotesLoading);
 
+    const conversations = useChatStore((state) => state.conversations);
+
+    const getConversationId = () => {
+        if (!selectedUser) return null;
+
+        const isGroup = selectedUser.groupMembers !== undefined || selectedUser.admins !== undefined;
+        if (isGroup) return selectedUser._id;
+
+        const conversation = conversations.find(c =>
+            c.participants.some(p => p._id === selectedUser._id)
+        );
+        return conversation ? conversation._id : null;
+    };
+
     useEffect(() => {
-        if (selectedUser?._id) {
-            fetchNotes(selectedUser._id);
+        const conversationId = getConversationId();
+        if (conversationId) {
+            fetchNotes(conversationId);
         }
-    }, [selectedUser?._id, fetchNotes]);
+    }, [selectedUser, conversations, fetchNotes]);
 
     const handleCreateNote = async () => {
-        if (!selectedUser?._id) return;
-        await createNote(selectedUser._id, "Untitled Note", "");
+        const conversationId = getConversationId();
+        if (!conversationId) return;
+        await createNote(conversationId, "Untitled Note", "");
     };
 
     const handleDeleteNote = (noteId) => {

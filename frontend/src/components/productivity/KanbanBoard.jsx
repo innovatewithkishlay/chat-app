@@ -21,11 +21,32 @@ const KanbanBoard = () => {
     const [newTaskColumn, setNewTaskColumn] = useState("todo");
     const [newTaskTitle, setNewTaskTitle] = useState("");
 
+    const conversations = useChatStore((state) => state.conversations);
+
     useEffect(() => {
-        if (selectedUser?._id) {
-            fetchBoard(selectedUser._id);
+        if (!selectedUser) return;
+
+        let conversationId = selectedUser._id;
+
+        // If it's a 1-on-1 chat (not a group), we need to find the conversation ID
+        // Groups usually have their own ID as the conversation ID (or we treat them as such)
+        // But for 1-on-1, selectedUser._id is the USER ID, not the CONVERSATION ID.
+        const isGroup = selectedUser.groupMembers !== undefined || selectedUser.admins !== undefined;
+
+        if (!isGroup) {
+            const conversation = conversations.find(c =>
+                c.participants.some(p => p._id === selectedUser._id)
+            );
+            if (conversation) {
+                conversationId = conversation._id;
+            } else {
+                // No conversation exists yet (e.g. new chat), so no board can exist.
+                return;
+            }
         }
-    }, [selectedUser?._id, fetchBoard]);
+
+        fetchBoard(conversationId);
+    }, [selectedUser, conversations, fetchBoard]);
 
     const onDragEnd = useCallback((result) => {
         const { destination, source, draggableId } = result;
