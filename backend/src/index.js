@@ -30,7 +30,7 @@ app.use(
     credentials: true,
   })
 );
-const port = process.env.NODE_ENV === "production" ? (process.env.PORT || 5001) : 5001;
+const port = process.env.PORT || 5001;
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
