@@ -28,6 +28,7 @@ const Sidebar = () => {
     removeFriend,
     groups,
     getGroups,
+    sentRequests,
   } = useChatStore();
 
   const { onlineUsers, authUser } = useAuthStore();
