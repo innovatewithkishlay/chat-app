@@ -32,9 +32,8 @@ export const useVoiceCallStore = create((set, get) => ({
         const { socket, authUser } = useAuthStore.getState();
         if (!socket) return;
 
-        // Reset state before starting
+        console.log("Starting call to:", userToCall);
         get().resetState();
-
         set({ callStatus: "OUTGOING", activeCallUserId: userToCall });
 
         try {
@@ -46,32 +45,27 @@ export const useVoiceCallStore = create((set, get) => ({
 
             stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
-            // Handle ICE candidates
             peer.onicecandidate = (event) => {
                 if (event.candidate) {
                     socket.emit("voice:call:signal", { to: userToCall, candidate: event.candidate });
                 }
             };
 
-            // Handle Remote Stream
             peer.ontrack = (event) => {
-
+                console.log("Remote stream received");
                 set({ remoteStream: event.streams[0] });
             };
 
-            // Monitor Connection State
             peer.oniceconnectionstatechange = () => {
-
+                console.log("ICE State:", peer.iceConnectionState);
                 if (peer.iceConnectionState === "disconnected" || peer.iceConnectionState === "failed") {
                     toast.error("Connection lost. Poor network.");
                 }
             };
 
-            // Create Offer
             const offer = await peer.createOffer();
             await peer.setLocalDescription(offer);
 
-            // Emit Initiate Event
             socket.emit("voice:call:initiate", {
                 userToCall,
                 signalData: offer,
@@ -81,7 +75,7 @@ export const useVoiceCallStore = create((set, get) => ({
 
         } catch (error) {
             console.error("Error starting voice call:", error);
-            toast.error("Failed to access microphone");
+            toast.error("Failed to access microphone: " + error.message);
             get().resetState();
         }
     },
@@ -89,8 +83,12 @@ export const useVoiceCallStore = create((set, get) => ({
     acceptCall: async () => {
         const { socket } = useAuthStore.getState();
         const { incomingCallData, iceCandidateQueue } = get();
-        if (!socket || !incomingCallData) return;
+        if (!socket || !incomingCallData) {
+            console.error("Cannot accept call: Missing socket or incomingCallData");
+            return;
+        }
 
+        console.log("Accepting call from:", incomingCallData.from);
         set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from, activeCallId: incomingCallData.callId });
 
         try {
@@ -109,21 +107,16 @@ export const useVoiceCallStore = create((set, get) => ({
             };
 
             peer.ontrack = (event) => {
-
+                console.log("Remote stream received (Answerer)");
                 set({ remoteStream: event.streams[0] });
             };
 
-            // Set Remote Description (Offer)
             await peer.setRemoteDescription(new RTCSessionDescription(incomingCallData.signal));
-
-            // Create Answer
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
 
-            // Emit Accept Event
             socket.emit("voice:call:accept", { signal: answer, to: incomingCallData.from, callId: incomingCallData.callId });
 
-            // Process Queue
             iceCandidateQueue.forEach(candidate => {
                 peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
             });
@@ -131,7 +124,7 @@ export const useVoiceCallStore = create((set, get) => ({
 
         } catch (error) {
             console.error("Error accepting voice call:", error);
-            toast.error("Failed to access microphone");
+            toast.error("Failed to access microphone: " + error.message);
             get().resetState();
         }
     },
@@ -139,6 +132,7 @@ export const useVoiceCallStore = create((set, get) => ({
     rejectCall: () => {
         const { socket } = useAuthStore.getState();
         const { incomingCallData } = get();
+        console.log("Rejecting call");
         if (socket && incomingCallData) {
             socket.emit("voice:call:reject", { to: incomingCallData.from, callId: incomingCallData.callId });
         }
@@ -147,9 +141,11 @@ export const useVoiceCallStore = create((set, get) => ({
 
     endCall: () => {
         const { socket } = useAuthStore.getState();
-        const { activeCallUserId, callStatus } = get();
+        const { activeCallUserId, activeCallId, callStatus } = get();
 
-        if (callStatus === "IDLE") return; // Prevent duplicate end calls
+        console.log("Ending call. Status:", callStatus, "To:", activeCallUserId);
+
+        if (callStatus === "IDLE") return;
 
         if (socket && activeCallUserId) {
             socket.emit("voice:call:end", { to: activeCallUserId, callId: activeCallId });
