@@ -12,20 +12,20 @@ const TaskCard = memo(({ task, index, onClick }) => {
                     {...provided.dragHandleProps}
                     onClick={() => onClick(task)}
                     className={`
-            bg-base-100 p-3 rounded-lg shadow-sm mb-2 border border-base-200 
-            hover:shadow-md transition-all cursor-pointer select-none
-            ${snapshot.isDragging ? "shadow-lg rotate-2 scale-105 z-50" : ""}
+            bg-base-100 p-4 rounded-xl shadow-sm mb-3 border border-base-200/60 
+            hover:shadow-md hover:-translate-y-1 transition-all duration-200 cursor-grab active:cursor-grabbing select-none
+            ${snapshot.isDragging ? "shadow-xl rotate-2 scale-105 z-50 ring-2 ring-primary/20" : ""}
           `}
                     style={{ ...provided.draggableProps.style }}
                 >
                     {/* Labels */}
                     {task.labels && task.labels.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-2">
+                        <div className="flex flex-wrap gap-1.5 mb-3">
                             {task.labels.map((label, i) => (
                                 <span
                                     key={i}
-                                    className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                    style={{ backgroundColor: label.color + "20", color: label.color }}
+                                    className="text-[10px] px-2 py-1 rounded-md font-semibold tracking-wide uppercase"
+                                    style={{ backgroundColor: label.color + "15", color: label.color, border: `1px solid ${label.color}30` }}
                                 >
                                     {label.text}
                                 </span>

@@ -100,8 +100,8 @@ const KanbanBoard = () => {
     if (!board) return null;
 
     return (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 bg-base-100/50">
-            <div className="flex h-full gap-4">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 bg-gradient-to-br from-base-100 to-base-200/50">
+            <div className="flex h-full gap-6 min-w-fit pb-4">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {columnsWithTasks.map((column) => (
                         <KanbanColumn

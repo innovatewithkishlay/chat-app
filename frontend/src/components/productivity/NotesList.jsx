@@ -8,15 +8,18 @@ const NoteItem = memo(({ note, isActive, onClick, onDelete }) => (
     <div
         onClick={() => onClick(note)}
         className={`
-      p-3 rounded-lg cursor-pointer transition-all group relative
-      ${isActive ? "bg-primary/10 text-primary" : "hover:bg-base-200"}
+      p-3 mx-2 rounded-xl cursor-pointer transition-all group relative border border-transparent
+      ${isActive
+                ? "bg-primary/10 text-primary border-primary/20 shadow-sm"
+                : "hover:bg-base-200/50 hover:border-base-200"
+            }
     `}
     >
-        <div className="flex items-center gap-2 mb-1">
-            <FileText size={14} className="opacity-70" />
-            <span className="font-medium text-sm truncate">{note.title || "Untitled"}</span>
+        <div className="flex items-center gap-2 mb-1.5">
+            <FileText size={16} className={`shrink-0 ${isActive ? "text-primary" : "opacity-50"}`} />
+            <span className={`font-semibold text-sm truncate ${isActive ? "" : "opacity-80"}`}>{note.title || "Untitled"}</span>
         </div>
-        <div className="flex items-center justify-between text-[10px] opacity-60">
+        <div className="flex items-center justify-between text-[10px] opacity-50 pl-6">
             <span className="flex items-center gap-1">
                 <Clock size={10} />
                 {new Date(note.updatedAt).toLocaleDateString()}
@@ -28,9 +31,9 @@ const NoteItem = memo(({ note, isActive, onClick, onDelete }) => (
                 e.stopPropagation();
                 onDelete(note._id);
             }}
-            className="absolute right-2 top-2 p-1 rounded hover:bg-base-300 opacity-0 group-hover:opacity-100 transition-opacity text-error"
+            className="absolute right-2 top-2 p-1.5 rounded-lg hover:bg-error/10 hover:text-error opacity-0 group-hover:opacity-100 transition-all"
         >
-            <Trash2 size={12} />
+            <Trash2 size={14} />
         </button>
     </div>
 ));
@@ -88,10 +91,10 @@ const NotesList = () => {
     }
 
     return (
-        <div className="w-64 border-r border-base-300 bg-base-200/30 flex flex-col h-full">
-            <div className="p-3 border-b border-base-300 flex items-center justify-between">
-                <h3 className="font-bold text-sm">Notes</h3>
-                <button onClick={handleCreateNote} className="btn btn-xs btn-circle btn-primary">
+        <div className="w-72 border-r border-base-300 bg-base-100/30 backdrop-blur-md flex flex-col h-full">
+            <div className="p-4 border-b border-base-200/50 flex items-center justify-between">
+                <h3 className="font-bold text-sm tracking-tight">Notes</h3>
+                <button onClick={handleCreateNote} className="btn btn-xs btn-circle btn-primary shadow-sm hover:shadow-md transition-shadow">
                     <Plus size={14} />
                 </button>
             </div>
