@@ -45,7 +45,6 @@ const ScheduledMessagesModal = ({ onClose }) => {
     };
 
     return (
-    return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-base-100/80 backdrop-blur-xl border border-base-200 p-6 rounded-2xl w-full max-w-md shadow-2xl max-h-[80vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between mb-6">
@@ -120,7 +119,6 @@ const ScheduledMessagesModal = ({ onClose }) => {
                 </div>
             </div>
         </div>
-    );
     );
 };
 
