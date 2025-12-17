@@ -254,7 +254,7 @@ const MessageInput = () => {
 
           <textarea
             ref={textareaRef}
-            className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-[150px] py-2 text-sm leading-relaxed scrollbar-hide"
+            className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-[150px] py-2 text-sm leading-relaxed scrollbar-hide outline-none focus:outline-none"
             placeholder={isRecording ? "Recording audio..." : "Type a message..."}
             value={text}
             onChange={handleTyping}

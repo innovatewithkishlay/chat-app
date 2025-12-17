@@ -45,64 +45,72 @@ const ScheduledMessagesModal = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-base-100 p-6 rounded-xl w-[500px] shadow-xl max-h-[80vh] flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-lg flex items-center gap-2">
-                        <Clock size={20} /> Scheduled Messages
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-base-100/80 backdrop-blur-xl border border-base-200 p-6 rounded-2xl w-full max-w-md shadow-2xl max-h-[80vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-lg flex items-center gap-2 text-base-content/90">
+                        <Clock size={20} className="text-primary" />
+                        <span>Scheduled Messages</span>
                     </h3>
-                    <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle">
+                    <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle hover:bg-base-200/50">
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Create Form */}
-                <form onSubmit={handleSchedule} className="mb-6 p-4 bg-base-200/50 rounded-lg">
+                <form onSubmit={handleSchedule} className="mb-6 p-1 bg-base-200/30 rounded-xl border border-base-200/50">
                     <textarea
-                        className="textarea textarea-bordered w-full mb-3"
-                        placeholder="Type your message..."
+                        className="textarea textarea-ghost w-full mb-2 bg-transparent focus:bg-base-100/50 transition-colors text-base resize-none focus:outline-none"
+                        placeholder="Type your message to schedule..."
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
-                        rows={2}
+                        rows={3}
                     />
-                    <div className="flex gap-2">
-                        <input
-                            type="date"
-                            className="input input-bordered input-sm flex-1"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                        />
-                        <input
-                            type="time"
-                            className="input input-bordered input-sm flex-1"
-                            value={time}
-                            onChange={(e) => setTime(e.target.value)}
-                        />
-                        <button type="submit" className="btn btn-primary btn-sm">
+                    <div className="flex gap-2 p-2">
+                        <div className="flex-1 flex gap-2 bg-base-100/50 rounded-lg p-1 border border-base-200/50">
+                            <input
+                                type="date"
+                                className="input input-ghost input-xs w-full focus:outline-none focus:bg-transparent text-xs"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                            />
+                            <div className="w-px bg-base-300 my-1"></div>
+                            <input
+                                type="time"
+                                className="input input-ghost input-xs w-full focus:outline-none focus:bg-transparent text-xs"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                            />
+                        </div>
+                        <button type="submit" className="btn btn-primary btn-sm shadow-lg shadow-primary/20">
                             Schedule
                         </button>
                     </div>
                 </form>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto space-y-2">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
                     {isScheduledLoading ? (
-                        <div className="text-center opacity-50">Loading...</div>
+                        <div className="text-center opacity-50 py-8">Loading...</div>
                     ) : scheduledMessages.length === 0 ? (
-                        <div className="text-center opacity-50 py-4">No scheduled messages</div>
+                        <div className="text-center opacity-40 py-8 flex flex-col items-center gap-2">
+                            <Clock size={32} className="opacity-20" />
+                            <p className="text-sm">No scheduled messages</p>
+                        </div>
                     ) : (
                         scheduledMessages.map((msg) => (
-                            <div key={msg._id} className="p-3 bg-base-200 rounded-lg flex items-center justify-between group">
+                            <div key={msg._id} className="p-3 bg-base-100/50 border border-base-200/50 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-colors shadow-sm">
                                 <div className="flex-1 min-w-0 mr-3">
-                                    <p className="font-medium truncate">{msg.content}</p>
-                                    <p className="text-xs opacity-60 flex items-center gap-1">
+                                    <p className="font-medium truncate text-sm text-base-content/90">{msg.content}</p>
+                                    <p className="text-[10px] opacity-60 flex items-center gap-1 mt-1 font-mono">
                                         <Calendar size={10} />
-                                        {new Date(msg.scheduledAt).toLocaleString()}
+                                        {new Date(msg.scheduledAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => cancelScheduledMessage(msg._id)}
-                                    className="btn btn-ghost btn-xs btn-circle text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="btn btn-ghost btn-xs btn-circle text-error/70 hover:text-error hover:bg-error/10 transition-all"
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -112,6 +120,7 @@ const ScheduledMessagesModal = ({ onClose }) => {
                 </div>
             </div>
         </div>
+    );
     );
 };
 
