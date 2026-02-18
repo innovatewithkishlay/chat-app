@@ -138,9 +138,9 @@ const ChatHeader = ({ onOpenMemory }) => {
                   <Phone size={18} />
                 ) : (
                   <>
-                    <Phone size={16} className="opacity-50" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px] group-hover:backdrop-blur-none transition-all">
-                      <Lock size={12} className="text-amber-600 drop-shadow-md" />
+                    <Phone size={18} className="opacity-80 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute top-0 right-0 p-[3px]">
+                      <Lock size={8} className="text-amber-500 fill-amber-500" />
                     </div>
                   </>
                 )}
@@ -155,9 +155,9 @@ const ChatHeader = ({ onOpenMemory }) => {
                   <Video size={18} />
                 ) : (
                   <>
-                    <Video size={16} className="opacity-50" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px] group-hover:backdrop-blur-none transition-all">
-                      <Lock size={12} className="text-amber-600 drop-shadow-md" />
+                    <Video size={18} className="opacity-80 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute top-0 right-0 p-[3px]">
+                      <Lock size={8} className="text-amber-500 fill-amber-500" />
                     </div>
                   </>
                 )}
