@@ -47,6 +47,7 @@ export const signup = async (req, res) => {
         email: newUser.email,
         username: newUser.username,
         profilePic: newUser.profilePic,
+        plan: newUser.plan,
         about: "",
       });
     } else {
@@ -87,6 +88,7 @@ export const login = async (req, res) => {
       fullname: user.fullname,
       email: user.email,
       profilePic: user.profilePic,
+      plan: user.plan,
     });
   } catch (err) {
     console.log(

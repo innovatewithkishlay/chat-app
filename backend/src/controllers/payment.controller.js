@@ -62,10 +62,11 @@ export const verifyPayment = async (req, res) => {
 
             user.subscriptionPlan = "pro";
             user.subscriptionStatus = "active";
+            user.plan = "PRO"; // Sync with frontend access control
             user.razorpayPaymentId = razorpay_payment_id;
+            user.razorpayOrderId = razorpay_order_id;
 
             await user.save();
-
             res.status(200).json({
                 success: true,
                 message: "Payment verified successfully",
