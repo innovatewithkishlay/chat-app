@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useStatusStore } from "../store/useStatusStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2 } from "lucide-react";
+import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2, CircleDashed } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
+import StatusList from "./status/StatusList";
 import ConfirmModal from "./ConfirmModal";
 import gsap from "gsap";
 
@@ -89,6 +91,28 @@ const Sidebar = () => {
   useEffect(() => {
     getConversations();
   }, [getConversations]);
+
+  // Status Store
+  const { fetchStatuses, subscribeToStatusEvents, unsubscribeFromStatusEvents, hasUnseen, statuses } = useStatusStore();
+
+  useEffect(() => {
+    // Determine if we need to fetch. 
+    // We can fetch on mount or when tab becomes 'status'.
+    // Let's fetch on mount to get the red dot, then subscribe.
+    fetchStatuses();
+    subscribeToStatusEvents();
+
+    return () => {
+      unsubscribeFromStatusEvents();
+    };
+  }, [fetchStatuses, subscribeToStatusEvents, unsubscribeFromStatusEvents]);
+
+  // Refetch when entering status tab if empty (optional)
+  useEffect(() => {
+    if (activeTab === "status" && statuses.length === 0) {
+      fetchStatuses();
+    }
+  }, [activeTab, fetchStatuses, statuses.length]);
 
   // GSAP Animation for list items
   useEffect(() => {
@@ -191,6 +215,15 @@ const Sidebar = () => {
             )}
           </button>
           <button
+            onClick={() => setActiveTab("status")}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 relative ${activeTab === "status" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
+          >
+            Status
+            {hasUnseen && (
+              <span className="absolute top-1 right-1 size-2 bg-primary rounded-full animate-pulse" />
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab("calls")}
             className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${activeTab === "calls" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
           >
@@ -222,6 +255,8 @@ const Sidebar = () => {
       <div className="overflow-y-auto w-full flex-1 p-2" ref={listRef}>
         {activeTab === "calls" ? (
           <CallHistory />
+        ) : activeTab === "status" ? (
+          <StatusList />
         ) : activeTab === "requests" ? (
           // Requests View
           <>

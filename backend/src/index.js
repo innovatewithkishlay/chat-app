@@ -45,6 +45,9 @@ app.use("/api/calls", callHistoryRoutes);
 import notificationRoutes from "./routes/notification.route.js";
 app.use("/api/notifications", notificationRoutes);
 
+import statusRoutes from "./routes/status.route.js";
+app.use("/api/status", statusRoutes);
+
 // Productivity Suite Routes
 import kanbanRoutes from "./routes/kanban.route.js";
 import noteRoutes from "./routes/note.route.js";
