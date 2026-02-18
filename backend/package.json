@@ -24,6 +24,7 @@
     "ioredis": "^5.9.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
+    "razorpay": "^2.9.6",
     "socket.io": "^4.8.1",
     "web-push": "^3.6.7"
   },
