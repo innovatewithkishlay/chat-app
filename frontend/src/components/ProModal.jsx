@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { X, Check, Zap, Crown, Star, Shield } from "lucide-react";
+import { X, Crown, Video, Phone, Zap, Star } from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
-import { useAuthStore } from "../store/useAuthStore";
-import logo from "/vite.svg"; // Assuming vite logo or app logo exists
 
 const ProModal = ({ onClose }) => {
-    const [loading, setLoading] = useState(false);
     const { authUser, checkAuth } = useAuthStore();
+    const [loading, setLoading] = useState(false);
 
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
@@ -45,7 +45,7 @@ const ProModal = ({ onClose }) => {
                 currency: orderData.currency,
                 name: "Chatify Pro",
                 description: "Unlock Premium Features",
-                image: "https://t4.ftcdn.net/jpg/04/18/38/54/360_F_418385494_xUfN94j821k1X4q1v86q4q6q4q6q4q6.jpg", // Quick placeholder logo
+                image: "/logo.png",
                 order_id: orderData.orderId,
                 handler: async function (response) {
                     // 2. Verify Payment
@@ -73,10 +73,10 @@ const ProModal = ({ onClose }) => {
                 prefill: {
                     name: authUser?.fullname,
                     email: authUser?.email,
-                    contact: "", // specific to user if available
+                    contact: "",
                 },
                 theme: {
-                    color: "#00BFFF", // Primary color
+                    color: "#F59E0B", // Amber-500 to match new UI
                 },
                 modal: {
                     ondismiss: function () {
@@ -95,81 +95,128 @@ const ProModal = ({ onClose }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in zoom-in duration-200">
-            <div className="relative w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+    // Close on ESC key
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
 
-                {/* Decorative Background Elements */}
-                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/20 to-transparent pointer-events-none" />
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+        document.addEventListener("keydown", handleEsc);
+
+        // Prevent body scroll
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.removeEventListener("keydown", handleEsc);
+            document.body.style.overflow = "auto";
+        };
+    }, [onClose]);
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+
+            {/* BACKDROP */}
+            <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+                onClick={onClose}
+            />
+
+            {/* MODAL */}
+            <div className="relative w-full max-w-md mx-4 bg-[#0a0a0a] border border-amber-500/30 rounded-3xl shadow-2xl shadow-amber-500/20 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
 
                 {/* Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all z-20"
+                    className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-all z-10"
                 >
-                    <X size={20} />
+                    <X className="size-5" />
                 </button>
 
-                <div className="p-8 text-center relative z-10 flex flex-col items-center">
-                    {/* Header */}
-                    <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-gradient-to-tr from-yellow-400 to-orange-500 shadow-lg shadow-orange-500/20">
-                        <Crown size={32} className="text-white drop-shadow-md" />
-                    </div>
+                <div className="p-8 flex flex-col items-center text-center">
 
-                    <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Upgrade to Pro</h2>
-                    <p className="text-white/60 mb-6 text-sm">Unlock the full potential of your chat experience.</p>
-
-                    {/* Pricing */}
-                    <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10 w-full">
-                        <div className="flex items-baseline justify-center gap-1">
-                            <span className="text-lg text-white/60">₹</span>
-                            <span className="text-4xl font-bold text-white">499</span>
-                            <span className="text-sm text-white/40 ml-1">/ lifetime</span>
+                    {/* Crown Icon */}
+                    <div className="mb-6 relative">
+                        <div className="absolute inset-0 bg-amber-500 blur-xl opacity-20 rounded-full animate-pulse" />
+                        <div className="relative size-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                            <Crown className="size-10 text-white fill-white/20" />
                         </div>
                     </div>
 
-                    {/* Features List */}
-                    <div className="space-y-3 mb-8 w-full">
-                        <FeatureItem icon={<Zap className="text-yellow-400 size-5" />} text="Post & View Status Updates" />
-                        <FeatureItem icon={<Star className="text-purple-400 size-5" />} text="Crystal Clear Video Calls" />
-                        <FeatureItem icon={<Shield className="text-green-400 size-5" />} text="Unlimited Voice Calls" />
-                        <FeatureItem icon={<Crown className="text-orange-400 size-5" />} text="Exclusive Pro Badge" />
+                    <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 mb-2">
+                        Unlock Premium
+                    </h2>
+
+                    <div className="flex items-baseline justify-center gap-1 mb-2">
+                        <span className="text-lg text-zinc-400">₹</span>
+                        <span className="text-3xl font-bold text-white">499</span>
+                        <span className="text-xs text-zinc-500 ml-1">/ lifetime</span>
                     </div>
 
-                    {/* Action Button */}
+                    <p className="text-zinc-400 text-sm mb-8 max-w-xs leading-relaxed">
+                        Experience the full potential with exclusive Pro features.
+                    </p>
+
+                    {/* FEATURES */}
+                    <div className="w-full space-y-3 mb-8">
+
+                        <Feature
+                            icon={<Zap className="size-5 text-amber-500" />}
+                            title="Status Updates"
+                            desc="Share your moments with friends"
+                        />
+
+                        <Feature
+                            icon={<Video className="size-5 text-amber-500" />}
+                            title="HD Video Calling"
+                            desc="Crystal clear face-to-face calls"
+                        />
+
+                        <Feature
+                            icon={<Phone className="size-5 text-amber-500" />}
+                            title="Unlimited Voice Calls"
+                            desc="Talk anytime without limits"
+                        />
+                    </div>
+
+                    {/* UPGRADE BUTTON */}
                     <button
                         onClick={handlePayment}
                         disabled={loading}
-                        className="w-full py-3 px-6 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-primary text-white font-bold rounded-xl shadow-lg shadow-primary/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 p-4 font-bold text-black shadow-xl hover:scale-[1.02] transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? (
-                            <>
+                            <span className="flex items-center justify-center gap-2">
                                 <span className="loading loading-spinner loading-sm"></span>
-                                <span>Processing...</span>
-                            </>
+                                Processing...
+                            </span>
                         ) : (
-                            <>
-                                <Crown size={20} />
-                                <span>Get Pro Access Now</span>
-                            </>
+                            <span className="flex items-center justify-center gap-2">
+                                <Crown className="size-5 fill-black/20" />
+                                Upgrade to Pro
+                            </span>
                         )}
                     </button>
 
-                    <p className="mt-4 text-[10px] text-white/30 uppercase tracking-wider">
-                        Secure payment via Razorpay
+                    <p className="mt-4 text-[10px] text-zinc-600 uppercase tracking-widest font-medium">
+                        Secure Payment via Razorpay
                     </p>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
-const FeatureItem = ({ icon, text }) => (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 transition-colors w-full">
-        <div className="shrink-0">{icon}</div>
-        <span className="text-sm font-medium text-white/90 text-left flex-1">{text}</span>
-        <Check size={16} className="text-primary" />
+// Feature Component
+const Feature = ({ icon, title, desc }) => (
+    <div className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-colors">
+        <div className="size-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            {icon}
+        </div>
+        <div className="text-left">
+            <h3 className="font-semibold text-zinc-100 text-sm">{title}</h3>
+            <p className="text-xs text-zinc-500">{desc}</p>
+        </div>
     </div>
 );
 
