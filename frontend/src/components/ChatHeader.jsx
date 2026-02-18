@@ -81,7 +81,7 @@ const ChatHeader = ({ onOpenMemory }) => {
     <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20 h-auto">
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
 
-      <div className="p-2.5 flex items-center justify-between">
+      <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Back Button (Mobile) */}
           <button onClick={() => setSelectedUser(null)} className="lg:hidden btn btn-ghost btn-circle btn-sm">

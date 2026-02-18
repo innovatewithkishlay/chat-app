@@ -33,7 +33,7 @@ const TaskCard = memo(({ task, index, onClick }) => {
                         </div>
                     )}
 
-                    <h4 className="font-medium text-sm mb-1 break-words">{task.title}</h4>
+                    <h4 className="font-medium text-sm mb-1 break-all whitespace-normal">{task.title}</h4>
 
                     <div className="flex items-center justify-between mt-3 text-xs opacity-60">
                         {task.dueDate && (
