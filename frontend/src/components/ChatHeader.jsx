@@ -131,18 +131,36 @@ const ChatHeader = ({ onOpenMemory }) => {
             <>
               <button
                 onClick={handleVoiceCall}
-                className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
-                title="Voice Call"
+                className={`btn btn-circle btn-sm transition-all duration-300 relative group overflow-hidden ${!isPro ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-500" : "btn-primary"}`}
+                title={isPro ? "Voice Call" : "Unlock Voice Call"}
               >
-                {isPro ? <Phone size={18} /> : <Lock size={16} />}
+                {isPro ? (
+                  <Phone size={18} />
+                ) : (
+                  <>
+                    <Phone size={16} className="opacity-50" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px] group-hover:backdrop-blur-none transition-all">
+                      <Lock size={12} className="text-amber-600 drop-shadow-md" />
+                    </div>
+                  </>
+                )}
               </button>
 
               <button
                 onClick={handleVideoCall}
-                className={`btn btn-circle btn-sm ${!isPro ? "btn-ghost text-zinc-500" : "btn-primary"}`}
-                title="Video Call"
+                className={`btn btn-circle btn-sm transition-all duration-300 relative group overflow-hidden ${!isPro ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-500" : "btn-primary"}`}
+                title={isPro ? "Video Call" : "Unlock Video Call"}
               >
-                {isPro ? <Video size={18} /> : <Lock size={16} />}
+                {isPro ? (
+                  <Video size={18} />
+                ) : (
+                  <>
+                    <Video size={16} className="opacity-50" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px] group-hover:backdrop-blur-none transition-all">
+                      <Lock size={12} className="text-amber-600 drop-shadow-md" />
+                    </div>
+                  </>
+                )}
               </button>
 
               {/* Clear Chat - Hidden on mobile */}
