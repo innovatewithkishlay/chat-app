@@ -5,13 +5,22 @@ dotenv.config();
 
 // Initialize Redis Client
 // Uses REDIS_URL from .env if available, otherwise defaults to localhost
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+const redisOptions = {
     retryStrategy(times) {
         const delay = Math.min(times * 50, 2000);
         return delay;
     },
     maxRetriesPerRequest: 3, // Fail fast if Redis is down
-});
+};
+
+if (process.env.REDIS_URL && process.env.REDIS_URL.startsWith("rediss://")) {
+    // START TLS configuration
+    redisOptions.tls = {
+        rejectUnauthorized: false
+    };
+}
+
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", redisOptions);
 
 redis.on("connect", () => console.log("✅ Redis Connected"));
 redis.on("error", (err) => console.error("❌ Redis Connection Error:", err.message));
