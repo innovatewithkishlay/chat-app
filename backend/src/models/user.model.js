@@ -40,6 +40,21 @@ const userSchema = new mongoose.Schema(
       imagesSent: { type: Number, default: 0 },
       videosSent: { type: Number, default: 0 },
     },
+    // Subscription Fields
+    subscriptionPlan: {
+      type: String,
+      default: "free", // "free" or "pro"
+    },
+    subscriptionStatus: {
+      type: String,
+      default: "inactive", // "active", "inactive", "cancelled"
+    },
+    razorpayOrderId: {
+      type: String,
+    },
+    razorpayPaymentId: {
+      type: String,
+    },
     friends: [
       {
         type: mongoose.Schema.Types.ObjectId,

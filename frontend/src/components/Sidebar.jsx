@@ -3,7 +3,7 @@ import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useStatusStore } from "../store/useStatusStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2, CircleDashed } from "lucide-react";
+import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2, CircleDashed, Crown } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";

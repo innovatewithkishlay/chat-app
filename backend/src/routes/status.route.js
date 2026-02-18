@@ -1,5 +1,6 @@
 import express from "express";
 import { protectRoute } from "../middlewares/auth.middleware.js";
+import { requirePro } from "../middlewares/requirePro.js";
 import {
     createStatus,
     getStatuses,
@@ -9,9 +10,12 @@ import {
 
 const router = express.Router();
 
-router.post("/", protectRoute, createStatus);
+// Only PRO users can create status
+router.post("/", protectRoute, requirePro, createStatus);
+
+// Everyone can view statuses (or maybe restricted? sticking to plan: PRO feature to post)
 router.get("/", protectRoute, getStatuses);
-router.post("/view", protectRoute, viewStatus); // Adjusted to match controller expecting body
-router.delete("/:storyId", protectRoute, deleteStatus);
+router.post("/view", protectRoute, viewStatus);
+router.delete("/:storyId", protectRoute, deleteStatus); // maybe check ownership/pro?
 
 export default router;
