@@ -7,6 +7,7 @@ import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import { useProductivityStore } from "../store/useProductivityStore";
 import ProModal from "./ProModal";
 import VideoCall from "./VideoCall";
+import ConfirmModal from "./ConfirmModal";
 import toast from "react-hot-toast";
 
 const ChatHeader = ({ onOpenMemory }) => {
@@ -18,6 +19,18 @@ const ChatHeader = ({ onOpenMemory }) => {
   const [isClearing, setIsClearing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+
+  // Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    isDangerous: false,
+    confirmText: "Confirm"
+  });
+
+  const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
   const isGroup = !!selectedUser.members;
   const isPro = authUser.plan === "PRO";
@@ -40,46 +53,78 @@ const ChatHeader = ({ onOpenMemory }) => {
 
   const handleLeaveGroup = async () => {
     if (isLeaving) return;
-    if (window.confirm("Are you sure you want to leave this group?")) {
-      setIsLeaving(true);
-      try {
-        await leaveGroup(selectedUser._id);
-      } finally {
-        setIsLeaving(false);
+    setConfirmModal({
+      isOpen: true,
+      title: "Leave Group",
+      message: "Are you sure you want to leave this group?",
+      confirmText: "Leave",
+      isDangerous: true,
+      onConfirm: async () => {
+        setIsLeaving(true);
+        try {
+          await leaveGroup(selectedUser._id);
+        } finally {
+          setIsLeaving(false);
+        }
       }
-    }
+    });
   };
 
   const handleClearChat = async () => {
     if (isClearing) return;
-    if (window.confirm("Are you sure you want to clear this chat?")) {
-      setIsClearing(true);
-      try {
-        await useChatStore.getState().clearChat(selectedUser._id);
-      } finally {
-        setIsClearing(false);
+    setConfirmModal({
+      isOpen: true,
+      title: "Clear Chat",
+      message: "Are you sure you want to clear this chat? This action cannot be undone.",
+      confirmText: "Clear",
+      isDangerous: true,
+      onConfirm: async () => {
+        setIsClearing(true);
+        try {
+          await useChatStore.getState().clearChat(selectedUser._id);
+        } finally {
+          setIsClearing(false);
+        }
       }
-    }
+    });
   };
 
   const handleDeleteChat = async () => {
     if (isDeleting) return;
-    if (window.confirm("Are you sure you want to delete this chat? It will be hidden until a new message arrives.")) {
-      setIsDeleting(true);
-      try {
-        const conversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id));
-        if (conversation) {
-          await useChatStore.getState().deleteChat(conversation._id);
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Chat",
+      message: "Are you sure you want to delete this chat? It will be hidden until a new message arrives.",
+      confirmText: "Delete",
+      isDangerous: true,
+      onConfirm: async () => {
+        setIsDeleting(true);
+        try {
+          const conversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id));
+          if (conversation) {
+            await useChatStore.getState().deleteChat(conversation._id);
+            setSelectedUser(null);
+          }
+        } finally {
+          setIsDeleting(false);
         }
-      } finally {
-        setIsDeleting(false);
       }
-    }
+    });
   };
 
   return (
     <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20 h-auto">
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        isDangerous={confirmModal.isDangerous}
+      />
 
       <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">

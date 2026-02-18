@@ -6,6 +6,7 @@ import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Tr
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
+import ConfirmModal from "./ConfirmModal";
 import gsap from "gsap";
 
 const Sidebar = () => {
@@ -29,6 +30,7 @@ const Sidebar = () => {
     groups,
     getGroups,
     sentRequests,
+    deleteChat
   } = useChatStore();
 
   const { onlineUsers, authUser } = useAuthStore();
@@ -40,7 +42,20 @@ const Sidebar = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
+
+  // Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    isDangerous: false,
+    confirmText: "Confirm"
+  });
+
   const listRef = useRef(null);
+
+  const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
   const handleAction = async (id, actionFn) => {
     if (loadingId) return;
@@ -103,6 +118,16 @@ const Sidebar = () => {
   return (
     <aside className="h-full w-full lg:w-80 border-r border-base-300 flex flex-col transition-all duration-300 bg-base-100/50 backdrop-blur-lg">
       {showMoodSelector && <MoodSelector isOpen={showMoodSelector} onClose={() => setShowMoodSelector(false)} />}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        isDangerous={confirmModal.isDangerous}
+      />
 
       <div className="border-b border-base-300 w-full p-4 space-y-4">
         <div className="flex items-center justify-between">
@@ -284,9 +309,14 @@ const Sidebar = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Are you sure you want to remove this friend?")) {
-                          handleAction(friend._id, removeFriend);
-                        }
+                        setConfirmModal({
+                          isOpen: true,
+                          title: "Remove Friend",
+                          message: `Are you sure you want to remove ${friend.fullname} from your friends?`,
+                          confirmText: "Remove",
+                          isDangerous: true,
+                          onConfirm: () => handleAction(friend._id, removeFriend)
+                        });
                       }}
                       disabled={loadingId === friend._id}
                       className="btn btn-xs btn-square btn-ghost text-error"
@@ -449,9 +479,14 @@ const Sidebar = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Delete this chat?")) {
-                          handleAction(conversation._id, useChatStore.getState().deleteChat);
-                        }
+                        setConfirmModal({
+                          isOpen: true,
+                          title: "Delete Chat",
+                          message: `Are you sure you want to delete your chat with ${otherUser.fullname}?`,
+                          confirmText: "Delete",
+                          isDangerous: true,
+                          onConfirm: () => handleAction(conversation._id, deleteChat)
+                        });
                       }}
                       disabled={loadingId === conversation._id}
                       className="p-1 hover:bg-base-200 rounded text-error"
