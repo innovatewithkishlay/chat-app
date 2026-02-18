@@ -3,10 +3,12 @@ import { X, Image as ImageIcon, Type, Send, Loader2, Upload } from "lucide-react
 import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
+import ProModal from "../ProModal";
 
 const StatusCreationPanel = ({ onClose }) => {
     const { createStatus } = useStatusStore();
     const { authUser } = useAuthStore();
+    const [showProModal, setShowProModal] = useState(false);
 
     const [activeTab, setActiveTab] = useState("text"); // "text" | "media"
     const [text, setText] = useState("");
@@ -44,9 +46,13 @@ const StatusCreationPanel = ({ onClose }) => {
                     <p className="text-zinc-500 mb-6 text-sm">
                         Status updates are available exclusively for PRO members. Upgrade now to share your moments!
                     </p>
-                    <button className="btn btn-primary w-full" onClick={onClose}>
-                        Upgrade to PRO (Coming Soon)
+                    <button
+                        className="btn btn-primary w-full"
+                        onClick={() => setShowProModal(true)}
+                    >
+                        Upgrade to PRO
                     </button>
+                    {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
                 </div>
             </div>
         );
