@@ -4,7 +4,7 @@ import { useChatStore } from "../../store/useChattingStore";
 import { Calendar, Clock, X, Trash2 } from "lucide-react";
 
 const ScheduledMessagesModal = ({ onClose }) => {
-    const { selectedUser } = useChatStore();
+    const { selectedUser, conversations } = useChatStore();
     const {
         scheduledMessages,
         fetchScheduledMessages,
@@ -17,15 +17,34 @@ const ScheduledMessagesModal = ({ onClose }) => {
     const [date, setDate] = useState("");
     const [time, setTime] = useState("");
 
+    const getConversationId = () => {
+        if (!selectedUser) return null;
+
+        const isGroup = selectedUser.groupMembers !== undefined || selectedUser.admins !== undefined; // Check if it's a group
+        if (isGroup) return selectedUser._id;
+
+        const conversation = conversations.find(c =>
+            c.participants.some(p => p._id === selectedUser._id)
+        );
+        return conversation ? conversation._id : null;
+    };
+
     useEffect(() => {
-        if (selectedUser?._id) {
-            fetchScheduledMessages(selectedUser._id);
+        const conversationId = getConversationId();
+        if (conversationId) {
+            fetchScheduledMessages(conversationId);
         }
-    }, [selectedUser?._id, fetchScheduledMessages]);
+    }, [selectedUser?._id, conversations, fetchScheduledMessages]);
 
     const handleSchedule = async (e) => {
         e.preventDefault();
         if (!content.trim() || !date || !time) return;
+
+        const conversationId = getConversationId();
+        if (!conversationId) {
+            alert("No conversation found. Please send a message first to start a conversation.");
+            return;
+        }
 
         const scheduledAt = new Date(`${date}T${time}`);
         if (scheduledAt <= new Date()) {
@@ -34,7 +53,7 @@ const ScheduledMessagesModal = ({ onClose }) => {
         }
 
         await scheduleMessage({
-            conversationId: selectedUser._id,
+            conversationId,
             content,
             scheduledAt
         });
