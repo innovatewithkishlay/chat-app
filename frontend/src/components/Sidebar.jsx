@@ -9,6 +9,7 @@ import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
 import StatusList from "./status/StatusList";
 import ConfirmModal from "./ConfirmModal";
+import ProModal from "./ProModal";
 import gsap from "gsap";
 
 const Sidebar = () => {
@@ -43,6 +44,7 @@ const Sidebar = () => {
   const [activeTab, setActiveTab] = useState("chats"); // "chats" | "friends" | "requests"
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
 
   // Confirm Modal State
@@ -163,9 +165,19 @@ const Sidebar = () => {
             <button onClick={() => setShowMoodSelector(true)} className="btn btn-ghost btn-circle btn-sm flex" title="Set Mood">
               <Smile size={18} />
             </button>
-            <div className="badge badge-sm badge-primary/10 text-primary border-none font-medium flex">
-              {authUser?.plan || "FREE"}
-            </div>
+            {authUser?.plan === "PRO" ? (
+              <div className="badge badge-sm badge-primary/10 text-primary border-none font-medium flex gap-1 cursor-default">
+                <Crown size={12} className="text-orange-400 fill-orange-400" />
+                PRO
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowProModal(true)}
+                className="badge badge-sm badge-ghost border-zinc-700 font-medium flex gap-1 hover:bg-primary hover:text-white hover:border-primary transition-all cursor-pointer"
+              >
+                GET PRO
+              </button>
+            )}
           </div>
         </div>
 
@@ -545,6 +557,7 @@ const Sidebar = () => {
       </div>
 
       {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
+      {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
     </aside>
   );
 };

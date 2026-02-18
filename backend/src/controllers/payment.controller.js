@@ -41,3 +41,49 @@ export const createOrder = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
+
+import crypto from "crypto";
+
+export const verifyPayment = async (req, res) => {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const userId = req.user._id;
+
+        const key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+        const generated_signature = crypto
+            .createHmac("sha256", key_secret)
+            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .digest("hex");
+
+        if (generated_signature === razorpay_signature) {
+            // Payment is successful
+            const user = await User.findById(userId);
+
+            user.subscriptionPlan = "pro";
+            user.subscriptionStatus = "active";
+            user.razorpayPaymentId = razorpay_payment_id;
+
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                message: "Payment verified successfully",
+                user: {
+                    _id: user._id,
+                    fullname: user.fullname,
+                    email: user.email,
+                    profilePic: user.profilePic,
+                    plan: user.plan, // Old field if used
+                    subscriptionPlan: user.subscriptionPlan // New field
+                }
+            });
+        } else {
+            res.status(400).json({ success: false, message: "Invalid signature" });
+        }
+
+    } catch (error) {
+        console.error("Error in verifyPayment:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
