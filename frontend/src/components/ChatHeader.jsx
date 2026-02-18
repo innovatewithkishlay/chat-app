@@ -78,7 +78,7 @@ const ChatHeader = ({ onOpenMemory }) => {
   };
 
   return (
-    <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20 min-h-[4rem] justify-center">
+    <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20 h-auto">
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
 
       <div className="p-2.5 flex items-center justify-between">
