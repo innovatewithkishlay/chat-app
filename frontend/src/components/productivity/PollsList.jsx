@@ -1,6 +1,7 @@
 import React, { useEffect, useState, memo } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { useChatStore } from "../../store/useChattingStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import { Plus, BarChart2, CheckCircle } from "lucide-react";
 import { PollsSkeleton } from "../skeletons/ProductivitySkeletons";
 
@@ -56,7 +57,7 @@ const PollItem = memo(({ poll, currentUserId, onVote }) => {
 
 const PollsList = () => {
     const selectedUser = useChatStore((state) => state.selectedUser);
-    const authUser = useChatStore((state) => state.authUser);
+    const authUser = useAuthStore((state) => state.authUser);
 
     const polls = useProductivityStore((state) => state.polls);
     const fetchPolls = useProductivityStore((state) => state.fetchPolls);
