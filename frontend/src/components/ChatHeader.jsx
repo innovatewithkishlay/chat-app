@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone, Trash2, Layout, FileText, MessageSquare, BarChart2 } from "lucide-react";
+import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone, Trash2, FileText, MessageSquare, BarChart2 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
@@ -231,14 +231,7 @@ const ChatHeader = ({ onOpenMemory }) => {
         >
           <MessageSquare size={16} /> Chat
         </button>
-        {!isGroup && (
-          <button
-            onClick={() => setActiveTab("kanban")}
-            className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "kanban" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
-          >
-            <Layout size={16} /> Board
-          </button>
-        )}
+
         <button
           onClick={() => setActiveTab("notes")}
           className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "notes" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}

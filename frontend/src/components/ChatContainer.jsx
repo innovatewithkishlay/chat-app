@@ -8,7 +8,7 @@ import { formatMessageTime } from "../lib/util";
 import { Trash2, Edit2, Smile } from "lucide-react";
 import gsap from "gsap";
 import { useProductivityStore } from "../store/useProductivityStore";
-import KanbanBoard from "./productivity/KanbanBoard";
+
 import NotesContainer from "./productivity/NotesContainer";
 import PollsList from "./productivity/PollsList";
 import TimelineScrubber from "./TimelineScrubber";
@@ -128,7 +128,7 @@ const ChatContainer = ({ onOpenMemory }) => {
         <GroupSettingsModal onClose={() => setShowGroupInfo(false)} />
       )}
 
-      {activeTab === "kanban" && <KanbanBoard />}
+
       {activeTab === "notes" && <NotesContainer />}
       {activeTab === "polls" && <PollsList />}
 
