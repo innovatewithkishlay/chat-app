@@ -14,20 +14,26 @@ import PollsList from "./productivity/PollsList";
 import TimelineScrubber from "./TimelineScrubber";
 import MessageStatus from "./MessageStatus";
 
+import GroupSettingsModal from "./GroupSettingsModal";
+
 const ChatContainer = ({ onOpenMemory }) => {
   const {
     messages,
     getMessages,
+    getGroupMessages,
     isMessagesLoading,
     subscribeToMessages,
     unsubscribeFromMessages,
     selectedUser,
-    isGroup,
     deleteMessage,
     editMessage,
     reactToMessage,
-    currentTypingUsers
+    currentTypingUsers,
+    showGroupInfo,
+    setShowGroupInfo
   } = useChatStore();
+
+  const isGroup = !!selectedUser?.members;
   const { authUser } = useAuthStore();
   const { activeTab } = useProductivityStore();
 
@@ -38,11 +44,15 @@ const ChatContainer = ({ onOpenMemory }) => {
   const [editText, setEditText] = useState("");
 
   useEffect(() => {
-    getMessages(selectedUser._id);
+    if (isGroup) {
+      getGroupMessages(selectedUser._id);
+    } else {
+      getMessages(selectedUser._id);
+    }
     subscribeToMessages();
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
@@ -111,8 +121,12 @@ const ChatContainer = ({ onOpenMemory }) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-base-100">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-base-100 relative">
       <ChatHeader onOpenMemory={onOpenMemory} />
+
+      {showGroupInfo && isGroup && (
+        <GroupSettingsModal onClose={() => setShowGroupInfo(false)} />
+      )}
 
       {activeTab === "kanban" && <KanbanBoard />}
       {activeTab === "notes" && <NotesContainer />}
@@ -128,6 +142,17 @@ const ChatContainer = ({ onOpenMemory }) => {
             <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
 
             {messages.map((message) => {
+              // System Message Rendering
+              if (message.type === "system") {
+                return (
+                  <div key={message._id} className="flex justify-center my-4">
+                    <span className="bg-base-300 text-xs px-3 py-1 rounded-full opacity-70">
+                      {message.text}
+                    </span>
+                  </div>
+                );
+              }
+
               const senderId = message.senderId._id || message.senderId;
               const isMyMessage = senderId === authUser._id;
               const isEditing = editingMessageId === message._id;

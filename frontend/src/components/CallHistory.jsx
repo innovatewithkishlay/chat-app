@@ -16,18 +16,18 @@ const CallHistory = () => {
     if (isLoading) {
         return (
             <div className="flex-1 flex justify-center items-center">
-                <span className="loading loading-spinner loading-lg text-primary"></span>
+                <span className="loading loading-spinner loading-md text-primary"></span>
             </div>
         );
     }
 
     if (calls.length === 0) {
         return (
-            <div className="flex-1 flex flex-col justify-center items-center text-zinc-500 gap-4">
-                <div className="size-20 rounded-full bg-base-200 flex items-center justify-center">
-                    <Phone size={40} className="opacity-50" />
+            <div className="flex-1 flex flex-col justify-center items-center text-base-content/30 gap-3">
+                <div className="size-16 rounded-full bg-base-200/50 flex items-center justify-center">
+                    <Clock size={32} className="opacity-50" />
                 </div>
-                <p className="text-lg font-medium">No call history yet</p>
+                <p className="text-sm font-medium">No call history</p>
             </div>
         );
     }
@@ -36,90 +36,107 @@ const CallHistory = () => {
         if (!seconds) return "0s";
         const min = Math.floor(seconds / 60);
         const sec = seconds % 60;
-        return `${min}m ${sec}s`;
+        return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
     };
 
     const formatTime = (dateString) => {
-        return new Date(dateString).toLocaleString([], {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
+        const date = new Date(dateString);
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+
+        if (isToday) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            <div className="flex items-center justify-between mb-6 px-2">
-                <h2 className="text-2xl font-bold">Call History</h2>
-                <button
-                    onClick={() => {
-                        if (window.confirm("Clear all call history?")) {
-                            useCallHistoryStore.getState().clearCallHistory();
-                        }
-                    }}
-                    className="btn btn-ghost btn-sm text-error"
-                >
-                    Clear History
-                </button>
+        <div className="flex-1 flex flex-col h-full bg-base-100">
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 border-b border-base-200">
+                <h2 className="text-sm font-bold uppercase tracking-wider opacity-70">Recent Calls</h2>
+                {calls.length > 0 && (
+                    <button
+                        onClick={() => {
+                            if (window.confirm("Clear all call history?")) {
+                                useCallHistoryStore.getState().clearCallHistory();
+                            }
+                        }}
+                        className="btn btn-ghost btn-xs text-error opacity-70 hover:opacity-100"
+                        title="Clear History"
+                    >
+                        Clear
+                    </button>
+                )}
             </div>
 
-            {calls.map((call) => {
-                const isCaller = call.caller._id === authUser._id;
-                const otherUser = isCaller ? call.receiver : call.caller;
-                const isMissed = call.status === "MISSED";
-                const isRejected = call.status === "REJECTED";
-                const isEnded = call.status === "ENDED";
+            {/* List */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                {calls.map((call) => {
+                    const isCaller = call.caller._id === authUser._id;
+                    const otherUser = isCaller ? call.receiver : call.caller;
+                    const isMissed = call.status === "MISSED";
+                    const isRejected = call.status === "REJECTED";
 
-                return (
-                    <div key={call._id} className="flex items-center justify-between p-4 bg-base-200/50 rounded-xl hover:bg-base-200 transition-colors">
-                        <div className="flex items-center gap-4">
+                    return (
+                        <div key={call._id} className="flex items-center gap-3 p-3 hover:bg-base-200 transition-colors border-b border-base-100 cursor-default group">
+                            {/* Avatar */}
                             <div className="avatar">
-                                <div className="size-12 rounded-full">
+                                <div className="size-10 rounded-full border border-base-200">
                                     <img src={otherUser.profilePic || "/avatar.png"} alt={otherUser.fullname} />
                                 </div>
                             </div>
 
-                            <div>
-                                <h3 className="font-semibold flex items-center gap-2">
-                                    {otherUser.fullname}
-                                    {call.callType === "VIDEO" ? <Video size={14} className="text-zinc-400" /> : <Phone size={14} className="text-zinc-400" />}
-                                </h3>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <h3 className={`font-medium text-sm truncate ${isMissed ? 'text-error' : ''}`}>
+                                        {otherUser.fullname}
+                                    </h3>
+                                    <span className="text-[10px] text-base-content/40 whitespace-nowrap ml-2">
+                                        {formatTime(call.createdAt)}
+                                    </span>
+                                </div>
 
-                                <div className="flex items-center gap-2 text-sm text-zinc-500">
+                                <div className="flex items-center gap-1.5 text-xs text-base-content/60">
+                                    {/* Direction Icon */}
                                     {isCaller ? (
-                                        <span className="flex items-center gap-1 text-blue-400">
-                                            <ArrowUpRight size={14} /> Outgoing
-                                        </span>
+                                        <ArrowUpRight size={12} className={isMissed || isRejected ? "text-error" : "text-success"} />
                                     ) : (
-                                        <span className="flex items-center gap-1 text-green-400">
-                                            <ArrowDownLeft size={14} /> Incoming
-                                        </span>
+                                        <ArrowDownLeft size={12} className={isMissed || isRejected ? "text-error" : "text-primary"} />
                                     )}
-                                    <span>•</span>
-                                    <span>{formatTime(call.createdAt)}</span>
+
+                                    {/* Status Text */}
+                                    <span className={`truncate ${isMissed ? "text-error" : ""}`}>
+                                        {call.status === "ENDED" ? (
+                                            isCaller ? "Outgoing" : "Incoming"
+                                        ) : (
+                                            call.status.charAt(0) + call.status.slice(1).toLowerCase()
+                                        )}
+                                    </span>
+
+                                    {/* Duration */}
+                                    {call.duration > 0 && (
+                                        <>
+                                            <span className="text-base-content/30">•</span>
+                                            <span>{formatDuration(call.duration)}</span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="flex flex-col items-end gap-1">
-                            <div className={`badge ${isMissed ? "badge-error" : isRejected ? "badge-warning" : "badge-success"} gap-1`}>
-                                {isMissed && <XCircle size={12} />}
-                                {isRejected && <XCircle size={12} />}
-                                {isEnded && <CheckCircle size={12} />}
-                                {call.status}
+                            {/* Call Type Icon */}
+                            <div className="opacity-50 group-hover:opacity-100 transition-opacity">
+                                {call.callType === "VIDEO" ? (
+                                    <Video size={16} className="text-base-content/70" />
+                                ) : (
+                                    <Phone size={16} className="text-base-content/70" />
+                                )}
                             </div>
-
-                            {isEnded && (
-                                <span className="text-xs text-zinc-500 flex items-center gap-1">
-                                    <Clock size={12} />
-                                    {formatDuration(call.duration)}
-                                </span>
-                            )}
                         </div>
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
         </div>
     );
 };

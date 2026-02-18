@@ -6,16 +6,14 @@ import { useVideoCallStore } from "../store/useVideoCallStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import { useProductivityStore } from "../store/useProductivityStore";
 import ProModal from "./ProModal";
-import GroupSettingsModal from "./GroupSettingsModal";
 import VideoCall from "./VideoCall";
 import toast from "react-hot-toast";
 
 const ChatHeader = ({ onOpenMemory }) => {
-  const { selectedUser, setSelectedUser, leaveGroup } = useChatStore();
+  const { selectedUser, setSelectedUser, leaveGroup, setShowGroupInfo, showGroupInfo } = useChatStore();
   const { onlineUsers = [], authUser } = useAuthStore();
   const { activeTab, setActiveTab } = useProductivityStore();
   const [showProModal, setShowProModal] = useState(false);
-  const [showGroupSettings, setShowGroupSettings] = useState(false);
 
   const [isClearing, setIsClearing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -80,9 +78,8 @@ const ChatHeader = ({ onOpenMemory }) => {
   };
 
   return (
-    <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20">
+    <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20 min-h-[4rem] justify-center">
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
-      {showGroupSettings && <GroupSettingsModal onClose={() => setShowGroupSettings(false)} />}
 
       <div className="p-2.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -91,7 +88,10 @@ const ChatHeader = ({ onOpenMemory }) => {
             <ArrowLeft size={20} />
           </button>
 
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => isGroup && setShowGroupSettings(true)}>
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => isGroup && setShowGroupInfo(!showGroupInfo)}
+          >
             {/* Avatar */}
             <div className="avatar">
               <div className="size-10 rounded-full relative">
@@ -204,7 +204,7 @@ const ChatHeader = ({ onOpenMemory }) => {
               {isGroup && (
                 <>
                   <li>
-                    <button onClick={() => setShowGroupSettings(true)}>Group Settings</button>
+                    <button onClick={() => setShowGroupInfo(true)}>Group Info</button>
                   </li>
                   <li>
                     <button onClick={handleLeaveGroup} disabled={isLeaving} className="text-error">
@@ -231,12 +231,14 @@ const ChatHeader = ({ onOpenMemory }) => {
         >
           <MessageSquare size={16} /> Chat
         </button>
-        <button
-          onClick={() => setActiveTab("kanban")}
-          className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "kanban" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
-        >
-          <Layout size={16} /> Board
-        </button>
+        {!isGroup && (
+          <button
+            onClick={() => setActiveTab("kanban")}
+            className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "kanban" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
+          >
+            <Layout size={16} /> Board
+          </button>
+        )}
         <button
           onClick={() => setActiveTab("notes")}
           className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "notes" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}

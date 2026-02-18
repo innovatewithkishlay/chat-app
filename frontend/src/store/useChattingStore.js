@@ -606,6 +606,32 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  promoteToAdmin: async (groupId, memberId) => {
+    try {
+      const res = await axiosInstance.post(`/groups/${groupId}/add-admin`, { memberId });
+      set((state) => ({
+        groups: state.groups.map((g) => (g._id === groupId ? res.data : g)),
+        selectedUser: state.selectedUser?._id === groupId ? res.data : state.selectedUser,
+      }));
+      toast.success("Promoted to Admin");
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
+  dismissAsAdmin: async (groupId, memberId) => {
+    try {
+      const res = await axiosInstance.post(`/groups/${groupId}/remove-admin`, { memberId });
+      set((state) => ({
+        groups: state.groups.map((g) => (g._id === groupId ? res.data : g)),
+        selectedUser: state.selectedUser?._id === groupId ? res.data : state.selectedUser,
+      }));
+      toast.success("Dismissed as Admin");
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
   deleteMessage: async (messageId) => {
     try {
       await axiosInstance.delete(`/messages/${messageId}`);
@@ -638,8 +664,11 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  showGroupInfo: false,
+  setShowGroupInfo: (show) => set({ showGroupInfo: show }),
+
   setSelectedUser: async (selectedUser) => {
-    set({ selectedUser, typingUsers: [] }); // Clear typing users when switching chats
+    set({ selectedUser, typingUsers: [], showGroupInfo: false }); // Clear typing users and close group info when switching chats
     if (selectedUser && selectedUser.email) {
       try {
         await axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`);

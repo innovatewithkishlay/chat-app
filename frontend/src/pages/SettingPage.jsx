@@ -1,7 +1,8 @@
 import { THEMES } from "../constants";
 import { useThemeStore } from "../store/useThemeStore";
 import { useChatStore } from "../store/useChattingStore";
-import { Send, Bell, Eye, EyeOff, Palette, Monitor } from "lucide-react";
+import toast from "react-hot-toast";
+import { Send, Bell, Eye, EyeOff, Palette, Monitor, Mail, MessageSquare } from "lucide-react";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 
@@ -218,6 +219,107 @@ const SettingPage = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Support Section */}
+        <div className="space-y-4" ref={addToRefs}>
+          <div className="flex items-center gap-2 text-lg font-semibold text-accent">
+            <Mail size={20} />
+            <h2>Support</h2>
+          </div>
+
+          <div className="bg-base-100/50 backdrop-blur-lg border border-base-300 rounded-xl p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-8">
+              <div className="md:w-1/3 space-y-4">
+                <h3 className="text-xl font-bold">Report a Bug</h3>
+                <p className="text-sm text-base-content/70 leading-relaxed">
+                  Found something broken? Let us know! Your feedback helps us make Toukii better for everyone.
+                </p>
+                <div className="flex items-center gap-3 text-sm text-base-content/60">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <MessageSquare size={16} />
+                  </div>
+                  <span>We usually respond within 24 hours</span>
+                </div>
+              </div>
+
+              <div className="md:w-2/3">
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const formData = new FormData(form);
+
+                    try {
+                      const btn = form.querySelector('button[type="submit"]');
+                      const originalText = btn.innerText;
+                      btn.disabled = true;
+                      btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Sending...';
+
+                      const response = await fetch("https://formspree.io/f/mlgwldqk", {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                          'Accept': 'application/json'
+                        }
+                      });
+
+                      if (response.ok) {
+                        form.reset();
+                        toast.success("Message sent, thanks for sending this up!");
+                        btn.innerHTML = 'Message Sent! ✨';
+                        btn.classList.add('btn-success', 'text-white');
+                        setTimeout(() => {
+                          btn.disabled = false;
+                          btn.innerText = originalText;
+                          btn.classList.remove('btn-success', 'text-white');
+                        }, 3000);
+                      } else {
+                        throw new Error('Failed to send');
+                      }
+                    } catch (error) {
+                      const btn = form.querySelector('button[type="submit"]');
+                      btn.innerText = 'Failed. Try again.';
+                      btn.classList.add('btn-error', 'text-white');
+                      setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerText = 'Send Message';
+                        btn.classList.remove('btn-error', 'text-white');
+                      }, 3000);
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Name</span>
+                      </label>
+                      <input type="text" name="name" placeholder="Your name" className="input input-bordered w-full focus:outline-none focus:border-primary bg-base-200/50" required />
+                    </div>
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Email</span>
+                      </label>
+                      <input type="email" name="email" placeholder="your@email.com" className="input input-bordered w-full focus:outline-none focus:border-primary bg-base-200/50" required />
+                    </div>
+                  </div>
+
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Message</span>
+                    </label>
+                    <textarea name="message" className="textarea textarea-bordered h-32 focus:outline-none focus:border-primary bg-base-200/50 resize-none" placeholder="Describe the bug or feature request..." required></textarea>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button type="submit" className="btn btn-primary px-8">
+                      Send Message <Send size={16} />
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>

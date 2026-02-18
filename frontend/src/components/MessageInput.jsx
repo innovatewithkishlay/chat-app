@@ -28,7 +28,7 @@ const MessageInput = () => {
   const typingTimeoutRef = useRef(null);
   const isTypingRef = useRef(false);
 
-  const isGroup = !!selectedUser.members;
+  const isGroup = !!selectedUser?.members;
 
   // Close emoji picker when clicking outside
   useEffect(() => {

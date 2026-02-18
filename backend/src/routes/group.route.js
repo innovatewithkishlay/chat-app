@@ -1,6 +1,6 @@
 import express from "express";
 import { protectRoute } from "../middlewares/auth.middleware.js";
-import { createGroup, getGroups, getGroupMessages, leaveGroup, sendGroupMessage, updateGroup, addMember, removeMember } from "../controllers/group.controller.js";
+import { createGroup, getGroups, getGroupMessages, leaveGroup, sendGroupMessage, updateGroup, addMember, removeMember, promoteToAdmin, dismissAsAdmin } from "../controllers/group.controller.js";
 
 const router = express.Router();
 
@@ -12,5 +12,7 @@ router.post("/:groupId/leave", protectRoute, leaveGroup);
 router.put("/:groupId/update", protectRoute, updateGroup);
 router.post("/:groupId/add-member", protectRoute, addMember);
 router.post("/:groupId/remove-member", protectRoute, removeMember);
+router.post("/:groupId/add-admin", protectRoute, promoteToAdmin);
+router.post("/:groupId/remove-admin", protectRoute, dismissAsAdmin);
 
 export default router;

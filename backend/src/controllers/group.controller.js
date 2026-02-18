@@ -2,21 +2,30 @@ import Group from "../models/group.model.js";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
 import { io, getReceiverSocketId } from "../lib/socket.js";
+import cloudinary from "../lib/cloudinary.js";
 
 export const createGroup = async (req, res) => {
     try {
-        const { name, members } = req.body;
+        const { name, members, description, image } = req.body;
         const userId = req.user._id;
 
         if (!name || !members || members.length === 0) {
             return res.status(400).json({ message: "Name and members are required" });
         }
 
+        let avatarUrl = "";
+        if (image) {
+            const uploadResponse = await cloudinary.uploader.upload(image);
+            avatarUrl = uploadResponse.secure_url;
+        }
+
         const group = new Group({
             name,
+            description: description || "",
             members: [...members, userId],
             admins: [userId],
             createdBy: userId,
+            avatar: avatarUrl,
         });
 
         await group.save();
@@ -26,9 +35,10 @@ export const createGroup = async (req, res) => {
             groupId: group._id,
             text: `${req.user.fullname} created group "${name}"`,
             senderId: userId,
-            type: "text",
+            type: "system",
         });
         await systemMessage.save();
+        const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
 
         const populatedGroup = await Group.findById(group._id)
             .populate("members", "fullname username profilePic")
@@ -39,7 +49,7 @@ export const createGroup = async (req, res) => {
             const socketId = getReceiverSocketId(member._id);
             if (socketId) {
                 io.to(socketId).emit("newGroup", populatedGroup);
-                io.to(socketId).emit("newGroupMessage", systemMessage);
+                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
             }
         });
 
@@ -98,6 +108,11 @@ export const leaveGroup = async (req, res) => {
             return res.status(200).json({ message: "Group deleted as no members left" });
         }
 
+        // If no admins left but members exist, promote the oldest member to admin
+        if (group.admins.length === 0 && group.members.length > 0) {
+            group.admins.push(group.members[0]);
+        }
+
         await group.save();
 
         // System message for leaving
@@ -105,7 +120,7 @@ export const leaveGroup = async (req, res) => {
             groupId: group._id,
             text: `${req.user.fullname} left the group`,
             senderId: userId,
-            type: "text",
+            type: "system",
         });
         await systemMessage.save();
         const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
@@ -114,7 +129,15 @@ export const leaveGroup = async (req, res) => {
         group.members.forEach((memberId) => {
             const socketId = getReceiverSocketId(memberId);
             if (socketId) {
-                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
+                // We need to send the updated group info too, in case admins changed
+                // Re-fetch populated group
+                Group.findById(groupId)
+                    .populate("members", "fullname username profilePic")
+                    .populate("admins", "fullname username profilePic")
+                    .then(updatedGroup => {
+                        io.to(socketId).emit("groupUpdated", updatedGroup);
+                        io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
+                    });
             }
         });
 
@@ -206,7 +229,7 @@ export const sendGroupMessage = async (req, res) => {
 export const updateGroup = async (req, res) => {
     try {
         const { groupId } = req.params;
-        const { name, description } = req.body;
+        const { name, description, image } = req.body;
         const userId = req.user._id;
 
         const group = await Group.findById(groupId);
@@ -218,6 +241,10 @@ export const updateGroup = async (req, res) => {
 
         if (name) group.name = name;
         if (description) group.description = description;
+        if (image) {
+            const uploadResponse = await cloudinary.uploader.upload(image);
+            group.avatar = uploadResponse.secure_url;
+        }
 
         await group.save();
 
@@ -226,9 +253,10 @@ export const updateGroup = async (req, res) => {
             groupId: group._id,
             text: `${req.user.fullname} updated group info`,
             senderId: userId,
-            type: "text",
+            type: "system",
         });
         await systemMessage.save();
+        const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
 
         const populatedGroup = await Group.findById(group._id)
             .populate("members", "fullname username profilePic")
@@ -239,7 +267,7 @@ export const updateGroup = async (req, res) => {
             const socketId = getReceiverSocketId(memberId);
             if (socketId) {
                 io.to(socketId).emit("groupUpdated", populatedGroup);
-                io.to(socketId).emit("newGroupMessage", systemMessage);
+                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
             }
         });
 
@@ -276,9 +304,10 @@ export const addMember = async (req, res) => {
             groupId: group._id,
             text: `${req.user.fullname} added ${addedUser.fullname}`,
             senderId: userId,
-            type: "text",
+            type: "system",
         });
         await systemMessage.save();
+        const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
 
         const populatedGroup = await Group.findById(group._id)
             .populate("members", "fullname username profilePic")
@@ -289,7 +318,7 @@ export const addMember = async (req, res) => {
             const socketId = getReceiverSocketId(mId);
             if (socketId) {
                 io.to(socketId).emit("groupUpdated", populatedGroup);
-                io.to(socketId).emit("newGroupMessage", systemMessage);
+                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
             }
         });
 
@@ -324,9 +353,10 @@ export const removeMember = async (req, res) => {
             groupId: group._id,
             text: `${req.user.fullname} removed ${removedUser.fullname}`,
             senderId: userId,
-            type: "text",
+            type: "system",
         });
         await systemMessage.save();
+        const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
 
         const populatedGroup = await Group.findById(group._id)
             .populate("members", "fullname username profilePic")
@@ -337,7 +367,7 @@ export const removeMember = async (req, res) => {
             const socketId = getReceiverSocketId(mId);
             if (socketId) {
                 io.to(socketId).emit("groupUpdated", populatedGroup);
-                io.to(socketId).emit("newGroupMessage", systemMessage);
+                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
             }
         });
 
@@ -350,6 +380,117 @@ export const removeMember = async (req, res) => {
         res.status(200).json(populatedGroup);
     } catch (error) {
         console.error("Error in removeMember:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const promoteToAdmin = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const { memberId } = req.body;
+        const userId = req.user._id;
+
+        const group = await Group.findById(groupId);
+        if (!group) return res.status(404).json({ message: "Group not found" });
+
+        if (!group.admins.includes(userId)) {
+            return res.status(403).json({ message: "Only admins can promote members" });
+        }
+
+        if (!group.members.includes(memberId)) {
+            return res.status(400).json({ message: "User is not a member of this group" });
+        }
+
+        if (group.admins.includes(memberId)) {
+            return res.status(400).json({ message: "User is already an admin" });
+        }
+
+        group.admins.push(memberId);
+        await group.save();
+
+        // System message
+        const targetUser = await User.findById(memberId);
+        const systemMessage = new Message({
+            groupId: group._id,
+            text: `${req.user.fullname} promoted ${targetUser.fullname} to admin`,
+            senderId: userId,
+            type: "system",
+        });
+        await systemMessage.save();
+        const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
+
+        const populatedGroup = await Group.findById(group._id)
+            .populate("members", "fullname username profilePic")
+            .populate("admins", "fullname username profilePic");
+
+        // Notify members
+        group.members.forEach((mId) => {
+            const socketId = getReceiverSocketId(mId);
+            if (socketId) {
+                io.to(socketId).emit("groupUpdated", populatedGroup);
+                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
+            }
+        });
+
+        res.status(200).json(populatedGroup);
+    } catch (error) {
+        console.error("Error in promoteToAdmin:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const dismissAsAdmin = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const { memberId } = req.body;
+        const userId = req.user._id;
+
+        const group = await Group.findById(groupId);
+        if (!group) return res.status(404).json({ message: "Group not found" });
+
+        if (!group.admins.includes(userId)) {
+            return res.status(403).json({ message: "Only admins can demote members" });
+        }
+
+        if (!group.admins.includes(memberId)) {
+            return res.status(400).json({ message: "User is not an admin" });
+        }
+
+        // Prevent self-demotion if last admin (optional check, but good for safety)
+        if (memberId === userId && group.admins.length === 1) {
+            return res.status(400).json({ message: "You cannot dismiss yourself as the only admin" });
+        }
+
+        group.admins = group.admins.filter(id => id.toString() !== memberId);
+        await group.save();
+
+        // System message
+        const targetUser = await User.findById(memberId);
+        const systemMessage = new Message({
+            groupId: group._id,
+            text: `${req.user.fullname} dismissed ${targetUser.fullname} as admin`,
+            senderId: userId,
+            type: "system",
+        });
+        await systemMessage.save();
+        const populatedSystemMessage = await Message.findById(systemMessage._id).populate("senderId", "fullname profilePic");
+
+        const populatedGroup = await Group.findById(group._id)
+            .populate("members", "fullname username profilePic")
+            .populate("admins", "fullname username profilePic");
+
+        // Notify members
+        group.members.forEach((mId) => {
+            const socketId = getReceiverSocketId(mId);
+            if (socketId) {
+                io.to(socketId).emit("groupUpdated", populatedGroup);
+                io.to(socketId).emit("newGroupMessage", populatedSystemMessage);
+            }
+        });
+
+        res.status(200).json(populatedGroup);
+    } catch (error) {
+        console.error("Error in dismissAsAdmin:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };
