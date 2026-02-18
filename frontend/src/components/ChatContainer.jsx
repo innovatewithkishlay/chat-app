@@ -35,7 +35,7 @@ const ChatContainer = ({ onOpenMemory }) => {
 
   const isGroup = !!selectedUser?.members;
   const { authUser } = useAuthStore();
-  const { activeTab } = useProductivityStore();
+  const { activeTab, votePoll } = useProductivityStore();
 
   const messageEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -149,6 +149,86 @@ const ChatContainer = ({ onOpenMemory }) => {
                     <span className="bg-base-300 text-xs px-3 py-1 rounded-full opacity-70">
                       {message.text}
                     </span>
+                  </div>
+                );
+              }
+
+              // Poll Message Rendering
+              if (message.type === "poll" && message.pollId) {
+                const poll = message.pollId;
+                const totalVotes = poll.options.reduce((acc, opt) => acc + opt.voteCount, 0);
+                const senderId = message.senderId._id || message.senderId;
+                const isMyMessage = senderId === authUser._id;
+
+                return (
+                  <div key={message._id} className={`chat ${isMyMessage ? "chat-end" : "chat-start"} group relative`}>
+                    <div className="chat-image avatar">
+                      <div className="size-10 rounded-full border border-base-300 shadow-sm">
+                        <img
+                          src={
+                            isMyMessage
+                              ? authUser.profilePic || "/avatar.png"
+                              : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")
+                          }
+                          alt="profile pic"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="chat-header mb-1">
+                      {isGroup && !isMyMessage && (
+                        <span className="text-xs font-bold mr-2 opacity-70">
+                          {message.senderId.fullname}
+                        </span>
+                      )}
+                      <time className="text-[10px] opacity-50 ml-1">
+                        {formatMessageTime(message.createdAt)}
+                      </time>
+                    </div>
+
+                    <div className={`chat-bubble p-0 overflow-hidden shadow-md flex flex-col min-w-[280px] sm:min-w-[320px] 
+                          ${isMyMessage ? "chat-bubble-primary" : "chat-bubble-secondary"}`}>
+
+                      <div className="p-4 border-b border-base-content/10 bg-base-100/10">
+                        <div className="font-bold text-lg mb-1">{poll.question}</div>
+                        <div className="text-xs opacity-70">📊 Poll</div>
+                      </div>
+
+                      <div className="p-3 space-y-2 bg-base-100/5">
+                        {poll.options.map((option, idx) => {
+                          const percentage = totalVotes === 0 ? 0 : Math.round((option.voteCount / totalVotes) * 100);
+                          const isVoted = poll.votes.some(v => v.userId === authUser._id && v.optionIndex === idx);
+
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => !isVoted && votePoll(poll._id, idx)}
+                              className={`relative p-2 rounded cursor-pointer border transition-all overflow-hidden ${isVoted ? "border-base-100 bg-base-100/20" : "border-base-content/10 hover:bg-base-content/5"}`}
+                            >
+                              {/* Progress Bar */}
+                              <div
+                                className="absolute inset-0 bg-base-content/10 transition-all duration-500"
+                                style={{ width: `${percentage}%` }}
+                              />
+
+                              <div className="relative flex items-center justify-between z-10 text-sm">
+                                <span className="font-medium flex items-center gap-2">
+                                  {option.text}
+                                  {isVoted && <span className="text-xs">✓</span>}
+                                </span>
+                                <span className="opacity-70 text-xs">
+                                  {percentage}% ({option.voteCount})
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="px-3 py-2 text-right text-[10px] opacity-60 bg-base-100/10">
+                        Total votes: {totalVotes}
+                      </div>
+                    </div>
                   </div>
                 );
               }

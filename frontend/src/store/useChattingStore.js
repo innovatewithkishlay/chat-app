@@ -355,6 +355,17 @@ export const useChatStore = create((set, get) => ({
       });
     });
 
+    socket.on("poll:updated", (updatedPoll) => {
+      set((state) => ({
+        messages: state.messages.map((m) => {
+          if (m.type === "poll" && m.pollId && m.pollId._id === updatedPoll._id) {
+            return { ...m, pollId: updatedPoll };
+          }
+          return m;
+        }),
+      }));
+    });
+
     socket.on("connect", () => {
       get().getConversations();
       get().getGroups();

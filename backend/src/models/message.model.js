@@ -23,9 +23,13 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    pollId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Poll",
+    },
     type: {
       type: String,
-      enum: ["text", "image", "video", "file", "audio", "system"],
+      enum: ["text", "image", "video", "file", "audio", "system", "poll"],
       default: "text",
     },
     status: {

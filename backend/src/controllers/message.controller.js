@@ -62,7 +62,7 @@ export const getMessages = async (req, res) => {
       ],
       deletedFor: { $ne: myId }, // Filter out messages deleted for me
       isDeleted: { $ne: true }, // Filter out messages deleted for everyone
-    });
+    }).populate("pollId");
 
     res.status(200).json(messages);
   } catch (error) {

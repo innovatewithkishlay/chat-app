@@ -15,8 +15,11 @@ const pollSchema = new mongoose.Schema(
         conversationId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Conversation",
-            required: true,
-            index: true,
+            // required: true, // No longer strictly required if we have groupId, but for now lets keep using conversationId as the text ID
+        },
+        groupId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Group",
         },
         question: {
             type: String,

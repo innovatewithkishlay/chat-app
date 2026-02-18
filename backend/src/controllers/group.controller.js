@@ -80,6 +80,7 @@ export const getGroupMessages = async (req, res) => {
         const { groupId } = req.params;
         const messages = await Message.find({ groupId })
             .populate("senderId", "fullname username profilePic")
+            .populate("pollId")
             .sort({ createdAt: 1 });
 
         res.status(200).json(messages);
