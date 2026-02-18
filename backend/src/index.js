@@ -62,6 +62,10 @@ app.use("/api/scheduled-messages", scheduledMessageRoutes);
 
 import "./lib/webpush.js";
 
+// Razorpay Payment Routes
+import paymentRoutes from "./routes/payment.route.js";
+app.use("/api/payment", paymentRoutes);
+
 // Reminder & Scheduled Message Cron
 setInterval(async () => {
   try {
