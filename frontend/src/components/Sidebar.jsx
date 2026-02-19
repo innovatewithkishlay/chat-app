@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useStatusStore } from "../store/useStatusStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2, CircleDashed, Crown } from "lucide-react";
+import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2, CircleDashed, Crown, Settings, Phone, Star } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
@@ -34,7 +35,7 @@ const Sidebar = () => {
     getGroups,
     sentRequests,
     deleteChat,
-    clearChat // Import clearChat
+    clearChat
   } = useChatStore();
 
   const { onlineUsers, authUser } = useAuthStore();
@@ -125,9 +126,6 @@ const Sidebar = () => {
     });
   };
 
-  // ... (useEffects)
-
-
   useEffect(() => {
     getTalkRequests();
     getSentRequests();
@@ -178,8 +176,8 @@ const Sidebar = () => {
     if (listRef.current) {
       gsap.fromTo(
         listRef.current.children,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.2, stagger: 0.03, ease: "power2.out" }
       );
     }
   }, [activeTab, isSearching, conversations, friends, talkRequests, groups]);
@@ -199,8 +197,247 @@ const Sidebar = () => {
   if (isConversationsLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-full lg:w-80 border-r border-base-300 flex flex-col transition-all duration-300 bg-base-100/50 backdrop-blur-lg">
+    <aside className="h-full w-full flex flex-col bg-base-100">
+      {/* 1. TOP SECTION: User Avatar & Header */}
+      <div className="px-4 py-3 flex items-center justify-between border-b border-base-300">
+        <div className="flex items-center gap-3">
+          <Link to="/profile" className="relative cursor-pointer transition-opacity hover:opacity-80">
+            <img
+              src={authUser?.profilePic || "/avatar.png"}
+              alt="Profile"
+              className="w-9 h-9 rounded-full object-cover border border-base-300"
+            />
+            <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-base-100"></span>
+          </Link>
+          <h1 className="text-[16px] font-semibold text-base-content tracking-tight">Toukii</h1>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Mood or Pro icons can be subtle here */}
+          <button
+            onClick={() => setShowMoodSelector(true)}
+            className="text-base-content/40 hover:text-base-content/70 p-1.5 rounded-full hover:bg-base-200 transition-colors"
+          >
+            <Smile size={18} />
+          </button>
+          <button
+            onClick={() => setShowCreateGroup(true)}
+            className="text-base-content/40 hover:text-primary p-1.5 rounded-full hover:bg-base-200 transition-colors"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. MIDDLE SECTION: Search & Tabs */}
+      <div className="px-4 pt-3 pb-2 space-y-3">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 size-4" />
+          <input
+            type="text"
+            placeholder="Search..."
+            className="w-full pl-9 pr-4 py-2 bg-base-200 border-none rounded-[10px] text-sm text-base-content/70 focus:outline-none focus:ring-1 focus:ring-base-content/20 placeholder:text-base-content/40"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content/70">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Minimal Tabs */}
+        <div className="flex items-center gap-1 border-b border-base-300 pb-1">
+          {[
+            { id: 'chats', Icon: MessageSquare, label: 'Chats' },
+            { id: 'friends', Icon: Users, label: 'Friends' },
+            { id: 'status', Icon: CircleDashed, label: 'Status', alert: hasUnseen },
+            { id: 'calls', Icon: Phone, label: 'Calls' },
+            { id: 'requests', Icon: Inbox, label: 'Reqs', count: talkRequests.length }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                 relative flex-1 py-2 flex justify-center items-center rounded-lg transition-all
+                 ${activeTab === tab.id ? 'text-primary bg-primary/5' : 'text-base-content/40 hover:text-base-content/60 hover:bg-base-200'}
+               `}
+              title={tab.label}
+            >
+              <tab.Icon size={18} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+              {tab.alert && <span className="absolute top-2 right-3 w-1.5 h-1.5 bg-primary rounded-full" />}
+              {tab.count > 0 && <span className="absolute -top-0 right-1 bg-red-500 text-white text-[9px] px-1 rounded-full">{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. LIST SECTION */}
+      <div className="flex-1 overflow-y-auto px-2 custom-scrollbar" ref={listRef}>
+        {activeTab === "calls" ? (
+          <CallHistory />
+        ) : activeTab === "status" ? (
+          <StatusList />
+        ) : activeTab === "requests" ? (
+          <div className="space-y-1 mt-2">
+            {talkRequests.length === 0 ? (
+              <div className="text-center text-base-content/40 py-10 text-xs">No pending requests</div>
+            ) : (
+              talkRequests.map(req => (
+                <div key={req._id} className="p-3 bg-base-200 rounded-xl flex items-center gap-3">
+                  <img src={req.sender.profilePic || "/avatar.png"} className="size-10 rounded-full" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-base-content/70">{req.sender.fullname}</div>
+                    <div className="flex gap-2 mt-1">
+                      <button onClick={() => handleAction(req._id, acceptTalkRequest)} className="text-xs px-3 py-1 bg-primary text-white rounded-md">Accept</button>
+                      <button onClick={() => handleAction(req._id, rejectTalkRequest)} className="text-xs px-3 py-1 bg-base-300 text-base-content/60 rounded-md">Decline</button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : activeTab === "friends" ? (
+          <div className="space-y-0.5 mt-1">
+            {friends.map(friend => (
+              <div
+                key={friend._id}
+                onClick={() => setSelectedUser(friend)}
+                className="group p-2 flex items-center gap-3 hover:bg-base-200 rounded-lg cursor-pointer transition-colors"
+              >
+                <div className="relative">
+                  <img src={friend.profilePic || "/avatar.png"} className="size-10 rounded-full object-cover border border-base-300" />
+                  {onlineUsers.includes(friend._id) && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-base-100 rounded-full"></span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-base-content/70 truncate">{friend.fullname}</div>
+                  <div className="text-xs text-base-content/40">@{friend.username}</div>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedUser(friend); }}
+                  className="opacity-0 group-hover:opacity-100 p-2 text-primary hover:bg-primary/10 rounded-full transition-all"
+                >
+                  <MessageSquare size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : isSearching ? (
+          <div className="space-y-1 mt-1">
+            {searchResults.length === 0 ? <div className="text-center text-base-content/40 py-4 text-sm">No users found</div> : searchResults.map(user => (
+              <div key={user._id} className="p-2 flex items-center gap-3 hover:bg-base-200 rounded-lg cursor-pointer">
+                <img src={user.profilePic || "/avatar.png"} className="size-10 rounded-full" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-base-content/70">{user.fullname}</div>
+                  <div className="text-xs text-base-content/40">@{user.username}</div>
+                </div>
+                <button onClick={() => handleAction(user._id, sendTalkRequest)} className="p-2 text-primary"><UserPlus size={18} /></button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-0.5 mt-1">
+            {/* Groups */}
+            {groups.length > 0 && (
+              groups.map(group => (
+                <div
+                  key={group._id}
+                  onClick={() => setSelectedUser(group)}
+                  className={`
+                             p-2 flex items-center gap-3 rounded-lg cursor-pointer transition-colors
+                             ${selectedUser?._id === group._id ? 'bg-primary/5' : 'hover:bg-base-200'}
+                           `}
+                >
+                  <img src={group.avatar || "/avatar.png"} className="size-10 rounded-full object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-base-content/70 truncate">{group.name}</div>
+                    <div className="text-xs text-base-content/40">{group.members.length} members</div>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {/* DM Conversations */}
+            {filteredConversations.map(c => {
+              const otherUser = getOtherUser(c);
+              if (!otherUser) return null;
+              const unread = c.unreadCount?.[authUser._id] || 0;
+              const isSelected = selectedUser?._id === otherUser._id;
+
+              return (
+                <div
+                  key={c._id}
+                  onClick={() => setSelectedUser(otherUser)}
+                  onContextMenu={(e) => handleContextMenu(e, c, otherUser)}
+                  className={`
+                             p-2 flex items-center gap-3 rounded-[10px] cursor-pointer transition-colors mb-0.5
+                             ${isSelected ? 'bg-primary/10' : 'hover:bg-base-200'}
+                           `}
+                >
+                  <div className="relative">
+                    <img src={otherUser.profilePic || "/avatar.png"} className="size-[40px] rounded-full object-cover bg-base-200" />
+                    {onlineUsers.includes(otherUser._id) && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-base-100 rounded-full"></span>}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                      <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-primary' : 'text-base-content/70'}`}>
+                        {otherUser.fullname}
+                      </span>
+                      {c.lastMessage && (
+                        <span className="text-[10px] text-base-content/40 whitespace-nowrap ml-1">
+                          {new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-0.5">
+                      <span className={`text-[12px] truncate max-w-[140px] ${unread > 0 ? 'text-base-content font-medium' : 'text-base-content/60'}`}>
+                        {c.lastMessage?.text || (c.lastMessage?.image ? "📷 Photo" : "Start a chat")}
+                      </span>
+                      {unread > 0 && (
+                        <span className="bg-primary text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full">
+                          {unread}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredConversations.length === 0 && groups.length === 0 && (
+              <div className="text-center text-base-content/40 py-10 flex flex-col items-center">
+                <MessageSquare className="size-8 opacity-20 mb-2" />
+                <span className="text-sm">No messages yet</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 4. BOTTOM SECTION: Settings */}
+      <div className="p-3 border-t border-base-300 flex justify-between items-center bg-base-100 z-10">
+        <Link
+          to="/settings"
+          className="p-2 text-base-content/40 hover:text-base-content/70 hover:bg-base-200 rounded-lg transition-colors flex items-center gap-2"
+          title="Settings"
+        >
+          <Settings size={20} />
+          {/* <span className="text-sm font-medium">Settings</span> */}
+        </Link>
+
+        <div className="text-[10px] text-base-content/30 font-medium">
+          v1.2.0
+        </div>
+      </div>
+
+      {/* Modals */}
+
       {showMoodSelector && <MoodSelector isOpen={showMoodSelector} onClose={() => setShowMoodSelector(false)} />}
+      {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
+      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
@@ -212,400 +449,21 @@ const Sidebar = () => {
         isDangerous={confirmModal.isDangerous}
       />
 
-      <div className="border-b border-base-300 w-full p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="size-6 text-primary" />
-            <span className="font-bold text-lg block tracking-tight">Messages</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowMoodSelector(true)} className="btn btn-ghost btn-circle btn-sm flex" title="Set Mood">
-              <Smile size={18} />
-            </button>
-            {authUser?.plan === "PRO" ? (
-              <div className="badge badge-sm badge-primary/10 text-primary border-none font-medium flex gap-1 cursor-default">
-                <Crown size={12} className="text-orange-400 fill-orange-400" />
-                PRO
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowProModal(true)}
-                className="badge badge-sm badge-ghost border-zinc-700 font-medium flex gap-1 hover:bg-primary hover:text-white hover:border-primary transition-all cursor-pointer"
-              >
-                GET PRO
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Search Input */}
-        <div className="relative block group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="size-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search users..."
-            className="input input-bordered input-sm w-full pl-9 pr-8 bg-base-200/50 focus:bg-base-200 transition-all rounded-xl"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute inset-y-0 right-0 pr-2 flex items-center"
-            >
-              <X className="size-4 text-zinc-500 hover:text-zinc-700" />
-            </button>
-          )}
-        </div>
-
-        {/* Tabs */}
-        <div className="flex p-1 bg-base-200/50 rounded-xl">
-          <button
-            onClick={() => setActiveTab("chats")}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${activeTab === "chats" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            Chats
+      {/* Context Menu */}
+      {contextMenu.isOpen && contextMenu.target && (
+        <div
+          className="fixed z-50 bg-white shadow-xl rounded-lg border border-slate-100 py-1 w-40"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={handleClearChatContext} className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            <Trash2 size={14} /> Clear Chat
           </button>
-          <button
-            onClick={() => setActiveTab("friends")}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${activeTab === "friends" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            Friends
-          </button>
-          <button
-            onClick={() => setActiveTab("requests")}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 relative ${activeTab === "requests" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            Reqs
-            {talkRequests.length > 0 && (
-              <span className="absolute top-1 right-1 size-2 bg-error rounded-full animate-pulse" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("status")}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 relative ${activeTab === "status" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            Status
-            {hasUnseen && (
-              <span className="absolute top-1 right-1 size-2 bg-primary rounded-full animate-pulse" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("calls")}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${activeTab === "calls" ? "bg-base-100 shadow-sm text-primary" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            Calls
+          <button onClick={handleDeleteChatContext} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2">
+            <Trash2 size={14} /> Delete Chat
           </button>
         </div>
-
-        {/* Create Group & Filter */}
-        <div className="flex items-center justify-between">
-          <label className="cursor-pointer flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-            <input
-              type="checkbox"
-              checked={showOnlineOnly}
-              onChange={(e) => setShowOnlineOnly(e.target.checked)}
-              className="checkbox checkbox-xs checkbox-primary"
-            />
-            <span>Online only</span>
-          </label>
-
-          <button
-            onClick={() => setShowCreateGroup(true)}
-            className="btn btn-xs btn-ghost gap-1 text-primary hover:bg-primary/10"
-          >
-            <Plus className="size-3" /> New Group
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-y-auto w-full flex-1 p-2" ref={listRef}>
-        {activeTab === "calls" ? (
-          <CallHistory />
-        ) : activeTab === "status" ? (
-          <StatusList />
-        ) : activeTab === "requests" ? (
-          // Requests View
-          <>
-            {talkRequests.length === 0 ? (
-              <div className="text-center text-zinc-500 py-8 flex flex-col items-center gap-2">
-                <Inbox className="size-8 opacity-20" />
-                <p className="text-sm">No pending requests</p>
-              </div>
-            ) : (
-              talkRequests.map((request) => (
-                <div key={request._id} className="w-full p-3 mb-2 bg-base-200/30 rounded-xl hover:bg-base-200 transition-colors">
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src={request.sender.profilePic || "/avatar.png"}
-                      alt={request.sender.fullname}
-                      className="size-10 object-cover rounded-full"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate text-sm">{request.sender.fullname}</div>
-                      <div className="text-xs text-zinc-400">@{request.sender.username}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAction(request._id, acceptTalkRequest)}
-                      disabled={loadingId === request._id}
-                      className="btn btn-xs btn-primary flex-1"
-                    >
-                      {loadingId === request._id ? <span className="loading loading-spinner loading-xs"></span> : "Accept"}
-                    </button>
-                    <button
-                      onClick={() => handleAction(request._id, rejectTalkRequest)}
-                      disabled={loadingId === request._id}
-                      className="btn btn-xs btn-ghost flex-1 hover:bg-error/10 hover:text-error"
-                    >
-                      {loadingId === request._id ? <span className="loading loading-spinner loading-xs"></span> : "Reject"}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </>
-        ) : activeTab === "friends" ? (
-          // Friends View
-          <>
-            {friends.length === 0 ? (
-              <div className="text-center text-zinc-500 py-8 flex flex-col items-center gap-2">
-                <User className="size-8 opacity-20" />
-                <p className="text-sm">No friends yet</p>
-              </div>
-            ) : (
-              friends.map((friend) => (
-                <div key={friend._id} className="w-full p-2 flex items-center gap-3 hover:bg-base-200/50 rounded-xl transition-all group mb-1 cursor-pointer" onClick={() => setSelectedUser(friend)}>
-                  <div className="relative mx-auto lg:mx-0">
-                    <img
-                      src={friend.profilePic || "/avatar.png"}
-                      alt={friend.fullname}
-                      className="size-10 object-cover rounded-full ring-2 ring-base-300 group-hover:ring-primary/20 transition-all"
-                    />
-                    {onlineUsers.includes(friend._id) && (
-                      <span className="absolute bottom-0 right-0 size-2.5 bg-green-500 rounded-full ring-2 ring-base-100" />
-                    )}
-                    {/* Mood Ring */}
-                    {friend.mood?.status && new Date(friend.mood.expiresAt) > new Date() && (
-                      <div className="absolute -top-1 -right-1 text-lg animate-bounce" title={friend.mood.status}>
-                        {friend.mood.status}
-                      </div>
-                    )}
-                  </div>
-                  <div className="block text-left min-w-0 flex-1">
-                    <div className="font-medium truncate text-sm">{friend.fullname}</div>
-                    <div className="text-xs text-zinc-400">@{friend.username}</div>
-                  </div>
-                  <div className="hidden lg:flex gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedUser(friend);
-                      }}
-                      className="btn btn-xs btn-square btn-ghost text-primary"
-                      title="Chat"
-                    >
-                      <MessageSquare className="size-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmModal({
-                          isOpen: true,
-                          title: "Remove Friend",
-                          message: `Are you sure you want to remove ${friend.fullname} from your friends?`,
-                          confirmText: "Remove",
-                          isDangerous: true,
-                          onConfirm: () => handleAction(friend._id, removeFriend)
-                        });
-                      }}
-                      disabled={loadingId === friend._id}
-                      className="btn btn-xs btn-square btn-ghost text-error"
-                      title="Remove Friend"
-                    >
-                      {loadingId === friend._id ? <span className="loading loading-spinner loading-xs"></span> : <X className="size-4" />}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </>
-        ) : isSearching ? (
-          // Search Results View
-          <>
-            {searchResults.length === 0 ? (
-              <div className="text-center text-zinc-500 py-8">No users found</div>
-            ) : (
-              searchResults.map((user) => (
-                <div
-                  key={user._id}
-                  className="w-full p-3 flex items-center gap-3 hover:bg-base-200 rounded-xl transition-colors mb-1"
-                >
-                  <div className="relative mx-auto lg:mx-0">
-                    <img
-                      src={user.profilePic || "/avatar.png"}
-                      alt={user.fullname}
-                      className="size-10 object-cover rounded-full"
-                    />
-                  </div>
-                  <div className="block text-left min-w-0 flex-1">
-                    <div className="font-medium truncate text-sm">{user.fullname}</div>
-                    <div className="text-xs text-zinc-400">@{user.username}</div>
-                  </div>
-                  <button
-                    onClick={() => handleAction(user._id, sendTalkRequest)}
-                    disabled={loadingId === user._id || sentRequests.some(r => r.receiver._id === user._id) || friends.some(f => f._id === user._id)}
-                    className="btn btn-xs btn-circle btn-primary"
-                    title="Send Talk Request"
-                  >
-                    {loadingId === user._id ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : sentRequests.some(r => r.receiver._id === user._id) ? (
-                      <Inbox className="size-4 opacity-50" />
-                    ) : friends.some(f => f._id === user._id) ? (
-                      <MessageSquare className="size-4" />
-                    ) : (
-                      <UserPlus className="size-4" />
-                    )}
-                  </button>
-                </div>
-              ))
-            )}
-          </>
-        ) : (
-          // Conversations & Groups View
-          <>
-            {/* Groups Section */}
-            {groups.length > 0 && (
-              <div className="mb-4">
-                <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Groups</div>
-                {groups.map((group) => (
-                  <button
-                    key={group._id}
-                    onClick={() => setSelectedUser(group)}
-                    className={`
-                    w-full p-2 flex items-center gap-3 rounded-xl transition-all mb-1
-                    ${selectedUser?._id === group._id
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-base-200/50"
-                      }
-                  `}
-                  >
-                    <div className="relative mx-auto lg:mx-0">
-                      <img
-                        src={group.avatar || "/avatar.png"}
-                        alt={group.name}
-                        className="size-10 object-cover rounded-full"
-                      />
-                    </div>
-                    <div className="block text-left min-w-0 flex-1">
-                      <div className="font-medium truncate text-sm">{group.name}</div>
-                      <div className="text-xs opacity-70">{group.members.length} members</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Direct Messages Section */}
-            <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Direct Messages</div>
-            {filteredConversations.map((conversation) => {
-              const otherUser = getOtherUser(conversation);
-              const unreadCount = conversation.unreadCount?.[authUser._id] || 0;
-              const lastMessage = conversation.lastMessage;
-
-              if (!otherUser) return null;
-
-              return (
-                <div
-                  key={conversation._id}
-                  onClick={() => setSelectedUser(otherUser)}
-                  onContextMenu={(e) => handleContextMenu(e, conversation, otherUser)}
-                  role="button"
-                  tabIndex={0}
-                  className={`
-                  w-full p-2 flex items-center gap-3 rounded-xl transition-all mb-1 group cursor-pointer
-                  ${selectedUser?._id === otherUser._id
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-base-200/50"
-                    }
-                `}
-                >
-                  <div className="relative mx-auto lg:mx-0">
-                    <img
-                      src={otherUser.profilePic || "/avatar.png"}
-                      alt={otherUser.fullname}
-                      className={`size-10 object-cover rounded-full transition-all ${selectedUser?._id === otherUser._id ? "ring-2 ring-primary" : ""}`}
-                    />
-                    {onlineUsers.includes(otherUser._id) && (
-                      <span
-                        className="absolute bottom-0 right-0 size-2.5 bg-green-500 
-                      rounded-full ring-2 ring-base-100"
-                      />
-                    )}
-                    {/* Mood Ring */}
-                    {otherUser.mood?.status && new Date(otherUser.mood.expiresAt) > new Date() && (
-                      <div className="absolute -top-1 -right-1 text-lg animate-bounce" title={otherUser.mood.status}>
-                        {otherUser.mood.status}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="block text-left min-w-0 flex-1">
-                    <div className="flex justify-between items-baseline">
-                      <div className="font-medium truncate text-sm">{otherUser.fullname}</div>
-                      {lastMessage && (
-                        <div className="text-[10px] opacity-50 ml-1 whitespace-nowrap">
-                          {new Date(lastMessage.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex justify-between items-center mt-0.5">
-                      <div className={`text-xs truncate w-32 ${unreadCount > 0 ? "font-medium text-primary" : "opacity-70"}`}>
-                        {lastMessage?.text || (lastMessage?.image ? "📷 Image" : "Start a conversation")}
-                      </div>
-                      {unreadCount > 0 && (
-                        <div className="size-4 rounded-full bg-primary text-primary-content text-[10px] flex items-center justify-center font-bold">
-                          {unreadCount}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Context Menu */}
-            {contextMenu.isOpen && contextMenu.target && (
-              <ul
-                className="fixed z-50 menu bg-base-100 shadow-xl rounded-box border border-base-200 w-40 p-2"
-                style={{ top: contextMenu.y, left: contextMenu.x }}
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking menu
-              >
-                <li><button onClick={handleClearChatContext} className="text-warning"><Trash2 size={16} /> Clear Chat</button></li>
-                <li><button onClick={handleDeleteChatContext} className="text-error"><Trash2 size={16} /> Delete Chat</button></li>
-              </ul>
-            )}
-
-            {filteredConversations.length === 0 && groups.length === 0 && (
-              <div className="text-center text-zinc-500 py-8 flex flex-col items-center gap-2">
-                <MessageSquare className="size-8 opacity-20" />
-                <p className="text-sm">No conversations</p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
-      {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
+      )}
     </aside>
   );
 };

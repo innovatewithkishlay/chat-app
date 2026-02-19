@@ -214,6 +214,19 @@ export const useStatusStore = create((set, get) => ({
         socket.off("status:deleted");
     },
 
+    // 5.5 Fetch Viewers (Owner or authorized)
+    fetchStatusViewers: async (storyId) => {
+        try {
+            const res = await axiosInstance.get(`/status/${storyId}/viewers`);
+            return res.data.viewers;
+        } catch (error) {
+            console.error("Error fetching status viewers:", error);
+            // toast.error(error.response?.data?.message || "Failed to fetch viewers");
+            // Return empty array or throw? Component handles loading state usually.
+            return [];
+        }
+    },
+
     // 6. UI Control
     activeStatus: null, // The status document currently being viewed
     openStatus: (status) => set({ activeStatus: status, activeStatusCreation: false }),

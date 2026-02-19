@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -27,8 +27,7 @@ const ChatContainer = ({ onOpenMemory }) => {
     subscribeToMessages,
     unsubscribeFromMessages,
     selectedUser,
-    deleteMessage, // This is the old single delete from store, likely same as deleteMessages logic but check store
-    deleteMessages, // This is the one we updated to take single ID
+    deleteMessages,
     editMessage,
     reactToMessage,
     currentTypingUsers,
@@ -48,19 +47,26 @@ const ChatContainer = ({ onOpenMemory }) => {
   const [messageToDelete, setMessageToDelete] = useState(null);
 
   useEffect(() => {
-    if (isGroup) {
-      getGroupMessages(selectedUser._id);
-    } else {
-      getMessages(selectedUser._id);
+    if (selectedUser) {
+      if (isGroup) {
+        getGroupMessages(selectedUser._id);
+      } else {
+        getMessages(selectedUser._id);
+      }
+      subscribeToMessages();
     }
-    subscribeToMessages();
-
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser?._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+      const isNearBottom = scrollContainerRef.current &&
+        (scrollContainerRef.current.scrollHeight - scrollContainerRef.current.scrollTop - scrollContainerRef.current.clientHeight < 300);
+
+      // Auto-scroll only if near bottom or it's a new message load
+      if (isNearBottom || messages.length < 20) {
+        messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
     }
   }, [messages]);
 
@@ -97,8 +103,7 @@ const ChatContainer = ({ onOpenMemory }) => {
     const element = document.getElementById(`msg-${messageId}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Highlight effect
-      gsap.fromTo(element, { backgroundColor: "rgba(var(--p), 0.2)" }, { backgroundColor: "transparent", duration: 2 });
+      gsap.fromTo(element, { backgroundColor: "rgba(59, 130, 246, 0.1)" }, { backgroundColor: "transparent", duration: 2 });
     }
   };
 
@@ -114,13 +119,10 @@ const ChatContainer = ({ onOpenMemory }) => {
     return "Typing...";
   };
 
-  if (!selectedUser) {
-    return <NoChatSelected />;
-  }
-
+  if (!selectedUser) return <NoChatSelected />;
   if (isMessagesLoading) {
     return (
-      <div className="flex-1 flex flex-col overflow-auto">
+      <div className="flex-1 flex flex-col h-full bg-base-200">
         <ChatHeader onOpenMemory={onOpenMemory} />
         <MessageSkeleton />
         <MessageInput />
@@ -129,7 +131,7 @@ const ChatContainer = ({ onOpenMemory }) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-base-100 relative">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-base-200 relative">
       <ChatHeader onOpenMemory={onOpenMemory} />
 
       {showGroupInfo && isGroup && (
@@ -152,25 +154,23 @@ const ChatContainer = ({ onOpenMemory }) => {
         count={1}
       />
 
-
       {activeTab === "notes" && <NotesContainer />}
       {activeTab === "polls" && <PollsList />}
 
       {activeTab === "chat" && (
         <>
           <div
-            className={`flex-1 overflow-y-auto px-4 pb-4 space-y-4 relative pt-4`}
+            className="flex-1 overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar"
             ref={scrollContainerRef}
             onScroll={handleScroll}
           >
             <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
 
             {messages.map((message) => {
-              // System Message Rendering
               if (message.type === "system") {
                 return (
                   <div key={message._id} className="flex justify-center my-4">
-                    <span className="bg-base-300 text-xs px-3 py-1 rounded-full opacity-70">
+                    <span className="bg-base-300/60 text-base-content/60 text-xs px-3 py-1 rounded-full font-medium shadow-sm">
                       {message.text}
                     </span>
                   </div>
@@ -181,291 +181,197 @@ const ChatContainer = ({ onOpenMemory }) => {
               const isMyMessage = senderId === authUser._id;
               const isEditing = editingMessageId === message._id;
 
-              const handleInteract = (e) => {
-                // No selection mode interaction needed
-              };
-
-              // Long Press Logic for Mobile
-              let longPressTimer;
-              const handleTouchStart = () => {
-                if (isMyMessage) {
-                  longPressTimer = setTimeout(() => {
-                    setMessageToDelete(message);
-                  }, 500); // 500ms long press
-                }
-              };
-
-              const handleTouchEnd = () => {
-                clearTimeout(longPressTimer);
-              };
-
-              // Poll Message Rendering
+              // Poll Rendering
               if (message.type === "poll" && message.pollId) {
                 const poll = message.pollId;
                 const totalVotes = poll.options.reduce((acc, opt) => acc + opt.voteCount, 0);
 
                 return (
-                  <div
-                    key={message._id}
-                    className={`chat ${isMyMessage ? "chat-end" : "chat-start"} group relative`}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                  >
-
-                    <div className="chat-image avatar">
-                      <div className="size-10 rounded-full border border-base-300 shadow-sm">
-                        <img
-                          src={
-                            isMyMessage
-                              ? authUser.profilePic || "/avatar.png"
-                              : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")
-                          }
-                          alt="profile pic"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="chat-header mb-1">
-                      {isGroup && !isMyMessage && (
-                        <span className="text-[10px] lg:text-xs font-bold mr-2 opacity-70">
-                          {message.senderId.fullname}
-                        </span>
-                      )}
-                      <time className="text-[9px] lg:text-[10px] opacity-50 ml-1">
-                        {formatMessageTime(message.createdAt)}
-                      </time>
-                    </div>
-
-                    <div className={`chat-bubble p-0 overflow-hidden shadow-md flex flex-col min-w-[240px] sm:min-w-[320px] 
-                          ${isMyMessage ? "chat-bubble-primary" : "chat-bubble-secondary"}
-                          `}>
-
-                      <div className="p-3 lg:p-4 border-b border-base-content/10 bg-base-100/10">
-                        <div className="font-bold text-[15px] lg:text-lg mb-0.5 lg:mb-1">{poll.question}</div>
-                        <div className="text-[10px] lg:text-xs opacity-70">📊 Poll</div>
+                  <div key={message._id} className={`flex w-full ${isMyMessage ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
+                      <div className="avatar flex-shrink-0 self-end">
+                        <div className="size-8 lg:size-10 rounded-full border border-base-300 shadow-sm">
+                          <img
+                            src={isMyMessage ? authUser.profilePic || "/avatar.png" : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")}
+                            alt="avatar"
+                          />
+                        </div>
                       </div>
 
-                      <div className="p-2 lg:p-3 space-y-1.5 lg:space-y-2 bg-base-100/5">
-                        {poll.options.map((option, idx) => {
-                          const percentage = totalVotes === 0 ? 0 : Math.round((option.voteCount / totalVotes) * 100);
-                          const isVoted = poll.votes.some(v => v.userId === authUser._id && v.optionIndex === idx);
-
-                          return (
-                            <div
-                              key={idx}
-                              onClick={(e) => {
-                                !isVoted && votePoll(poll._id, idx);
-                                e.stopPropagation();
-                              }}
-                              className={`relative p-1.5 lg:p-2 rounded cursor-pointer border transition-all overflow-hidden ${isVoted ? "border-base-100 bg-base-100/20" : "border-base-content/10 hover:bg-base-content/5"}`}
-                            >
-                              {/* Progress Bar */}
-                              <div
-                                className="absolute inset-0 bg-base-content/10 transition-all duration-500"
-                                style={{ width: `${percentage}%` }}
-                              />
-
-                              <div className="relative flex items-center justify-between z-10 text-[13px] lg:text-sm">
-                                <span className="font-medium flex items-center gap-2">
-                                  {option.text}
-                                  {isVoted && <span className="text-[10px] lg:text-xs">✓</span>}
-                                </span>
-                                <span className="opacity-70 text-[10px] lg:text-xs">
-                                  {percentage}% ({option.voteCount})
-                                </span>
+                      <div className={`p-4 rounded-2xl shadow-sm border ${isMyMessage ? "bg-base-100 border-primary/20" : "bg-base-100 border-base-300"} `}>
+                        <div className="font-bold text-base-content mb-2">{poll.question}</div>
+                        <div className="space-y-2">
+                          {poll.options.map((option, idx) => {
+                            const percentage = totalVotes === 0 ? 0 : Math.round((option.voteCount / totalVotes) * 100);
+                            const isVoted = poll.votes.some(v => v.userId === authUser._id && v.optionIndex === idx);
+                            return (
+                              <div key={idx} onClick={() => !isVoted && votePoll(poll._id, idx)} className={`relative p-2 rounded-lg border cursor-pointer overflow-hidden ${isVoted ? "border-primary/30 bg-primary/5" : "border-base-300 hover:bg-base-200"}`}>
+                                <div className="absolute inset-0 bg-primary/10 transition-all duration-500" style={{ width: `${percentage}%` }} />
+                                <div className="relative z-10 flex justify-between text-sm font-medium text-base-content/70">
+                                  <span>{option.text} {isVoted && "✓"}</span>
+                                  <span>{percentage}%</span>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="px-3 py-1.5 lg:py-2 text-right text-[9px] lg:text-[10px] opacity-60 bg-base-100/10">
-                        Total votes: {totalVotes}
+                            );
+                          })}
+                        </div>
+                        <div className="mt-2 text-xs text-base-content/40 text-right">{totalVotes} votes</div>
                       </div>
                     </div>
                   </div>
                 );
               }
 
-              // Normal Message Rendering
+              // Normal Message
               return (
                 <div
                   key={message._id}
                   id={`msg-${message._id}`}
-                  className={`chat ${isMyMessage ? "chat-end" : "chat-start"} group relative`}
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
+                  className={`flex w-full ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
                 >
+                  <div className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
 
-                  <div className="chat-image avatar">
-                    <div className="size-10 rounded-full border border-base-300 shadow-sm">
-                      <img
-                        src={
-                          isMyMessage
-                            ? authUser.profilePic || "/avatar.png"
-                            : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")
-                        }
-                        alt="profile pic"
-                      />
+                    {/* Avatar */}
+                    <div className="avatar flex-shrink-0 self-end">
+                      <div className="size-8 lg:size-10 rounded-full border border-base-300 shadow-sm">
+                        <img
+                          src={
+                            isMyMessage
+                              ? authUser.profilePic || "/avatar.png"
+                              : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")
+                          }
+                          alt="avatar"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="chat-header mb-1">
-                    {isGroup && !isMyMessage && (
-                      <span className="text-[10px] lg:text-xs font-bold mr-2 opacity-70">
-                        {message.senderId.fullname}
-                      </span>
-                    )}
-                    <time className="text-[9px] lg:text-[10px] opacity-50 ml-1">
-                      {formatMessageTime(message.createdAt)}
-                    </time>
-                  </div>
 
-                  <div className="relative group/message">
-                    <div
-                      className={`chat-bubble flex flex-col shadow-md relative min-w-[100px] lg:min-w-[120px] py-2 px-3 lg:py-2 lg:px-4
-                        ${isMyMessage
-                          ? "chat-bubble-primary"
-                          : "chat-bubble-secondary"
-                        }
-                        ${(message.isDeleted || message.deletedForEveryone) ? "italic opacity-70 border border-base-content/20" : ""}
-                    `}
-                    >
-                      {message.image && !(message.isDeleted || message.deletedForEveryone) && (
-                        <>
-                          {message.type === "audio" || message.image.match(/\.(webm|mp3|wav)$/i) ? (
-                            <audio controls src={message.image} className="mb-2 max-w-[200px]" />
-                          ) : (
-                            <img
-                              src={message.image}
-                              alt="Attachment"
-                              className="sm:max-w-[200px] rounded-md mb-2 border border-base-content/10"
-                            />
-                          )}
-                        </>
-                      )}
-
-                      {/* Intent Label */}
-                      {message.intent && message.intent !== 'none' && !(message.isDeleted || message.deletedForEveryone) && (
-                        <span className="text-[9px] lg:text-[10px] uppercase font-bold opacity-70 mb-1 block bg-black/20 px-1 rounded w-fit">
-                          {message.intent === 'important' && '🔔 Important'}
-                          {message.intent === 'question' && '❓ Question'}
-                          {message.intent === 'action' && '✅ Action'}
-                          {message.intent === 'idea' && '💡 Idea'}
+                    <div className="flex flex-col min-w-0">
+                      {isGroup && !isMyMessage && (
+                        <span className="text-xs font-semibold text-base-content/60 mb-1 ml-1">
+                          {message.senderId.fullname}
                         </span>
                       )}
 
-                      {isEditing ? (
-                        <div className="flex flex-col gap-2 min-w-[200px]">
-                          <input
-                            type="text"
-                            className="input input-sm input-bordered w-full text-black"
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleEditSave(message._id);
-                              if (e.key === "Escape") handleEditCancel();
-                            }}
-                          />
-                          <div className="flex justify-end gap-1">
-                            <button
-                              className="btn btn-xs btn-ghost text-black"
-                              onClick={handleEditCancel}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              className="btn btn-xs btn-success text-white"
-                              onClick={() => handleEditSave(message._id)}
-                            >
-                              Save
-                            </button>
+                      <div className={`
+                        relative px-4 py-2 lg:py-3 lg:px-5 rounded-2xl shadow-sm text-[15px] leading-relaxed
+                        ${isMyMessage
+                          ? "bg-primary text-primary-content rounded-tr-none"
+                          : "bg-base-100 text-base-content border border-base-300 rounded-tl-none"
+                        }
+                        ${(message.isDeleted || message.deletedForEveryone) ? "italic opacity-80" : ""}
+                      `}>
+                        {/* Attachments */}
+                        {message.image && !(message.isDeleted || message.deletedForEveryone) && (
+                          <div className="mb-2">
+                            {message.type === "audio" || message.image.match(/\.(webm|mp3|wav)$/i) ? (
+                              <audio controls src={message.image} className="max-w-full" />
+                            ) : (
+                              <img
+                                src={message.image}
+                                alt="Attachment"
+                                className="rounded-lg max-h-[300px] w-full object-cover bg-base-content/5"
+                              />
+                            )}
                           </div>
+                        )}
+
+                        {/* Text Content */}
+                        {isEditing ? (
+                          <div className="flex flex-col gap-2 min-w-[200px]">
+                            <input
+                              type="text"
+                              className="input input-sm bg-white/20 text-inherit w-full border-none focus:outline-none focus:ring-1 focus:ring-white/50 placeholder-white/60"
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleEditSave(message._id);
+                                if (e.key === "Escape") handleEditCancel();
+                              }}
+                            />
+                            <div className="flex justify-end gap-1">
+                              <button onClick={handleEditCancel} className="btn btn-xs btn-ghost text-inherit opacity-80">Cancel</button>
+                              <button onClick={() => handleEditSave(message._id)} className="btn btn-xs btn-circle btn-success text-white">✓</button>
+                            </div>
+                          </div>
+                        ) : (
+                          message.text && <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                        )}
+
+                        {/* Metadata Row */}
+                        <div className={`flex items-center justify-end gap-1 mt-1 ${isMyMessage ? "text-primary-content/70" : "text-base-content/40"}`}>
+                          {message.isEdited && !(message.isDeleted || message.deletedForEveryone) && <span className="text-[10px] italic">edited</span>}
+                          <time className="text-[10px] min-w-[35px] text-right">{formatMessageTime(message.createdAt)}</time>
+                          {isMyMessage && (
+                            <div className={message.text ? "" : "translate-y-0.5"}>
+                              <MessageStatus status={message.status} />
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        message.text && <p className="leading-relaxed text-[14px] lg:text-base">{message.text}</p>
-                      )}
 
-                      {/* Edited Tag */}
-                      {message.isEdited && !(message.isDeleted || message.deletedForEveryone) && !isEditing && (
-                        <span className="text-[9px] opacity-60 text-right block w-full mt-1">edited</span>
-                      )}
-
-                      {/* Message Status Ticks */}
-                      {isMyMessage && (
-                        <div className={`absolute bottom-0.5 right-1.5 ${message.text ? "" : "bg-black/20 rounded px-1"}`}>
-                          <MessageStatus status={message.status} />
-                        </div>
-                      )}
-
-                      {/* Reactions */}
-                      {message.reactions && message.reactions.length > 0 && (
-                        <div className={`absolute -bottom-3 ${isMyMessage ? "right-0" : "left-0"} flex bg-base-100 rounded-full px-1.5 py-0.5 shadow-sm border border-base-300 text-xs z-10 scale-90`}>
-                          {Object.entries(
-                            message.reactions.reduce((acc, curr) => {
-                              acc[curr.emoji] = (acc[curr.emoji] || 0) + 1;
-                              return acc;
-                            }, {})
-                          ).map(([emoji, count]) => (
-                            <span key={emoji} className="ml-0.5">{emoji}{count > 1 && count}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Message Options (Hover) */}
-                    {!(message.isDeleted || message.deletedForEveryone) && !isEditing && (
-                      <div className={`absolute top-1/2 transform -translate-y-1/2 ${isMyMessage ? 'left-[-80px]' : 'right-[-80px]'} opacity-0 group-hover/message:opacity-100 transition-opacity flex gap-1 bg-base-100/80 backdrop-blur shadow-md rounded-full p-1 z-10`}>
-                        {/* React Button */}
-                        <div className="dropdown dropdown-top dropdown-end">
-                          <div tabIndex={0} role="button" className="btn btn-xs btn-circle btn-ghost text-lg">😊</div>
-                          <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 flex-row flex-wrap gap-1 justify-center">
-                            {["👍", "❤️", "😂", "😮", "😢", "😡"].map(emoji => (
-                              <li key={emoji}>
-                                <button onClick={() => reactToMessage(message._id, emoji)} className="text-lg p-1 hover:bg-base-200 rounded">{emoji}</button>
-                              </li>
+                        {/* Reactions */}
+                        {message.reactions && message.reactions.length > 0 && (
+                          <div className={`absolute -bottom-2 ${isMyMessage ? "left-0" : "right-0"} flex bg-base-100 rounded-full px-1.5 py-0.5 shadow border border-base-300 text-xs z-10`}>
+                            {Object.entries(
+                              message.reactions.reduce((acc, curr) => {
+                                acc[curr.emoji] = (acc[curr.emoji] || 0) + 1;
+                                return acc;
+                              }, {})
+                            ).map(([emoji, count]) => (
+                              <span key={emoji} className="ml-0.5">{emoji}{count > 1 && count}</span>
                             ))}
-                          </ul>
-                        </div>
-
-                        {isMyMessage && (
-                          <>
-                            <button
-                              onClick={() => handleEditStart(message)}
-                              className="btn btn-xs btn-ghost btn-circle text-info"
-                              title="Edit"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button onClick={() => setMessageToDelete(message)} className="btn btn-xs btn-ghost btn-circle text-error" title="Delete">
-                              <Trash2 size={14} />
-                            </button>
-                          </>
+                          </div>
                         )}
                       </div>
-                    )}
+
+                      {/* Hover Actions */}
+                      {!(message.isDeleted || message.deletedForEveryone) && !isEditing && (
+                        <div className={`flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity self-center px-2`}>
+                          {/* React Button */}
+                          <div className="dropdown dropdown-top dropdown-end">
+                            <div tabIndex={0} role="button" className="p-1.5 text-base-content/40 hover:text-base-content/60 hover:bg-base-200 rounded-full transition-colors cursor-pointer"><Smile size={16} /></div>
+                            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-xl w-52 flex-row flex-wrap gap-1 justify-center">
+                              {["👍", "❤️", "😂", "😮", "😢", "😡"].map(emoji => (
+                                <li key={emoji}>
+                                  <button onClick={() => reactToMessage(message._id, emoji)} className="text-xl p-2 hover:bg-base-200 rounded-lg">{emoji}</button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {isMyMessage && (
+                            <>
+                              <button onClick={() => handleEditStart(message)} className="p-1.5 text-base-content/40 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors" title="Edit">
+                                <Edit2 size={16} />
+                              </button>
+                              <button onClick={() => setMessageToDelete(message)} className="p-1.5 text-base-content/40 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Delete">
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
                   </div>
                 </div>
               );
             })}
 
             {currentTypingUsers && currentTypingUsers.length > 0 && (
-              <div className="chat chat-start" id="typing-indicator">
-                <div className="chat-image avatar">
-                  <div className="size-10 rounded-full border">
-                    <img
-                      src={isGroup && currentTypingUsers.length === 1
-                        ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId)?.profilePic || "/avatar.png"
-                        : selectedUser.profilePic || "/avatar.png"}
-                      alt="profile pic"
-                    />
+              <div className="flex gap-3">
+                <div className="avatar">
+                  <div className="size-8 rounded-full border border-base-300">
+                    <img src={isGroup && currentTypingUsers.length === 1 ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId)?.profilePic || "/avatar.png" : selectedUser.profilePic || "/avatar.png"} alt="typing" />
                   </div>
                 </div>
-                <div className="chat-bubble bg-base-200 text-xs opacity-50 flex items-center gap-1">
-                  <span className="loading loading-dots loading-xs"></span> {getTypingText()}
+                <div className="bg-base-100 border border-base-300 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+                  <span className="loading loading-dots loading-xs text-base-content/40"></span>
+                  <span className="text-xs text-base-content/40 italic">{getTypingText()}</span>
                 </div>
               </div>
             )}
+
             <div ref={messageEndRef} />
           </div>
 

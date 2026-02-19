@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
+import StatusViewersSheet from "./StatusViewersSheet";
 
 const StatusViewer = ({
     initialStoryIndex = 0,
@@ -13,6 +14,7 @@ const StatusViewer = ({
 }) => {
     const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex);
     const [progress, setProgress] = useState(0);
+    const [showViewers, setShowViewers] = useState(false);
     const { viewStatus } = useStatusStore();
     const { authUser } = useAuthStore();
 
@@ -21,16 +23,29 @@ const StatusViewer = ({
     const duration = isVideo ? (currentStory.duration || 15) : 5; // Default 5s for image/text
 
     const videoRef = useRef(null);
+    const viewTimerRef = useRef(null);
 
-    // Handle View Counting
+    // Handle View Counting (2-second Timer)
     useEffect(() => {
-        if (currentStory && currentStory._id) {
-            viewStatus(userId, currentStory._id);
+        // Reset timer on change
+        if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
+
+        if (currentStory && currentStory._id && userId !== authUser?._id) {
+            // Only count if NOT owner
+            viewTimerRef.current = setTimeout(() => {
+                viewStatus(userId, currentStory._id);
+            }, 2000); // 2 seconds threshold
         }
-    }, [currentStoryIndex, userId]);
+
+        return () => {
+            if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
+        };
+    }, [currentStoryIndex, userId, currentStory?._id]);
 
     // Auto Advance Logic
     useEffect(() => {
+        if (showViewers) return; // Pause auto-advance when viewing list
+
         setProgress(0);
         const startTime = Date.now();
 
@@ -45,7 +60,7 @@ const StatusViewer = ({
         }, 50);
 
         return () => clearInterval(interval);
-    }, [currentStoryIndex, duration]);
+    }, [currentStoryIndex, duration, showViewers]);
 
     const handleNext = () => {
         if (currentStoryIndex < stories.length - 1) {
@@ -62,21 +77,13 @@ const StatusViewer = ({
             setCurrentStoryIndex(prev => prev - 1);
         } else {
             if (onPrevUser) onPrevUser();
-            // else do nothing or close? usually stay or close. Let's stay.
         }
     };
 
     if (!currentStory) return null;
 
-    if (!currentStory) return null;
-
     return (
         <div className="w-full h-full flex items-center justify-center bg-black relative">
-            {/* Mobile: Full Screen. Desktop: Constrained aspect ratio or full? 
-                User asked for "Immersive", "Full width and height of chat area". 
-                Sidebar visible on left.
-                So we take full space of the parent div.
-            */}
             <div className="relative w-full h-full bg-zinc-900 overflow-hidden flex flex-col">
 
                 {/* Progress Bars */}
@@ -95,14 +102,10 @@ const StatusViewer = ({
 
                 {/* Header */}
                 <div className="absolute top-4 left-0 right-0 z-20 px-4 py-2 flex items-center justify-between pointer-events-none">
-                    {/* pointer-events-none to let clicks pass through to nav overlays? 
-                       No, buttons need pointer-events-auto
-                   */}
                     <div className="flex items-center gap-2 pointer-events-auto">
                         <button onClick={onClose} className="p-1 rounded-full bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm">
                             <ChevronLeft size={20} />
                         </button>
-                        {/* Could show user info here */}
                     </div>
                     <button onClick={onClose} className="p-1 rounded-full bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm pointer-events-auto">
                         <X size={20} />
@@ -126,10 +129,9 @@ const StatusViewer = ({
                         <video
                             src={currentStory.content}
                             className="w-full h-full object-contain"
-                            autoPlay
+                            autoPlay={!showViewers}
+                            muted={false} // Maybe allow sound? User didn't specify. Default muted maybe better for autoplay policies but apps usually allow sound.
                             ref={videoRef}
-                        // On video, we might want to sync progress with video time update rather than timer
-                        // For simplicity in this iteration, we use timer.
                         />
                     ) : (
                         <img src={currentStory.content} className="w-full h-full object-contain" alt="Status" />
@@ -140,13 +142,23 @@ const StatusViewer = ({
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-20 pointer-events-none">
                     {userId === authUser?._id && (
                         <div className="flex flex-col items-center text-white/80 pointer-events-auto">
-                            <div className="flex items-center gap-1 mb-2">
+                            <button
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); setShowViewers(true); }}
+                            >
                                 <Eye size={16} />
                                 <span className="text-sm font-medium">{currentStory.viewerCount}</span>
-                            </div>
+                            </button>
                         </div>
                     )}
                 </div>
+
+                {/* Viewer Sheet */}
+                <StatusViewersSheet
+                    storyId={currentStory._id}
+                    isOpen={showViewers}
+                    onClose={() => setShowViewers(false)}
+                />
 
             </div>
         </div>

@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -49,7 +48,6 @@ const App = () => {
     );
   return (
     <div data-theme={theme} className="h-screen w-full overflow-hidden bg-base-100 flex flex-col">
-      <Navbar />
       <div className="flex-1 h-full overflow-hidden">
         <Routes>
           <Route

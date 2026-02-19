@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, Send, X, Mic, StopCircle, Trash2, Smile, Clock } from "lucide-react";
+import { Image, Send, X, Mic, Smile, Clock, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import EmojiPicker from "emoji-picker-react";
 import gsap from "gsap";
@@ -10,18 +10,16 @@ import ScheduledMessagesModal from "./productivity/ScheduledMessagesModal";
 const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
-  const [audioBlob, setAudioBlob] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false); // For Plus button
   const [isSending, setIsSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   const fileInputRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const timerRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiPickerRef = useRef(null);
+  const attachMenuRef = useRef(null);
 
   const { sendMessage, sendGroupMessage, selectedUser, sendTypingStart, sendTypingStop } = useChatStore();
   const { authUser } = useAuthStore();
@@ -30,11 +28,14 @@ const MessageInput = () => {
 
   const isGroup = !!selectedUser?.members;
 
-  // Close emoji picker when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
         setShowEmojiPicker(false);
+      }
+      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target)) {
+        setShowAttachMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -55,18 +56,22 @@ const MessageInput = () => {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [text]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+      setShowAttachMenu(false);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -77,13 +82,13 @@ const MessageInput = () => {
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
-    if (!text.trim() && !imagePreview && !audioBlob) return;
+    if (!text.trim() && !imagePreview) return;
     if (isSending) return;
 
     setIsSending(true);
     setShowEmojiPicker(false);
 
-    // Stop typing immediately
+    // Stop typing
     if (isTypingRef.current) {
       sendTypingStop(selectedUser._id, isGroup ? selectedUser._id : null);
       isTypingRef.current = false;
@@ -92,46 +97,25 @@ const MessageInput = () => {
 
     try {
       let content = { text: text.trim(), image: imagePreview };
-      if (audioBlob) {
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = async () => {
-          content.image = reader.result;
-          await send(content);
-        };
-      } else {
-        await send(content);
-      }
+      await (isGroup ? sendGroupMessage(selectedUser._id, content) : sendMessage(content));
+
+      setText("");
+      setImagePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
     } finally {
       setIsSending(false);
     }
-  };
-
-  const send = async (content) => {
-    if (isGroup) {
-      await sendGroupMessage(selectedUser._id, content);
-    } else {
-      await sendMessage(content);
-    }
-    setText("");
-    setImagePreview(null);
-    setAudioBlob(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const handleTyping = (e) => {
     const value = e.target.value;
     setText(value);
 
-    // Slash Commands Logic (Simple Example)
-    if (value === "/shrug") {
-      setText("¯\\_(ツ)_/¯");
-      return;
-    }
-
+    // Typing indicator logic
     const receiverId = selectedUser._id;
     const groupId = isGroup ? selectedUser._id : null;
 
@@ -149,24 +133,12 @@ const MessageInput = () => {
       if (isTypingRef.current) {
         isTypingRef.current = false;
         sendTypingStop(receiverId, groupId);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       }
     }
   };
 
   const handleEmojiClick = (emojiObject) => {
-    const cursor = textareaRef.current.selectionStart;
-    const msg = text.slice(0, cursor) + emojiObject.emoji + text.slice(cursor);
-    setText(msg);
-
-    // Restore cursor position after state update
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.selectionStart = cursor + emojiObject.emoji.length;
-        textareaRef.current.selectionEnd = cursor + emojiObject.emoji.length;
-        textareaRef.current.focus();
-      }
-    }, 0);
+    setText(prev => prev + emojiObject.emoji);
   };
 
   const handleKeyDown = (e) => {
@@ -176,151 +148,94 @@ const MessageInput = () => {
     }
   };
 
-  const handleImageClick = () => {
-    const isFree = authUser.plan === "FREE";
-    const imagesSent = authUser.usage?.imagesSent || 0;
-    const limit = isFree ? 2 : 100;
-    if (imagesSent >= limit) {
-      toast.error(`Daily image limit (${limit}) reached. Upgrade to PRO!`);
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const startRecording = async () => {
-    toast.success("Audio functionality coming soon!");
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      clearInterval(timerRef.current);
-    }
-  };
-
-  const formatDuration = (sec) => {
-    const min = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${min}:${s < 10 ? '0' : ''}${s}`;
-  };
+  const startRecording = () => { toast.success("Voice messages coming soon!"); };
 
   return (
-    <div className="p-2 lg:p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative z-50 transition-all">
-      {/* Emoji Picker */}
+    <div className="bg-base-100 border-t border-base-300 p-2 lg:px-4 lg:py-2 min-h-[60px] flex items-end gap-2 relative z-30">
+
+      {/* Popovers */}
       {showEmojiPicker && (
-        <div ref={emojiPickerRef} className="absolute bottom-full left-2 lg:left-4 mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-base-300">
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            theme={document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"}
-            lazyLoadEmojis={true}
-            searchDisabled={false}
-            width={300}
-            height={350}
-            previewConfig={{ showPreview: false }}
-          />
+        <div ref={emojiPickerRef} className="absolute bottom-[70px] left-4 z-50">
+          <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} theme="auto" />
         </div>
       )}
 
       {showScheduleModal && <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />}
 
-      {imagePreview && (
-        <div className="mb-2 lg:mb-3 flex items-center gap-2 animate-in slide-in-from-bottom-2 px-2">
-          <div className="relative">
-            <img src={imagePreview} alt="Preview" className="w-16 h-16 lg:w-20 lg:h-20 object-cover rounded-xl border border-zinc-700 shadow-lg" />
-            <button onClick={removeImage} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center hover:bg-base-200 transition-colors">
-              <X className="size-3" />
-            </button>
+      {/* Attach Menu */}
+      {showAttachMenu && (
+        <div ref={attachMenuRef} className="absolute bottom-[70px] left-14 bg-base-100 shadow-xl rounded-xl border border-base-300 p-2 flex flex-col gap-1 min-w-[140px] animate-fade-in z-50">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
+          >
+            <Image size={16} className="text-blue-500" /> Photo
+          </button>
+          <button
+            onClick={() => { setShowScheduleModal(true); setShowAttachMenu(false); }}
+            className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
+          >
+            <Clock size={16} className="text-orange-500" /> Schedule
+          </button>
+        </div>
+      )}
+      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
+
+      {/* Left Icons */}
+      <div className="flex items-center gap-1 mb-2">
+        <button
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          className="p-2 text-base-content/40 hover:text-amber-500 hover:bg-base-200 rounded-full transition-colors"
+        >
+          <Smile size={20} />
+        </button>
+        <button
+          onClick={() => setShowAttachMenu(!showAttachMenu)}
+          className={`p-2 rounded-full transition-colors ${showAttachMenu ? 'bg-base-200 text-base-content/60' : 'text-base-content/40 hover:text-base-content/60 hover:bg-base-200'}`}
+        >
+          <Plus size={20} />
+        </button>
+      </div>
+
+      {/* Input Area */}
+      <div className="flex-1 bg-base-200 rounded-[20px] px-4 py-2 flex flex-col justify-center min-h-[44px] focus-within:ring-1 focus-within:ring-base-content/20 transition-all mb-1.5 border border-transparent focus-within:bg-base-100 focus-within:border-base-300">
+        {imagePreview && (
+          <div className="mb-2 relative w-fit">
+            <img src={imagePreview} className="h-20 rounded-lg border border-base-300" alt="Preview" />
+            <button onClick={removeImage} className="absolute -top-1 -right-1 bg-base-100 rounded-full p-0.5 shadow border border-base-300 hover:text-red-500"><X size={14} /></button>
           </div>
-        </div>
-      )}
+        )}
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={handleTyping}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a message..."
+          rows={1}
+          className="w-full bg-transparent border-none outline-none text-base-content placeholder:text-base-content/40 text-sm resize-none max-h-[150px] scrollbar-hide"
+        />
+      </div>
 
-      {audioBlob && (
-        <div className="mb-3 flex items-center gap-3 bg-base-200/50 p-2 rounded-xl w-fit">
-          <audio src={URL.createObjectURL(audioBlob)} controls className="h-8 w-40 lg:w-48" />
-          <button onClick={() => setAudioBlob(null)} className="btn btn-ghost btn-xs text-error"><Trash2 size={16} /></button>
-        </div>
-      )}
-
-      <form onSubmit={handleSendMessage} className="flex items-end gap-2 lg:gap-3">
-        <div className="flex-1 flex gap-1 lg:gap-2 relative items-end bg-base-200/50 rounded-xl lg:rounded-2xl p-1 lg:p-1.5 border border-transparent focus-within:border-primary/20 transition-all shadow-sm">
-
+      {/* Right Icon (Send/Mic) */}
+      <div className="mb-2">
+        {text.trim() || imagePreview ? (
           <button
-            type="button"
-            className={`btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-primary transition-colors`}
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          >
-            <Smile size={20} className="lg:size-5 size-[18px]" />
-          </button>
-
-          <textarea
-            ref={textareaRef}
-            className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-[120px] lg:max-h-[150px] py-1.5 lg:py-2 text-sm leading-relaxed scrollbar-hide outline-none focus:outline-none min-h-[36px]"
-            placeholder={isRecording ? "Recording..." : "Type a message..."}
-            value={text}
-            onChange={handleTyping}
-            onKeyDown={handleKeyDown}
-            disabled={isRecording || isSending}
-            rows={1}
-          />
-
-          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
-
-          <button
-            type="button"
-            className={`hidden sm:flex btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
-            onClick={handleImageClick}
-            disabled={isRecording || isSending}
-          >
-            <Image size={20} />
-          </button>
-
-          {/* Mobile Image Button (Visible only on mobile inside input) */}
-          <button
-            type="button"
-            className={`sm:hidden btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
-            onClick={handleImageClick}
-            disabled={isRecording || isSending}
-          >
-            <Image size={18} />
-          </button>
-
-          <button
-            type="button"
-            className={`hidden sm:flex btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
-            onClick={() => setShowScheduleModal(true)}
-            disabled={isRecording || isSending}
-            title="Schedule Message"
-          >
-            <Clock size={20} />
-          </button>
-        </div>
-
-        {text.trim() || imagePreview || audioBlob ? (
-          <button
-            type="submit"
+            onClick={handleSendMessage}
             disabled={isSending}
-            className="btn btn-circle btn-primary shadow-lg hover:scale-105 transition-transform mb-0.5 btn-sm lg:btn-md"
+            className="p-2.5 bg-primary text-primary-content rounded-full hover:bg-primary-focus shadow-sm hover:shadow-md transition-all active:scale-95"
           >
-            {isSending ? <span className="loading loading-spinner loading-xs"></span> : <Send size={18} />}
+            {isSending ? <span className="loading loading-spinner loading-xs" /> : <Send size={18} />}
           </button>
         ) : (
           <button
-            type="button"
-            className={`btn btn-circle mb-0.5 btn-sm lg:btn-md ${isRecording ? "btn-error animate-pulse" : "btn-ghost text-zinc-400"}`}
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={isSending}
+            onClick={startRecording}
+            className="p-2.5 text-base-content/40 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
           >
-            {isRecording ? <StopCircle size={20} /> : <Mic size={20} className="lg:size-5 size-[18px]" />}
+            <Mic size={20} />
           </button>
         )}
+      </div>
 
-        {isRecording && (
-          <span className="text-error text-xs font-mono absolute -top-6 right-4 bg-base-100 px-2 py-1 rounded border border-error/20">
-            {formatDuration(recordingDuration)}
-          </span>
-        )}
-      </form>
     </div>
   );
 };

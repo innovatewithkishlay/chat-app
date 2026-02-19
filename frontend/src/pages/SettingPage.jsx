@@ -3,8 +3,7 @@ import { useThemeStore } from "../store/useThemeStore";
 import { useChatStore } from "../store/useChattingStore";
 import toast from "react-hot-toast";
 import { Send, Bell, Eye, EyeOff, Palette, Monitor, Mail, MessageSquare } from "lucide-react";
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
+import SettingsLayout from "../components/SettingsLayout";
 
 const PREVIEW_MESSAGES = [
   { id: 1, content: "Hey! How's it going?", isSent: false },
@@ -19,52 +18,29 @@ const SettingPage = () => {
   const { theme, setTheme } = useThemeStore();
   const { showNotifications, showPreview, toggleNotificationSetting } = useChatStore();
 
-  const containerRef = useRef(null);
-  const sectionsRef = useRef([]);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        sectionsRef.current,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: "power2.out" }
-      );
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
-
-  const addToRefs = (el) => {
-    if (el && !sectionsRef.current.includes(el)) {
-      sectionsRef.current.push(el);
-    }
-  };
-
   return (
-    <div className="h-screen container mx-auto px-4 pt-20 max-w-4xl overflow-y-auto" ref={containerRef}>
+    <SettingsLayout>
       <div className="space-y-8 pb-10">
 
-        {/* Header */}
-        <div className="flex flex-col gap-1" ref={addToRefs}>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Settings
-          </h1>
-          <p className="text-base-content/70">Customize your chat experience</p>
+        {/* Intro Text */}
+        <div>
+          <h2 className="text-2xl font-bold text-base-content mb-2">Preferences</h2>
+          <p className="text-base-content/60">Customize your chat experience and look</p>
         </div>
 
         {/* Notifications Section */}
-        <div className="space-y-4" ref={addToRefs}>
-          <div className="flex items-center gap-2 text-lg font-semibold text-primary">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-lg font-semibold text-primary border-b border-primary/10 pb-2">
             <Bell size={20} />
             <h2>Notifications</h2>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             {/* Show Notifications Toggle */}
-            <div className="bg-base-100/50 backdrop-blur-lg border border-base-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex justify-between items-center">
                 <div className="space-y-1">
-                  <h3 className="font-medium">Enable Notifications</h3>
+                  <h3 className="font-medium text-base-content">Enable Notifications</h3>
                   <p className="text-xs text-base-content/60">Receive toast alerts for new messages</p>
                 </div>
                 <input
@@ -77,12 +53,12 @@ const SettingPage = () => {
             </div>
 
             {/* Show Preview Toggle */}
-            <div className={`bg-base-100/50 backdrop-blur-lg border border-base-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow ${!showNotifications ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow ${!showNotifications ? 'opacity-50 pointer-events-none' : ''}`}>
               <div className="flex justify-between items-center">
                 <div className="space-y-1">
-                  <h3 className="font-medium flex items-center gap-2">
+                  <h3 className="font-medium flex items-center gap-2 text-base-content">
                     Message Preview
-                    {showPreview ? <Eye size={14} className="text-base-content/50" /> : <EyeOff size={14} className="text-base-content/50" />}
+                    {showPreview ? <Eye size={14} className="text-base-content/40" /> : <EyeOff size={14} className="text-base-content/40" />}
                   </h3>
                   <p className="text-xs text-base-content/60">Show message content in notifications</p>
                 </div>
@@ -99,17 +75,17 @@ const SettingPage = () => {
         </div>
 
         {/* Appearance Section */}
-        <div className="space-y-4" ref={addToRefs}>
-          <div className="flex items-center gap-2 text-lg font-semibold text-secondary">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-lg font-semibold text-secondary border-b border-secondary/10 pb-2">
             <Palette size={20} />
             <h2>Appearance</h2>
           </div>
 
-          <div className="bg-base-100/50 backdrop-blur-lg border border-base-300 rounded-xl p-6 shadow-sm">
+          <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm">
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium">Theme Selection</h3>
-                <span className="text-xs text-base-content/50">{THEMES.length} themes available</span>
+                <h3 className="font-medium text-base-content">Theme Selection</h3>
+                <span className="text-xs text-base-content/60">{THEMES.length} themes available</span>
               </div>
 
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
@@ -118,12 +94,12 @@ const SettingPage = () => {
                     key={t}
                     className={`
                       group flex flex-col items-center gap-2 p-2 rounded-xl transition-all duration-200
-                      ${theme === t ? "bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-base-100 scale-105" : "hover:bg-base-200/50 hover:scale-105"}
+                      ${theme === t ? "bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-base-100 scale-105" : "hover:bg-base-200 hover:scale-105"}
                     `}
                     onClick={() => setTheme(t)}
                   >
                     <div
-                      className="relative h-10 w-full rounded-lg overflow-hidden shadow-sm border border-base-content/10"
+                      className="relative h-10 w-full rounded-lg overflow-hidden shadow-sm border border-base-300"
                       data-theme={t}
                     >
                       <div className="absolute inset-0 grid grid-cols-4 gap-px p-1">
@@ -133,7 +109,7 @@ const SettingPage = () => {
                         <div className="rounded bg-neutral"></div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-medium truncate w-full text-center opacity-80 group-hover:opacity-100">
+                    <span className="text-[10px] font-medium truncate w-full text-center text-base-content/60 group-hover:text-base-content">
                       {t.charAt(0).toUpperCase() + t.slice(1)}
                     </span>
                   </button>
@@ -144,14 +120,14 @@ const SettingPage = () => {
         </div>
 
         {/* Preview Section */}
-        <div className="space-y-4" ref={addToRefs}>
-          <div className="flex items-center gap-2 text-lg font-semibold text-accent">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-lg font-semibold text-accent border-b border-accent/10 pb-2">
             <Monitor size={20} />
             <h2>Live Preview</h2>
           </div>
 
-          <div className="rounded-2xl border border-base-300 overflow-hidden bg-base-100 shadow-xl">
-            <div className="p-8 bg-base-200/50 flex justify-center">
+          <div className="rounded-2xl border border-base-300 overflow-hidden bg-base-200 shadow-xl">
+            <div className="p-8 flex justify-center">
               <div className="w-full max-w-md bg-base-100 rounded-2xl shadow-lg overflow-hidden border border-base-content/5">
                 {/* Chat Header */}
                 <div className="px-4 py-3 border-b border-base-300 bg-base-100/80 backdrop-blur-md sticky top-0 z-10">
@@ -223,18 +199,19 @@ const SettingPage = () => {
             </div>
           </div>
         </div>
+
         {/* Support Section */}
-        <div className="space-y-4" ref={addToRefs}>
-          <div className="flex items-center gap-2 text-lg font-semibold text-accent">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-lg font-semibold text-accent border-b border-accent/10 pb-2">
             <Mail size={20} />
             <h2>Support</h2>
           </div>
 
-          <div className="bg-base-100/50 backdrop-blur-lg border border-base-300 rounded-xl p-6 shadow-sm">
+          <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="md:w-1/3 space-y-4">
-                <h3 className="text-xl font-bold">Report a Bug</h3>
-                <p className="text-sm text-base-content/70 leading-relaxed">
+                <h3 className="text-xl font-bold text-base-content">Report a Bug</h3>
+                <p className="text-sm text-base-content/60 leading-relaxed">
                   Found something broken? Let us know! Your feedback helps us make Toukii better for everyone.
                 </p>
                 <div className="flex items-center gap-3 text-sm text-base-content/60">
@@ -295,23 +272,23 @@ const SettingPage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text">Name</span>
+                        <span className="label-text text-base-content/70">Name</span>
                       </label>
-                      <input type="text" name="name" placeholder="Your name" className="input input-bordered w-full focus:outline-none focus:border-primary bg-base-200/50" required />
+                      <input type="text" name="name" placeholder="Your name" className="input input-bordered w-full bg-base-200 focus:outline-none focus:border-primary" required />
                     </div>
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text">Email</span>
+                        <span className="label-text text-base-content/70">Email</span>
                       </label>
-                      <input type="email" name="email" placeholder="your@email.com" className="input input-bordered w-full focus:outline-none focus:border-primary bg-base-200/50" required />
+                      <input type="email" name="email" placeholder="your@email.com" className="input input-bordered w-full bg-base-200 focus:outline-none focus:border-primary" required />
                     </div>
                   </div>
 
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text">Message</span>
+                      <span className="label-text text-base-content/70">Message</span>
                     </label>
-                    <textarea name="message" className="textarea textarea-bordered h-32 focus:outline-none focus:border-primary bg-base-200/50 resize-none" placeholder="Describe the bug or feature request..." required></textarea>
+                    <textarea name="message" className="textarea textarea-bordered h-32 focus:outline-none focus:border-primary bg-base-200 resize-none" placeholder="Describe the bug or feature request..." required></textarea>
                   </div>
 
                   <div className="flex justify-end">
@@ -325,7 +302,7 @@ const SettingPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </SettingsLayout>
   );
 };
 

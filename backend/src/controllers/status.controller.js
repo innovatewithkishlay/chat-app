@@ -138,64 +138,75 @@ export const getStatuses = async (req, res) => {
 // 3. View Status
 export const viewStatus = async (req, res) => {
     try {
-        const { statusId, storyId } = req.body;
-        const userId = req.user._id.toString(); // Viewer ID
-        const me = req.user; // Viewer info for socket
+        const { storyId } = req.body;
+        const userId = req.user._id;
 
-        if (!statusId || !storyId) {
-            return res.status(400).json({ message: "Status ID and Story ID required" });
+        if (!storyId) {
+            return res.status(400).json({ message: "Story ID is required" });
         }
 
-        // A. Redis Dedup
-        const viewKey = `status:${storyId}:viewers`;
-        const isAlreadyViewed = await redisClient.sismember(viewKey, userId);
-
-        if (isAlreadyViewed) {
-            return res.status(200).json({ message: "Already viewed (Redis)" });
+        // 1. Find the Status document containing this story
+        const statusDoc = await Status.findOne({ "stories._id": storyId });
+        if (!statusDoc) {
+            return res.status(404).json({ message: "Status not found" });
         }
 
-        // B. Update MongoDB
+        // 2. Check Expiration
+        if (new Date() > statusDoc.expiresAt) {
+            return res.status(410).json({ message: "Status expired" });
+        }
+
+        const ownerId = statusDoc.userId.toString();
+
+        // 3. Security Check (Owner or Friend)
+        if (ownerId !== userId.toString()) {
+            const owner = await User.findById(ownerId);
+            const isFriend = owner.friends.includes(userId);
+            if (!isFriend) {
+                return res.status(403).json({ message: "Not authorized to view this status" });
+            }
+        }
+
+        // 4. Atomic Update (Prevent Duplicates)
+        // Only push if userId is NOT already in the viewers array for this specific story
         const updatedStatus = await Status.findOneAndUpdate(
             {
-                _id: statusId,
                 "stories._id": storyId,
                 "stories.viewers.userId": { $ne: userId }
             },
             {
-                $push: { "stories.$.viewers": { userId, viewedAt: new Date() } },
+                $push: {
+                    "stories.$.viewers": {
+                        userId,
+                        viewedAt: new Date()
+                    }
+                },
                 $inc: { "stories.$.viewerCount": 1 }
             },
             { new: true }
-        );
+        ).populate("userId", "username profilePic");
 
+        // 5. Respond & Emit Socket
         if (updatedStatus) {
-            // C. Update Redis Set if DB update succeeded
-            // This order ensures DB is source of truth.
-            await redisClient.sadd(viewKey, userId);
-            await redisClient.expire(viewKey, 86400); // 24h Expiry for the set
-
-            // D. Emit Socket Event (status:viewed) -> To the Owner of the status
-            try {
-                const ownerId = updatedStatus.userId.toString();
-                if (ownerId !== userId) {
-                    const ownerSocketId = getReceiverSocketId(ownerId);
-                    if (ownerSocketId) {
-                        io.to(ownerSocketId).emit("status:viewed", {
-                            storyId,
-                            viewer: {
-                                _id: userId,
-                                fullname: me.fullname,
-                                profilePic: me.profilePic
-                            }
-                        });
+            // Success - New View Added
+            // Emit to Owner
+            const socketId = getReceiverSocketId(ownerId);
+            if (socketId && ownerId !== userId.toString()) {
+                io.to(socketId).emit("status:viewed", {
+                    storyId,
+                    viewer: {
+                        _id: userId,
+                        username: req.user.username,
+                        profilePic: req.user.profilePic,
+                        viewedAt: new Date()
                     }
-                }
-            } catch (socketError) {
-                console.error("Socket emission failed (status:viewed):", socketError.message);
+                });
             }
+            return res.status(200).json({ message: "Status viewed" });
+        } else {
+            // No update happened implies already viewed or doc changed
+            return res.status(200).json({ message: "Already viewed" });
         }
-
-        res.status(200).json(updatedStatus || { message: "Status not found or already viewed" });
 
     } catch (error) {
         console.error("Error in viewStatus:", error.message);
@@ -203,7 +214,55 @@ export const viewStatus = async (req, res) => {
     }
 };
 
-// 4. Delete Status (Own Only)
+// 4. Get Status Viewers (Owner Only)
+export const getStatusViewers = async (req, res) => {
+    try {
+        const { storyId } = req.params;
+        const userId = req.user._id.toString();
+
+        // 1. Find Status
+        const statusDoc = await Status.findOne({ "stories._id": storyId });
+
+        if (!statusDoc) {
+            return res.status(404).json({ message: "Status not found" });
+        }
+
+        // 2. Verify Ownership
+        if (statusDoc.userId.toString() !== userId) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        // 3. Extract logic to get specific story viewers
+        // We need to populate the specific story's viewers. 
+        // Mongoose doesn't easily populate ONE sub-document element's array without aggregate/filtering, 
+        // but since we loaded the whole doc, we can find the story and manually populate or use populate on the doc.
+        // Let's populate the whole doc's stories.viewers.userId
+        await statusDoc.populate("stories.viewers.userId", "username profilePic");
+
+        const story = statusDoc.stories.find(s => s._id.toString() === storyId);
+        if (!story) return res.status(404).json({ message: "Story not found" });
+
+        // 4. Format & Sort
+        const viewers = story.viewers.map(v => ({
+            _id: v.userId._id,
+            username: v.userId.username,
+            profilePic: v.userId.profilePic,
+            viewedAt: v.viewedAt
+        })).sort((a, b) => new Date(b.viewedAt) - new Date(a.viewedAt));
+
+        res.status(200).json({
+            storyId,
+            totalViews: viewers.length,
+            viewers
+        });
+
+    } catch (error) {
+        console.error("Error in getStatusViewers:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// 5. Delete Status (Own Only)
 export const deleteStatus = async (req, res) => {
     try {
         const { storyId } = req.params;
@@ -219,12 +278,11 @@ export const deleteStatus = async (req, res) => {
             return res.status(404).json({ message: "Status not found" });
         }
 
-        // Invalidate Feed Cache for self, so I don't see it anymore
+        // Invalidate Feed Cache for self
         await redisClient.del(`status:feed:${userId.toString()}`);
 
-        // E. Emit Socket Event (status:deleted)
+        // Emit Socket Event (status:deleted)
         try {
-            // Find friends to notify that a status is gone (so they verify/refresh)
             const user = await User.findById(userId).select("friends");
             const friendIds = user.friends || [];
 
@@ -238,7 +296,6 @@ export const deleteStatus = async (req, res) => {
                 }
             });
 
-            // Also notify self (if using multiple devices)
             const mySocketId = getReceiverSocketId(userId);
             if (mySocketId) {
                 io.to(mySocketId).emit("status:deleted", { userId, storyId });
