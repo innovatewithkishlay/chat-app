@@ -5,6 +5,8 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import SettingPage from "./pages/SettingPage";
 import ProfilePage from "./pages/ProfilePage";
+import ProPage from "./pages/ProPage";
+import DeveloperPage from "./pages/DeveloperPage";
 import { useAuthStore } from "./store/useAuthStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
@@ -63,6 +65,8 @@ const App = () => {
             element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
           />
           <Route path="/settings" element={<SettingPage />} />
+          <Route path="/settings/pro" element={<ProPage />} />
+          <Route path="/settings/developer" element={<DeveloperPage />} />
           <Route
             path="/profile"
             element={authUser ? <ProfilePage /> : <Navigate to={"/login"} />}

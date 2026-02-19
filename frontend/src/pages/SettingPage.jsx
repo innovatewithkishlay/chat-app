@@ -20,32 +20,32 @@ const SettingPage = () => {
 
   return (
     <SettingsLayout>
-      <div className="space-y-8 pb-10">
+      <div className="space-y-6 mx-auto max-w-[820px]">
 
         {/* Intro Text */}
-        <div>
+        <div className="mb-6">
           <h2 className="text-2xl font-bold text-base-content mb-2">Preferences</h2>
           <p className="text-base-content/60">Customize your chat experience and look</p>
         </div>
 
         {/* Notifications Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-lg font-semibold text-primary border-b border-primary/10 pb-2">
-            <Bell size={20} />
+        <section>
+          <div className="flex items-center gap-2 text-lg font-semibold text-primary border-b border-primary/10 pb-2 mb-4">
+            <Bell size={18} />
             <h2>Notifications</h2>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             {/* Show Notifications Toggle */}
-            <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex justify-between items-center">
-                <div className="space-y-1">
-                  <h3 className="font-medium text-base-content">Enable Notifications</h3>
+                <div className="space-y-0.5">
+                  <h3 className="font-medium text-base-content text-sm">Enable Notifications</h3>
                   <p className="text-xs text-base-content/60">Receive toast alerts for new messages</p>
                 </div>
                 <input
                   type="checkbox"
-                  className="toggle toggle-primary"
+                  className="toggle toggle-sm toggle-primary"
                   checked={showNotifications}
                   onChange={() => toggleNotificationSetting("showNotifications")}
                 />
@@ -53,10 +53,10 @@ const SettingPage = () => {
             </div>
 
             {/* Show Preview Toggle */}
-            <div className={`bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow ${!showNotifications ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow ${!showNotifications ? 'opacity-50 pointer-events-none' : ''}`}>
               <div className="flex justify-between items-center">
-                <div className="space-y-1">
-                  <h3 className="font-medium flex items-center gap-2 text-base-content">
+                <div className="space-y-0.5">
+                  <h3 className="font-medium flex items-center gap-2 text-base-content text-sm">
                     Message Preview
                     {showPreview ? <Eye size={14} className="text-base-content/40" /> : <EyeOff size={14} className="text-base-content/40" />}
                   </h3>
@@ -64,7 +64,7 @@ const SettingPage = () => {
                 </div>
                 <input
                   type="checkbox"
-                  className="toggle toggle-secondary"
+                  className="toggle toggle-sm toggle-secondary"
                   checked={showPreview}
                   onChange={() => toggleNotificationSetting("showPreview")}
                   disabled={!showNotifications}
@@ -72,19 +72,19 @@ const SettingPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Appearance Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-lg font-semibold text-secondary border-b border-secondary/10 pb-2">
-            <Palette size={20} />
+        <section>
+          <div className="flex items-center gap-2 text-lg font-semibold text-secondary border-b border-secondary/10 pb-2 mb-4">
+            <Palette size={18} />
             <h2>Appearance</h2>
           </div>
 
-          <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm">
+          <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm">
             <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium text-base-content">Theme Selection</h3>
+              <div className="flex justify-between items-center mb-1">
+                <h3 className="font-medium text-base-content text-sm">Theme Selection</h3>
                 <span className="text-xs text-base-content/60">{THEMES.length} themes available</span>
               </div>
 
@@ -99,10 +99,10 @@ const SettingPage = () => {
                     onClick={() => setTheme(t)}
                   >
                     <div
-                      className="relative h-10 w-full rounded-lg overflow-hidden shadow-sm border border-base-300"
+                      className="relative h-8 w-full rounded-lg overflow-hidden shadow-sm border border-base-300"
                       data-theme={t}
                     >
-                      <div className="absolute inset-0 grid grid-cols-4 gap-px p-1">
+                      <div className="absolute inset-0 grid grid-cols-4 gap-px p-0.5">
                         <div className="rounded bg-primary"></div>
                         <div className="rounded bg-secondary"></div>
                         <div className="rounded bg-accent"></div>
@@ -117,17 +117,17 @@ const SettingPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Preview Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-lg font-semibold text-accent border-b border-accent/10 pb-2">
-            <Monitor size={20} />
+        <section>
+          <div className="flex items-center gap-2 text-lg font-semibold text-accent border-b border-accent/10 pb-2 mb-4">
+            <Monitor size={18} />
             <h2>Live Preview</h2>
           </div>
 
           <div className="rounded-2xl border border-base-300 overflow-hidden bg-base-200 shadow-xl">
-            <div className="p-8 flex justify-center">
+            <div className="p-6 flex justify-center">
               <div className="w-full max-w-md bg-base-100 rounded-2xl shadow-lg overflow-hidden border border-base-content/5">
                 {/* Chat Header */}
                 <div className="px-4 py-3 border-b border-base-300 bg-base-100/80 backdrop-blur-md sticky top-0 z-10">
@@ -198,19 +198,19 @@ const SettingPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Support Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-lg font-semibold text-accent border-b border-accent/10 pb-2">
-            <Mail size={20} />
+        <section>
+          <div className="flex items-center gap-2 text-lg font-semibold text-accent border-b border-accent/10 pb-2 mb-4">
+            <Mail size={18} />
             <h2>Support</h2>
           </div>
 
           <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="md:w-1/3 space-y-4">
-                <h3 className="text-xl font-bold text-base-content">Report a Bug</h3>
+                <h3 className="text-lg font-bold text-base-content">Report a Bug</h3>
                 <p className="text-sm text-base-content/60 leading-relaxed">
                   Found something broken? Let us know! Your feedback helps us make Toukii better for everyone.
                 </p>
@@ -291,7 +291,7 @@ const SettingPage = () => {
                     <textarea name="message" className="textarea textarea-bordered h-32 focus:outline-none focus:border-primary bg-base-200 resize-none" placeholder="Describe the bug or feature request..." required></textarea>
                   </div>
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end pt-2">
                     <button type="submit" className="btn btn-primary px-8">
                       Send Message <Send size={16} />
                     </button>
@@ -300,7 +300,7 @@ const SettingPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </SettingsLayout>
   );
