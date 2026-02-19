@@ -16,6 +16,7 @@ import MessageStatus from "./MessageStatus";
 
 import GroupSettingsModal from "./GroupSettingsModal";
 import DeleteMessagesModal from "./DeleteMessagesModal";
+import NoChatSelected from "./NoChatSelected";
 
 const ChatContainer = ({ onOpenMemory }) => {
   const {
@@ -112,6 +113,10 @@ const ChatContainer = ({ onOpenMemory }) => {
     }
     return "Typing...";
   };
+
+  if (!selectedUser) {
+    return <NoChatSelected />;
+  }
 
   if (isMessagesLoading) {
     return (

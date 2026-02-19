@@ -22,17 +22,17 @@ const HomePage = () => {
   // But here we need to pass the *document* to StatusViewer.
 
   return (
-    <div className="chat-wrapper bg-base-200">
-      <div className="flex h-full pt-16 lg:pt-20 lg:px-4 justify-center">
-        <div className="bg-base-100 w-full h-full max-w-6xl lg:h-[calc(100vh-8rem)] lg:rounded-lg shadow-xl overflow-hidden flex">
+    <div className="h-full bg-base-200">
+      <div className="flex h-full pt-16">
+        <div className="flex w-full h-full overflow-hidden bg-base-100">
 
           {/* Sidebar */}
-          <div className={`${(selectedUser || activeStatus || activeStatusCreation) ? 'hidden' : 'block'} lg:block w-full lg:w-80 border-r border-base-300 h-full`}>
+          <div className={`${(selectedUser || activeStatus || activeStatusCreation) ? 'hidden' : 'block'} lg:block w-full lg:w-80 border-r border-base-300 h-full flex flex-col flex-shrink-0`}>
             <Sidebar />
           </div>
 
           {/* Main Content */}
-          <div className={`${(!selectedUser && !activeStatus && !activeStatusCreation) ? 'hidden' : 'block'} flex-1 h-full relative flex flex-col`}>
+          <div className={`${(!selectedUser && !activeStatus && !activeStatusCreation) ? 'hidden lg:flex' : 'flex'} flex-1 h-full relative flex-col w-full min-w-0`}>
             {activeStatus ? (
               <div className="w-full h-full absolute inset-0 z-20 bg-black">
                 <StatusViewer

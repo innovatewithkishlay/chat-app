@@ -48,27 +48,29 @@ const App = () => {
       </div>
     );
   return (
-    <div data-theme={theme}>
+    <div data-theme={theme} className="h-screen w-full overflow-hidden bg-base-100 flex flex-col">
       <Navbar />
-      <Routes>
-        <Route
-          path="/"
-          element={authUser ? <HomePage /> : <Navigate to={"/login"} />}
-        />
-        <Route
-          path="/login"
-          element={!authUser ? <LoginPage /> : <Navigate to={"/"} />}
-        />
-        <Route
-          path="/signup"
-          element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
-        />
-        <Route path="/settings" element={<SettingPage />} />
-        <Route
-          path="/profile"
-          element={authUser ? <ProfilePage /> : <Navigate to={"/login"} />}
-        />
-      </Routes>
+      <div className="flex-1 h-full overflow-hidden">
+        <Routes>
+          <Route
+            path="/"
+            element={authUser ? <HomePage /> : <Navigate to={"/login"} />}
+          />
+          <Route
+            path="/login"
+            element={!authUser ? <LoginPage /> : <Navigate to={"/"} />}
+          />
+          <Route
+            path="/signup"
+            element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
+          />
+          <Route path="/settings" element={<SettingPage />} />
+          <Route
+            path="/profile"
+            element={authUser ? <ProfilePage /> : <Navigate to={"/login"} />}
+          />
+        </Routes>
+      </div>
       <Toaster />
       {authUser && callStatus !== "IDLE" && <VideoCall />}
       {authUser && voiceCallStatus !== "IDLE" && <VoiceCall />}

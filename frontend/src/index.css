@@ -1,25 +1,39 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* ===== GLOBAL OVERFLOW FIX ===== */
 
 html,
 body,
 #root {
   width: 100%;
-  max-width: 100%;
+  height: 100%;
+  margin: 0;
   overflow-x: hidden;
+  overscroll-behavior: none;
+  /* Prevent pull-to-refresh on mobile */
 }
 
-/* Prevent accidental 100vw overflow issues */
-* {
-  box-sizing: border-box;
+.chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
 }
 
-/* Optional smoother animation */
+@supports (height: 100dvh) {
+  .chat-wrapper {
+    height: 100dvh;
+  }
+}
+
+@layer utilities {
+  .modal-open {
+    overflow: hidden !important;
+  }
+}
+
 @keyframes scaleIn {
   from {
-    transform: scale(0.96);
+    transform: scale(0.95);
     opacity: 0;
   }
 
@@ -30,5 +44,5 @@ body,
 }
 
 .animate-scaleIn {
-  animation: scaleIn 0.15s ease-out;
+  animation: scaleIn 0.15s ease-out forwards;
 }
