@@ -102,12 +102,17 @@ const MessageInput = () => {
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.focus(); // Keep keyboard open
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
     } finally {
       setIsSending(false);
+      // Ensure focus is regained even if lost during async op
+      setTimeout(() => textareaRef.current?.focus(), 10);
     }
   };
 
