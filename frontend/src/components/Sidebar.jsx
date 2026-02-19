@@ -350,10 +350,21 @@ const Sidebar = () => {
                              ${selectedUser?._id === group._id ? 'bg-primary/5' : 'hover:bg-base-200'}
                            `}
                 >
-                  <img src={group.avatar || "/avatar.png"} className="size-10 rounded-full object-cover" />
+                  <div className="relative">
+                    {group.avatar ? (
+                      <img src={group.avatar} className="size-10 rounded-xl object-cover border border-base-300" />
+                    ) : (
+                      <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-base-300">
+                        <Users size={20} />
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-base-content/70 truncate">{group.name}</div>
-                    <div className="text-xs text-base-content/40">{group.members.length} members</div>
+                    <div className="text-xs text-base-content/40 flex items-center gap-1">
+                      <Users size={12} />
+                      {group.members.length} members
+                    </div>
                   </div>
                 </div>
               ))
