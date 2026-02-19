@@ -73,6 +73,18 @@ const userSchema = new mongoose.Schema(
       status: { type: String, default: "" }, // e.g., "Focused", "Busy"
       expiresAt: { type: Date, default: null },
     },
+    isPro: {
+      type: Boolean,
+      default: false,
+    },
+    proExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    proStartedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

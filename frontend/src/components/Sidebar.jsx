@@ -209,7 +209,14 @@ const Sidebar = () => {
             />
             <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-base-100"></span>
           </Link>
-          <h1 className="text-[16px] font-semibold text-base-content tracking-tight">Toukii</h1>
+          <h1 className="text-[16px] font-semibold text-base-content tracking-tight flex items-center gap-2">
+            Toukii
+            {authUser?.isPro && (
+              <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-primary to-secondary text-[10px] font-bold text-white shadow-sm">
+                PRO
+              </span>
+            )}
+          </h1>
         </div>
 
         <div className="flex items-center gap-1">

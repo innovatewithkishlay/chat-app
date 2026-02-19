@@ -27,9 +27,19 @@ export const searchUsers = async (req, res) => {
 export const activateProTemp = async (req, res) => {
     try {
         const userId = req.user._id;
+
+        // Calculate expiry (30 days from now)
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
         const user = await User.findByIdAndUpdate(
             userId,
-            { plan: "PRO" },
+            {
+                plan: "PRO",
+                isPro: true,
+                proStartedAt: now,
+                proExpiresAt: expiresAt
+            },
             { new: true }
         );
         res.status(200).json(user);
