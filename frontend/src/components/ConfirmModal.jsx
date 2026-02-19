@@ -1,12 +1,13 @@
 import React from "react";
 import { AlertTriangle } from "lucide-react";
+import Modal from "./Modal";
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", cancelText = "Cancel", isDangerous = false }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-base-100 rounded-xl shadow-2xl p-6 w-full max-w-sm border border-base-200 animate-in zoom-in-95 duration-200 scale-100">
+        <Modal onClose={onClose}>
+            <div className="bg-base-100 rounded-xl shadow-2xl p-6 w-[90vw] max-w-sm border border-base-200 animate-in zoom-in-95 duration-200 scale-100 relative" onClick={(e) => e.stopPropagation()}>
                 <h3 className="text-lg font-bold flex items-center gap-2">
                     {isDangerous && <AlertTriangle className="size-5 text-error" />}
                     {title}
@@ -30,9 +31,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText 
                     </button>
                 </div>
             </div>
-            {/* Backdrop click to close */}
-            <div className="absolute inset-0 -z-10" onClick={onClose}></div>
-        </div>
+        </Modal>
     );
 };
 

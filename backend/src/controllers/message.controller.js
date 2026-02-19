@@ -6,6 +6,44 @@ import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import { incrementUsage } from "../middlewares/limit.middleware.js";
 
+export const clearChat = async (req, res) => {
+  try {
+    const { id: userToChatId } = req.params;
+    const myId = req.user._id;
+
+    // Clear messages: 
+    // 1. Between me and user (1-1)
+    // 2. OR messages in the group (if idToClear is a group)
+    // Note: If idToClear is a user, it won't match groupId (unless coincidence, extremely rare with ObjectId).
+    // If idToClear is a group, it won't match senderId/recieverId logic usually.
+    // So this single query handles both.
+    await Message.updateMany(
+      {
+        $or: [
+          { senderId: myId, recieverId: userToChatId },
+          { senderId: userToChatId, recieverId: myId },
+          { groupId: userToChatId }
+        ],
+      },
+      {
+        $addToSet: { deletedFor: myId }
+      }
+    );
+
+    // Also clear seen status locally if needed? No need.
+    // Emit clear event if user has other tabs open
+    const socketId = getReceiverSocketId(myId);
+    if (socketId) {
+      io.to(socketId).emit("chat:cleared", { userToChatId });
+    }
+
+    res.status(200).json({ message: "Chat cleared successfully" });
+  } catch (error) {
+    console.error("Error in clearChat: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getConversations = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -61,7 +99,8 @@ export const getMessages = async (req, res) => {
         { senderId: userToChatId, recieverId: myId },
       ],
       deletedFor: { $ne: myId }, // Filter out messages deleted for me
-      isDeleted: { $ne: true }, // Filter out messages deleted for everyone
+      // We DO NOT filter out isDeleted/deletedForEveryone here anymore, 
+      // because we want to show "This message was deleted" placeholder.
     }).populate("pollId");
 
     res.status(200).json(messages);
@@ -71,139 +110,61 @@ export const getMessages = async (req, res) => {
   }
 };
 
-export const clearChat = async (req, res) => {
-  try {
-    const { id: userToChatId } = req.params;
-    const myId = req.user._id;
-
-    // Find all messages between these two users
-    const messages = await Message.find({
-      $or: [
-        { senderId: myId, recieverId: userToChatId },
-        { senderId: userToChatId, recieverId: myId },
-      ],
-    });
-
-    // Add myId to deletedFor array for each message
-    // Using updateMany is more efficient
-    await Message.updateMany(
-      {
-        $or: [
-          { senderId: myId, recieverId: userToChatId },
-          { senderId: userToChatId, recieverId: myId },
-        ],
-      },
-      { $addToSet: { deletedFor: myId } }
-    );
-
-    // Notify myself via socket to clear UI immediately (though frontend should do it optimistically)
-    const socketId = getReceiverSocketId(myId);
-    if (socketId) {
-      io.to(socketId).emit("chat:cleared", { userToChatId });
-    }
-
-    res.status(200).json({ message: "Chat cleared successfully" });
-  } catch (error) {
-    console.log("Error in clearChat controller: ", error.message);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, audio, replyTo, intent } = req.body;
-    const { id: recieverId } = req.params;
+    const { text, image } = req.body;
+    const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    // --- PERMISSION CHECK START ---
-    // Check if conversation exists. If not, user cannot send message.
-    let conversation = await Conversation.findOne({
-      participants: { $all: [senderId, recieverId] },
-    });
-
-    if (!conversation) {
-      return res.status(403).json({ message: "You must have an accepted talk request to send messages." });
-    }
-    // --- PERMISSION CHECK END ---
-
     let imageUrl;
-    let messageType = "text";
-
     if (image) {
+      // Upload base64 image to cloudinary
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
-      messageType = "image";
-    } else if (audio) {
-      const uploadResponse = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
-      imageUrl = uploadResponse.secure_url; // Storing audio URL in image field
-      messageType = "audio";
     }
 
     const newMessage = new Message({
       senderId,
-      recieverId,
+      recieverId: receiverId,
       text,
       image: imageUrl,
-      type: messageType,
-      replyTo: replyTo || null,
-      intent: intent || "none",
     });
 
     await newMessage.save();
 
-    // Increment usage if image sent
-    if (imageUrl) {
-      await incrementUsage(senderId, "image");
+    let conversation = await Conversation.findOne({
+      participants: { $all: [senderId, receiverId] },
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [senderId, receiverId],
+      });
     }
+
+    const receiverIdString = receiverId.toString();
+    const senderIdString = senderId.toString();
 
     conversation.lastMessage = newMessage._id;
 
-    // Increment unread count for receiver
-    const currentUnread = conversation.unreadCount.get(recieverId.toString()) || 0;
-    conversation.unreadCount.set(recieverId.toString(), currentUnread + 1);
+    // Unhide conversation for both users
+    conversation.hiddenFor = conversation.hiddenFor.filter(
+      id => id.toString() !== senderIdString && id.toString() !== receiverIdString
+    );
 
-    // Unhide conversation for receiver if they hid it
-    // We remove recieverId from hiddenFor array
-    conversation.hiddenFor = conversation.hiddenFor.filter(id => id.toString() !== recieverId.toString());
+    // Increment unread count for receiver
+    const currentUnread = conversation.unreadCount.get(receiverIdString) || 0;
+    conversation.unreadCount.set(receiverIdString, currentUnread + 1);
 
     await conversation.save();
 
-    // Populate conversation for real-time update
-    const populatedConversation = await Conversation.findById(conversation._id)
-      .populate({ path: "participants", select: "-password" })
-      .populate({ path: "lastMessage" });
-
-    const receiverSocketId = getReceiverSocketId(recieverId);
+    const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
-      io.to(receiverSocketId).emit("conversationUpdated", populatedConversation);
-    } else {
-      // User is offline, send push notification
-      const subscriptions = await import("../models/subscription.model.js").then(m => m.default.find({ userId: recieverId }));
-      const webpush = await import("../lib/webpush.js").then(m => m.default);
-
-      const payload = JSON.stringify({
-        title: `New message from ${req.user.fullname}`,
-        body: text || (image ? "Sent an image" : (audio ? "Sent an audio message" : "Sent a message")),
-        icon: "/icon-192x192.png", // Ensure this exists in frontend public
-        url: `/`, // Redirect to home page where chat lives
-      });
-
-      subscriptions.forEach(sub => {
-        webpush.sendNotification(sub, payload).catch(err => {
-          console.error("Error sending push:", err);
-          if (err.statusCode === 410) {
-            // Subscription expired, delete it
-            import("../models/subscription.model.js").then(m => m.default.findByIdAndDelete(sub._id));
-          }
-        });
-      });
     }
 
-    // Emit to sender as well to update their sidebar (move to top, show last message)
-    const senderSocketId = getReceiverSocketId(senderId);
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("conversationUpdated", populatedConversation);
+    if (image) {
+      await incrementUsage(senderId, "image");
     }
 
     res.status(201).json(newMessage);
@@ -216,6 +177,7 @@ export const sendMessage = async (req, res) => {
 export const deleteMessage = async (req, res) => {
   try {
     const { id: messageId } = req.params;
+    const { type } = req.query; // "me" or "everyone"
     const userId = req.user._id;
 
     const message = await Message.findById(messageId);
@@ -223,43 +185,50 @@ export const deleteMessage = async (req, res) => {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    if (message.senderId.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Unauthorized to delete this message" });
-    }
-
-    // Soft delete but hide completely
-    message.isDeleted = true;
-    // We don't change text/image, just mark as deleted so it can be filtered out
-    await message.save();
-
-    // Notify receiver/group
-    const emitTo = message.groupId ? message.groupId : message.recieverId;
-    const isGroup = !!message.groupId;
-
-    if (isGroup) {
-      // We need to fetch group members to emit to them, or just emit to room if we had rooms.
-      // Since we don't have rooms set up for groups in socket.js (we iterate members), 
-      // let's fetch the group.
-      const group = await import("../models/group.model.js").then(m => m.default.findById(message.groupId));
-      if (group) {
-        group.members.forEach(memberId => {
-          const socketId = getReceiverSocketId(memberId);
-          if (socketId) {
-            io.to(socketId).emit("messageDeleted", { messageId, isSoft: false });
-          }
-        });
+    if (type === "everyone") {
+      // DELETE FOR EVERYONE
+      if (message.senderId.toString() !== userId.toString()) {
+        return res.status(403).json({ message: "Unauthorized to delete for everyone" });
       }
+
+      // Optional: Check time limit (e.g. 1 hour)
+      // const timeDiff = (Date.now() - message.createdAt) / 1000 / 60; // minutes
+      // if (timeDiff > 60) return res.status(400).json({ message: "Too late to delete for everyone" });
+
+      message.deletedForEveryone = true;
+      message.text = "This message was deleted";
+      message.image = null;
+      message.type = "text"; // Reset type to text to show the placeholder
+      await message.save();
+
+      // Notify everyone
+      const isGroup = !!message.groupId;
+      if (isGroup) {
+        const group = await import("../models/group.model.js").then(m => m.default.findById(message.groupId));
+        if (group) {
+          group.members.forEach(memberId => {
+            const socketId = getReceiverSocketId(memberId);
+            if (socketId) io.to(socketId).emit("messageUpdated", message);
+          });
+        }
+      } else {
+        const receiverSocketId = getReceiverSocketId(message.recieverId);
+        if (receiverSocketId) io.to(receiverSocketId).emit("messageUpdated", message);
+
+        const senderSocketId = getReceiverSocketId(userId); // Also update sender's view
+        if (senderSocketId) io.to(senderSocketId).emit("messageUpdated", message);
+      }
+
     } else {
-      const receiverSocketId = getReceiverSocketId(message.recieverId);
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("messageDeleted", { messageId, isSoft: false });
+      // DELETE FOR ME (Default)
+      if (!message.deletedFor.includes(userId)) {
+        message.deletedFor.push(userId);
+        await message.save();
       }
 
-      // Also emit to sender to remove it from their view immediately
-      const senderSocketId = getReceiverSocketId(userId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messageDeleted", { messageId, isSoft: false });
-      }
+      // No need to notify others, just confirm to sender
+      res.status(200).json({ message: "Message deleted for you" });
+      return;
     }
 
     res.status(200).json({ message: "Message deleted successfully" });

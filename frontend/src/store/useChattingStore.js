@@ -35,6 +35,26 @@ export const useChatStore = create((set, get) => ({
   typingUsers: [], // Array of { senderId, groupId (optional) }
   currentTypingUsers: [], // Derived state for UI
 
+
+
+  deleteMessages: async (messageId, deleteType = "me") => {
+    // deleteType: "me" | "everyone"
+    try {
+      await axiosInstance.delete(`/messages/${messageId}?type=${deleteType}`);
+
+      set((state) => ({
+        // Optimistic update handled by socket events "messageUpdated" or "messageDeleted"
+        // But for "delete for me", we need manual update as backend doesn't emit socket event
+        messages: deleteType === "me"
+          ? state.messages.filter(m => m._id !== messageId)
+          : state.messages // "everyone" updates via socket
+      }));
+      toast.success(deleteType === "everyone" ? "Deleted for everyone" : "Deleted for me");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete");
+    }
+  },
+
   // Notification Settings
   showNotifications: localStorage.getItem("showNotifications") !== "false",
   showPreview: localStorage.getItem("showPreview") !== "false",

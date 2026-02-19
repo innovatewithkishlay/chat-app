@@ -71,6 +71,10 @@ const messageSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    deletedForEveryone: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

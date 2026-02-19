@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone, Trash2, FileText, MessageSquare, BarChart2 } from "lucide-react";
+import { X, Video, Lock, Settings, BrainCircuit, ArrowLeft, Phone, Trash2, FileText, MessageSquare, BarChart2, MoreVertical } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
@@ -8,16 +8,22 @@ import { useProductivityStore } from "../store/useProductivityStore";
 import ProModal from "./ProModal";
 import VideoCall from "./VideoCall";
 import ConfirmModal from "./ConfirmModal";
+import DeleteMessagesModal from "./DeleteMessagesModal";
 import toast from "react-hot-toast";
 
 const ChatHeader = ({ onOpenMemory }) => {
-  const { selectedUser, setSelectedUser, leaveGroup, setShowGroupInfo, showGroupInfo } = useChatStore();
+  const {
+    selectedUser,
+    setSelectedUser,
+    leaveGroup,
+    setShowGroupInfo,
+    showGroupInfo,
+    deleteMessages
+  } = useChatStore();
   const { onlineUsers = [], authUser } = useAuthStore();
   const { activeTab, setActiveTab } = useProductivityStore();
   const [showProModal, setShowProModal] = useState(false);
 
-  const [isClearing, setIsClearing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
   // Confirm Modal State
@@ -70,51 +76,70 @@ const ChatHeader = ({ onOpenMemory }) => {
     });
   };
 
-  const handleClearChat = async () => {
-    if (isClearing) return;
+
+
+  // Helper for ConfirmModal
+  const confirmAction = (title, message, onConfirm, isDangerous = false, confirmText = "Confirm") => {
     setConfirmModal({
       isOpen: true,
-      title: "Clear Chat",
-      message: "Are you sure you want to clear this chat? This action cannot be undone.",
-      confirmText: "Clear",
-      isDangerous: true,
-      onConfirm: async () => {
-        setIsClearing(true);
-        try {
-          await useChatStore.getState().clearChat(selectedUser._id);
-        } finally {
-          setIsClearing(false);
-        }
+      title,
+      message,
+      confirmText,
+      isDangerous,
+      onConfirm: () => {
+        onConfirm();
+        closeConfirmModal();
       }
     });
   };
 
-  const handleDeleteChat = async () => {
-    if (isDeleting) return;
-    setConfirmModal({
-      isOpen: true,
-      title: "Delete Chat",
-      message: "Are you sure you want to delete this chat? It will be hidden until a new message arrives.",
-      confirmText: "Delete",
-      isDangerous: true,
-      onConfirm: async () => {
-        setIsDeleting(true);
-        try {
-          const conversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p._id === selectedUser._id));
-          if (conversation) {
-            await useChatStore.getState().deleteChat(conversation._id);
-            setSelectedUser(null);
-          }
-        } finally {
-          setIsDeleting(false);
-        }
-      }
-    });
+  const { clearChat, deleteChat } = useChatStore();
+
+  const handleClearChat = async () => {
+    if (selectedUser) {
+      confirmAction(
+        "Clear Chat",
+        "Are you sure you want to clear this chat? Messages will be removed from your view.",
+        async () => {
+          await clearChat(selectedUser._id);
+          toast.success("Chat cleared");
+        },
+        true,
+        "Clear"
+      );
+    }
   };
+
+  const handleDeleteChat = async () => {
+    const conversation = useChatStore.getState().conversations.find(c =>
+      c.participants.some(p => p._id === selectedUser._id)
+    );
+    if (conversation) {
+      confirmAction(
+        "Delete Chat",
+        "Are you sure you want to delete this chat? It will be removed from your sidebar.",
+        async () => {
+          await deleteChat(conversation._id);
+          setSelectedUser(null);
+          toast.success("Chat deleted");
+        },
+        true,
+        "Delete"
+      );
+    } else {
+      setSelectedUser(null);
+    }
+  };
+
+
+
+
 
   return (
     <div className="flex flex-col border-b border-base-300 bg-base-100/80 backdrop-blur-md z-20 h-auto">
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
+
+
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
@@ -167,10 +192,6 @@ const ChatHeader = ({ onOpenMemory }) => {
 
         {/* Buttons */}
         <div className="flex items-center gap-1 lg:gap-2">
-          {/* Memory Button - Hidden on mobile, added to dropdown */}
-          <button onClick={onOpenMemory} className="hidden sm:flex btn btn-ghost btn-circle btn-sm" title="Chat Memory">
-            <BrainCircuit size={18} />
-          </button>
 
           {!isGroup && (
             <>
@@ -207,53 +228,36 @@ const ChatHeader = ({ onOpenMemory }) => {
                   </>
                 )}
               </button>
-
-              {/* Clear Chat - Hidden on mobile */}
-              <button
-                onClick={handleClearChat}
-                disabled={isClearing}
-                className="hidden sm:flex btn btn-ghost btn-circle btn-sm text-error"
-                title="Clear Chat"
-              >
-                {isClearing ? <span className="loading loading-spinner loading-xs"></span> : <Trash2 size={20} />}
-              </button>
             </>
           )}
 
+          {/* Settings Dropdown - CLEANED UP */}
           <div className="dropdown dropdown-end">
             <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm size-8 lg:size-8">
-              <Settings size={18} className="lg:size-[20px]" />
+              <MoreVertical size={20} className="text-gray-600" />
             </div>
-            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
-              {/* Mobile Only: View Memory */}
-              <li className="sm:hidden">
-                <button onClick={onOpenMemory}>
-                  <BrainCircuit size={16} /> View Memory
-                </button>
-              </li>
-
-              {!isGroup && (
+            <ul tabIndex={0} className="dropdown-content z-[50] menu p-2 shadow-xl bg-white rounded-xl w-56 border border-gray-100 animate-in fade-in zoom-in-95 duration-100">
+              {isGroup ? (
                 <>
                   <li>
-                    <button onClick={handleClearChat} disabled={isClearing} className="text-error">
-                      {isClearing ? "Clearing..." : "Clear Chat"}
-                    </button>
+                    <button onClick={() => setShowGroupInfo(true)} className="py-2 text-gray-700 font-medium">Group Info</button>
                   </li>
                   <li>
-                    <button onClick={handleDeleteChat} disabled={isDeleting} className="text-error">
-                      {isDeleting ? "Deleting..." : "Delete Chat"}
+                    <button onClick={handleLeaveGroup} disabled={isLeaving} className="py-2 text-red-500 font-medium hover:bg-red-50">
+                      {isLeaving ? "Leaving..." : "Leave Group"}
                     </button>
                   </li>
                 </>
-              )}
-              {isGroup && (
+              ) : (
                 <>
                   <li>
-                    <button onClick={() => setShowGroupInfo(true)}>Group Info</button>
+                    <button onClick={handleClearChat} className="py-2 text-gray-700 font-medium hover:bg-gray-50 flex gap-3">
+                      <Trash2 size={16} /> Clear Chat
+                    </button>
                   </li>
                   <li>
-                    <button onClick={handleLeaveGroup} disabled={isLeaving} className="text-error">
-                      {isLeaving ? "Leaving..." : "Leave Group"}
+                    <button onClick={handleDeleteChat} className="py-2 text-red-500 font-medium hover:bg-red-50 flex gap-3">
+                      <Trash2 size={16} /> Delete Chat
                     </button>
                   </li>
                 </>
@@ -261,7 +265,7 @@ const ChatHeader = ({ onOpenMemory }) => {
             </ul>
           </div>
 
-          {/* Close Button - Hidden on mobile (Back arrow used instead) */}
+          {/* Close Button */}
           <button onClick={() => setSelectedUser(null)} className="hidden sm:flex btn btn-ghost btn-circle btn-sm">
             <X size={20} />
           </button>

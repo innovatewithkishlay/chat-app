@@ -15,6 +15,7 @@ import TimelineScrubber from "./TimelineScrubber";
 import MessageStatus from "./MessageStatus";
 
 import GroupSettingsModal from "./GroupSettingsModal";
+import DeleteMessagesModal from "./DeleteMessagesModal";
 
 const ChatContainer = ({ onOpenMemory }) => {
   const {
@@ -25,12 +26,13 @@ const ChatContainer = ({ onOpenMemory }) => {
     subscribeToMessages,
     unsubscribeFromMessages,
     selectedUser,
-    deleteMessage,
+    deleteMessage, // This is the old single delete from store, likely same as deleteMessages logic but check store
+    deleteMessages, // This is the one we updated to take single ID
     editMessage,
     reactToMessage,
     currentTypingUsers,
     showGroupInfo,
-    setShowGroupInfo
+    setShowGroupInfo,
   } = useChatStore();
 
   const isGroup = !!selectedUser?.members;
@@ -42,6 +44,7 @@ const ChatContainer = ({ onOpenMemory }) => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState("");
+  const [messageToDelete, setMessageToDelete] = useState(null);
 
   useEffect(() => {
     if (isGroup) {
@@ -128,6 +131,22 @@ const ChatContainer = ({ onOpenMemory }) => {
         <GroupSettingsModal onClose={() => setShowGroupInfo(false)} />
       )}
 
+      {/* Delete Message Modal */}
+      <DeleteMessagesModal
+        isOpen={!!messageToDelete}
+        onClose={() => setMessageToDelete(null)}
+        onDeleteForMe={() => {
+          deleteMessages(messageToDelete._id, "me");
+          setMessageToDelete(null);
+        }}
+        onDeleteForEveryone={() => {
+          deleteMessages(messageToDelete._id, "everyone");
+          setMessageToDelete(null);
+        }}
+        canDeleteForEveryone={messageToDelete?.senderId._id === authUser._id || messageToDelete?.senderId === authUser._id}
+        count={1}
+      />
+
 
       {activeTab === "notes" && <NotesContainer />}
       {activeTab === "polls" && <PollsList />}
@@ -135,7 +154,7 @@ const ChatContainer = ({ onOpenMemory }) => {
       {activeTab === "chat" && (
         <>
           <div
-            className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+            className={`flex-1 overflow-y-auto px-4 pb-4 space-y-4 relative pt-4`}
             ref={scrollContainerRef}
             onScroll={handleScroll}
           >
@@ -153,15 +172,41 @@ const ChatContainer = ({ onOpenMemory }) => {
                 );
               }
 
+              const senderId = message.senderId._id || message.senderId;
+              const isMyMessage = senderId === authUser._id;
+              const isEditing = editingMessageId === message._id;
+
+              const handleInteract = (e) => {
+                // No selection mode interaction needed
+              };
+
+              // Long Press Logic for Mobile
+              let longPressTimer;
+              const handleTouchStart = () => {
+                if (isMyMessage) {
+                  longPressTimer = setTimeout(() => {
+                    setMessageToDelete(message);
+                  }, 500); // 500ms long press
+                }
+              };
+
+              const handleTouchEnd = () => {
+                clearTimeout(longPressTimer);
+              };
+
               // Poll Message Rendering
               if (message.type === "poll" && message.pollId) {
                 const poll = message.pollId;
                 const totalVotes = poll.options.reduce((acc, opt) => acc + opt.voteCount, 0);
-                const senderId = message.senderId._id || message.senderId;
-                const isMyMessage = senderId === authUser._id;
 
                 return (
-                  <div key={message._id} className={`chat ${isMyMessage ? "chat-end" : "chat-start"} group relative`}>
+                  <div
+                    key={message._id}
+                    className={`chat ${isMyMessage ? "chat-end" : "chat-start"} group relative`}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                  >
+
                     <div className="chat-image avatar">
                       <div className="size-10 rounded-full border border-base-300 shadow-sm">
                         <img
@@ -187,7 +232,8 @@ const ChatContainer = ({ onOpenMemory }) => {
                     </div>
 
                     <div className={`chat-bubble p-0 overflow-hidden shadow-md flex flex-col min-w-[240px] sm:min-w-[320px] 
-                          ${isMyMessage ? "chat-bubble-primary" : "chat-bubble-secondary"}`}>
+                          ${isMyMessage ? "chat-bubble-primary" : "chat-bubble-secondary"}
+                          `}>
 
                       <div className="p-3 lg:p-4 border-b border-base-content/10 bg-base-100/10">
                         <div className="font-bold text-[15px] lg:text-lg mb-0.5 lg:mb-1">{poll.question}</div>
@@ -202,7 +248,10 @@ const ChatContainer = ({ onOpenMemory }) => {
                           return (
                             <div
                               key={idx}
-                              onClick={() => !isVoted && votePoll(poll._id, idx)}
+                              onClick={(e) => {
+                                !isVoted && votePoll(poll._id, idx);
+                                e.stopPropagation();
+                              }}
                               className={`relative p-1.5 lg:p-2 rounded cursor-pointer border transition-all overflow-hidden ${isVoted ? "border-base-100 bg-base-100/20" : "border-base-content/10 hover:bg-base-content/5"}`}
                             >
                               {/* Progress Bar */}
@@ -233,16 +282,16 @@ const ChatContainer = ({ onOpenMemory }) => {
                 );
               }
 
-              const senderId = message.senderId._id || message.senderId;
-              const isMyMessage = senderId === authUser._id;
-              const isEditing = editingMessageId === message._id;
-
+              // Normal Message Rendering
               return (
                 <div
                   key={message._id}
                   id={`msg-${message._id}`}
                   className={`chat ${isMyMessage ? "chat-end" : "chat-start"} group relative`}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
                 >
+
                   <div className="chat-image avatar">
                     <div className="size-10 rounded-full border border-base-300 shadow-sm">
                       <img
@@ -273,10 +322,10 @@ const ChatContainer = ({ onOpenMemory }) => {
                           ? "chat-bubble-primary"
                           : "chat-bubble-secondary"
                         }
-                        ${message.isDeleted ? "italic opacity-70 border border-base-content/20" : ""}
+                        ${(message.isDeleted || message.deletedForEveryone) ? "italic opacity-70 border border-base-content/20" : ""}
                     `}
                     >
-                      {message.image && !message.isDeleted && (
+                      {message.image && !(message.isDeleted || message.deletedForEveryone) && (
                         <>
                           {message.type === "audio" || message.image.match(/\.(webm|mp3|wav)$/i) ? (
                             <audio controls src={message.image} className="mb-2 max-w-[200px]" />
@@ -291,7 +340,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                       )}
 
                       {/* Intent Label */}
-                      {message.intent && message.intent !== 'none' && !message.isDeleted && (
+                      {message.intent && message.intent !== 'none' && !(message.isDeleted || message.deletedForEveryone) && (
                         <span className="text-[9px] lg:text-[10px] uppercase font-bold opacity-70 mb-1 block bg-black/20 px-1 rounded w-fit">
                           {message.intent === 'important' && '🔔 Important'}
                           {message.intent === 'question' && '❓ Question'}
@@ -333,7 +382,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                       )}
 
                       {/* Edited Tag */}
-                      {message.isEdited && !message.isDeleted && !isEditing && (
+                      {message.isEdited && !(message.isDeleted || message.deletedForEveryone) && !isEditing && (
                         <span className="text-[9px] opacity-60 text-right block w-full mt-1">edited</span>
                       )}
 
@@ -360,7 +409,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                     </div>
 
                     {/* Message Options (Hover) */}
-                    {!message.isDeleted && !isEditing && (
+                    {!(message.isDeleted || message.deletedForEveryone) && !isEditing && (
                       <div className={`absolute top-1/2 transform -translate-y-1/2 ${isMyMessage ? 'left-[-80px]' : 'right-[-80px]'} opacity-0 group-hover/message:opacity-100 transition-opacity flex gap-1 bg-base-100/80 backdrop-blur shadow-md rounded-full p-1 z-10`}>
                         {/* React Button */}
                         <div className="dropdown dropdown-top dropdown-end">
@@ -383,7 +432,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                             >
                               <Edit2 size={14} />
                             </button>
-                            <button onClick={() => deleteMessage(message._id)} className="btn btn-xs btn-ghost btn-circle text-error" title="Delete">
+                            <button onClick={() => setMessageToDelete(message)} className="btn btn-xs btn-ghost btn-circle text-error" title="Delete">
                               <Trash2 size={14} />
                             </button>
                           </>

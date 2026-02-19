@@ -33,7 +33,8 @@ const Sidebar = () => {
     groups,
     getGroups,
     sentRequests,
-    deleteChat
+    deleteChat,
+    clearChat // Import clearChat
   } = useChatStore();
 
   const { onlineUsers, authUser } = useAuthStore();
@@ -46,6 +47,31 @@ const Sidebar = () => {
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    target: null // { conversationId, otherUser }
+  });
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(prev => ({ ...prev, isOpen: false }));
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
+  const handleContextMenu = (e, conversation, otherUser) => {
+    e.preventDefault();
+    setContextMenu({
+      isOpen: true,
+      x: e.pageX,
+      y: e.pageY,
+      target: { conversation, otherUser }
+    });
+  };
 
   // Confirm Modal State
   const [confirmModal, setConfirmModal] = useState({
@@ -70,6 +96,37 @@ const Sidebar = () => {
       setLoadingId(null);
     }
   };
+
+  const handleClearChatContext = () => {
+    const { target } = contextMenu;
+    if (!target) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: "Clear Chat",
+      message: `Clear all messages with ${target.otherUser.fullname}?`,
+      confirmText: "Clear",
+      isDangerous: true,
+      onConfirm: () => handleAction(target.otherUser._id, clearChat)
+    });
+  };
+
+  const handleDeleteChatContext = () => {
+    const { target } = contextMenu;
+    if (!target) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Chat",
+      message: `Delete conversation with ${target.otherUser.fullname}?`,
+      confirmText: "Delete",
+      isDangerous: true,
+      onConfirm: () => handleAction(target.conversation._id, deleteChat)
+    });
+  };
+
+  // ... (useEffects)
+
 
   useEffect(() => {
     getTalkRequests();
@@ -466,6 +523,7 @@ const Sidebar = () => {
                 <div
                   key={conversation._id}
                   onClick={() => setSelectedUser(otherUser)}
+                  onContextMenu={(e) => handleContextMenu(e, conversation, otherUser)}
                   role="button"
                   tabIndex={0}
                   className={`
@@ -520,31 +578,21 @@ const Sidebar = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Hover Actions */}
-                  <div className="hidden group-hover:flex absolute right-2 top-2 bg-base-100 rounded-lg shadow-sm border border-base-200 p-1 gap-1 z-10">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmModal({
-                          isOpen: true,
-                          title: "Delete Chat",
-                          message: `Are you sure you want to delete your chat with ${otherUser.fullname}?`,
-                          confirmText: "Delete",
-                          isDangerous: true,
-                          onConfirm: () => handleAction(conversation._id, deleteChat)
-                        });
-                      }}
-                      disabled={loadingId === conversation._id}
-                      className="p-1 hover:bg-base-200 rounded text-error"
-                      title="Delete Chat"
-                    >
-                      {loadingId === conversation._id ? <span className="loading loading-spinner loading-xs"></span> : <Trash2 size={14} />}
-                    </button>
-                  </div>
                 </div>
               );
             })}
+
+            {/* Context Menu */}
+            {contextMenu.isOpen && contextMenu.target && (
+              <ul
+                className="fixed z-50 menu bg-base-100 shadow-xl rounded-box border border-base-200 w-40 p-2"
+                style={{ top: contextMenu.y, left: contextMenu.x }}
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking menu
+              >
+                <li><button onClick={handleClearChatContext} className="text-warning"><Trash2 size={16} /> Clear Chat</button></li>
+                <li><button onClick={handleDeleteChatContext} className="text-error"><Trash2 size={16} /> Delete Chat</button></li>
+              </ul>
+            )}
 
             {filteredConversations.length === 0 && groups.length === 0 && (
               <div className="text-center text-zinc-500 py-8 flex flex-col items-center gap-2">
