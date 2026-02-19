@@ -114,7 +114,7 @@ const ProPage = () => {
                 {isPro && !isExpired ? (
                     // PRO USER UI (SaaS Design)
                     <div className="space-y-6">
-                        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm relative overflow-hidden">
+                        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm relative overflow-hidden">
                             {/* Texture/Bg */}
                             <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
                                 <Crown size={180} />
@@ -123,22 +123,22 @@ const ProPage = () => {
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-6">
                                     <div className="flex gap-4">
-                                        <div className="size-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                        <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                                             <Crown size={24} />
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h3 className="text-lg font-bold text-slate-800">Pro Plan</h3>
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase tracking-wide">
+                                                <h3 className="text-lg font-bold text-base-content">Pro Plan</h3>
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">
                                                     Active
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-slate-500 mt-1">Your subscription is active.</p>
+                                            <p className="text-sm text-base-content/60 mt-1">Your subscription is active.</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Valid Until</p>
-                                        <p className="text-sm font-semibold text-slate-700">
+                                        <p className="text-xs text-base-content/40 font-medium uppercase tracking-wider mb-1">Valid Until</p>
+                                        <p className="text-sm font-semibold text-base-content/80">
                                             {expiresAt ? format(expiresAt, "MMMM d, yyyy") : "Lifetime"}
                                         </p>
                                     </div>
@@ -147,28 +147,28 @@ const ProPage = () => {
                                 {/* Compact Countdown & Progress */}
                                 <div className="mt-8">
                                     <div className="flex items-end justify-between mb-2">
-                                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Time Remaining</span>
-                                        <p className="text-lg font-bold text-slate-700 font-mono tracking-tight">
-                                            {timeLeft.days}d <span className="text-slate-400 mx-1">/</span> {timeLeft.hours}h <span className="text-slate-400 mx-1">/</span> {timeLeft.minutes}m
+                                        <span className="text-xs font-medium text-base-content/50 uppercase tracking-wide">Time Remaining</span>
+                                        <p className="text-lg font-bold text-base-content/80 font-mono tracking-tight">
+                                            {timeLeft.days}d <span className="text-base-content/30 mx-1">/</span> {timeLeft.hours}h <span className="text-base-content/30 mx-1">/</span> {timeLeft.minutes}m
                                         </p>
                                     </div>
 
                                     {/* Thin Progress Bar */}
-                                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-1 w-full bg-base-200 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-indigo-600 rounded-full transition-all duration-1000 ease-in-out"
+                                            className="h-full bg-primary rounded-full transition-all duration-1000 ease-in-out"
                                             style={{ width: `${progress}%` }}
                                         />
                                     </div>
 
                                     {/* Renewal Text */}
                                     <div className="mt-3 flex justify-between items-center">
-                                        <p className="text-xs text-slate-400">
-                                            Renews on <span className="font-medium text-slate-600">{expiresAt ? format(expiresAt, "MMM d, yyyy") : "N/A"}</span>
+                                        <p className="text-xs text-base-content/50">
+                                            Renews on <span className="font-medium text-base-content/70">{expiresAt ? format(expiresAt, "MMM d, yyyy") : "N/A"}</span>
                                         </p>
 
                                         {timeLeft.days < 5 && (
-                                            <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 flex items-center gap-1">
+                                            <span className="text-xs font-semibold text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20 flex items-center gap-1">
                                                 <AlertTriangle size={10} /> Expiring Soon
                                             </span>
                                         )}
@@ -186,18 +186,18 @@ const ProPage = () => {
                 ) : (
                     // FREE USER UI (Upgrade CTA)
                     <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-8 relative overflow-hidden shadow-lg">
+                        <div className="bg-neutral text-neutral-content rounded-2xl p-8 relative overflow-hidden shadow-lg">
                             <div className="absolute top-0 right-0 p-8 opacity-10">
                                 <Crown size={200} />
                             </div>
 
                             <div className="relative z-10 max-w-lg">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-medium mb-4 backdrop-blur-sm border border-white/10">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-base-100/10 text-neutral-content/90 text-xs font-medium mb-4 backdrop-blur-sm border border-base-100/10">
                                     <Crown size={12} />
                                     <span>Recommended Plan</span>
                                 </div>
                                 <h2 className="text-3xl font-bold mb-3">Upgrade to Pro</h2>
-                                <p className="text-white/70 mb-8 leading-relaxed">
+                                <p className="text-neutral-content/70 mb-8 leading-relaxed">
                                     Get unlimited access to video calls, advanced analytics, ghost mode, and priority support.
                                 </p>
 
@@ -205,11 +205,11 @@ const ProPage = () => {
                                     <button
                                         onClick={handleUpgrade}
                                         disabled={loading}
-                                        className="btn bg-white text-indigo-900 border-none hover:bg-indigo-50 w-full sm:w-auto px-8"
+                                        className="btn btn-primary w-full sm:w-auto px-8 border-none"
                                     >
                                         {loading ? "Processing..." : "Get Pro for ₹499"}
                                     </button>
-                                    <p className="text-xs text-white/50">Secure payment via Razorpay</p>
+                                    <p className="text-xs text-neutral-content/50">Secure payment via Razorpay</p>
                                 </div>
                             </div>
                         </div>
@@ -228,11 +228,11 @@ const ProPage = () => {
 // Sub-components
 const FeaturesSection = ({ locked = false }) => (
     <section>
-        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Zap size={18} className="text-amber-500" />
+        <h3 className="text-base font-semibold text-base-content mb-4 flex items-center gap-2">
+            <Zap size={18} className="text-warning" />
             Premium Features
         </h3>
-        <div className={`bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 ${locked ? 'opacity-70' : ''}`}>
+        <div className={`bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm space-y-4 ${locked ? 'opacity-70' : ''}`}>
             <FeatureItem icon={<Video size={16} />} title="HD Video Calling" desc="Crystal clear 1080p video calls" locked={locked} />
             <FeatureItem icon={<Phone size={16} />} title="Unlimited Voice Calls" desc="Talk for as long as you want" locked={locked} />
             <FeatureItem icon={<Shield size={16} />} title="Advanced Privacy" desc="Ghost mode and screenshot alerts" locked={locked} />
@@ -243,11 +243,11 @@ const FeaturesSection = ({ locked = false }) => (
 
 const UsageSection = ({ active = false, user }) => (
     <section>
-        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <BarChart size={18} className="text-blue-500" />
+        <h3 className="text-base font-semibold text-base-content mb-4 flex items-center gap-2">
+            <BarChart size={18} className="text-info" />
             Usage Limits
         </h3>
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-5">
+        <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm space-y-5">
             <UsageItem label="Status Updates" used={user?.usage?.statusCount || 3} limit={active ? 30 : 5} />
             <UsageItem label="Cloud Storage" used={150} limit={active ? 2048 : 500} unit="MB" />
         </div>
@@ -256,15 +256,15 @@ const UsageSection = ({ active = false, user }) => (
 
 const FeatureItem = ({ icon, title, desc, locked }) => (
     <div className="flex items-start gap-3 group">
-        <div className={`p-2 rounded-lg mt-0.5 transition-colors ${locked ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600'}`}>
+        <div className={`p-2 rounded-lg mt-0.5 transition-colors ${locked ? 'bg-base-200 text-base-content/40' : 'bg-primary/10 text-primary'}`}>
             {icon}
         </div>
         <div>
             <div className="flex items-center gap-2">
-                <h4 className={`text-sm font-medium ${locked ? 'text-slate-500' : 'text-slate-800'}`}>{title}</h4>
-                {locked && <span className="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded border border-slate-200">LOCKED</span>}
+                <h4 className={`text-sm font-medium ${locked ? 'text-base-content/60' : 'text-base-content'}`}>{title}</h4>
+                {locked && <span className="text-[10px] bg-base-200 text-base-content/50 px-1.5 py-0.5 rounded border border-base-300">LOCKED</span>}
             </div>
-            <p className="text-xs text-slate-400">{desc}</p>
+            <p className="text-xs text-base-content/60">{desc}</p>
         </div>
     </div>
 );
@@ -274,12 +274,12 @@ const UsageItem = ({ label, used, limit, unit = "" }) => {
     return (
         <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
-                <span className="font-medium text-slate-600">{label}</span>
-                <span className="text-slate-400">{used} / {limit} {unit}</span>
+                <span className="font-medium text-base-content/70">{label}</span>
+                <span className="text-base-content/50">{used} / {limit} {unit}</span>
             </div>
-            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-base-200 rounded-full overflow-hidden">
                 <div
-                    className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                    className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${percentage}%` }}
                 />
             </div>
