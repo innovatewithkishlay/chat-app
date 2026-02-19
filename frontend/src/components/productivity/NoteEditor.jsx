@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, ArrowLeft } from "lucide-react";
 
 const NoteEditor = () => {
     const activeNote = useProductivityStore((state) => state.activeNote);
@@ -52,12 +52,20 @@ const NoteEditor = () => {
     return (
         <div className="flex-1 flex flex-col h-full bg-base-100">
             {/* Toolbar */}
-            <div className="p-4 border-b border-base-300 flex items-center justify-between">
+            <div className="p-4 border-b border-base-300 flex items-center gap-3">
+                {/* Back Button (Mobile Only) */}
+                <button
+                    onClick={() => useProductivityStore.getState().setActiveNote(null)}
+                    className="md:hidden btn btn-ghost btn-sm btn-circle"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+
                 <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="text-xl font-bold bg-transparent border-none focus:outline-none w-full"
+                    className="text-xl font-bold bg-transparent border-none focus:outline-none flex-1 min-w-0"
                     placeholder="Note Title"
                 />
                 <div className="flex items-center gap-2 text-xs opacity-60">
