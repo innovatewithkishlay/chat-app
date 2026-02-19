@@ -132,7 +132,11 @@ const ChatContainer = ({ onOpenMemory }) => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-base-200 relative">
-      <ChatHeader onOpenMemory={onOpenMemory} />
+
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 z-30">
+        <ChatHeader onOpenMemory={onOpenMemory} />
+      </div>
 
       {showGroupInfo && isGroup && (
         <GroupSettingsModal onClose={() => setShowGroupInfo(false)} />
@@ -159,8 +163,9 @@ const ChatContainer = ({ onOpenMemory }) => {
 
       {activeTab === "chat" && (
         <>
+          {/* Scrollable Messages Area */}
           <div
-            className="flex-1 overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar"
+            className="flex-1 overflow-y-auto w-full relative custom-scrollbar px-4 py-6 space-y-6"
             ref={scrollContainerRef}
             onScroll={handleScroll}
           >
@@ -384,7 +389,10 @@ const ChatContainer = ({ onOpenMemory }) => {
             </button>
           )}
 
-          <MessageInput />
+          {/* Fixed Input Area */}
+          <div className="flex-shrink-0 z-30 bg-base-200">
+            <MessageInput />
+          </div>
         </>
       )}
     </div>
