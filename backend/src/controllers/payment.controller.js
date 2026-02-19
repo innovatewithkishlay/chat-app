@@ -60,9 +60,18 @@ export const verifyPayment = async (req, res) => {
             // Payment is successful
             const user = await User.findById(userId);
 
-            user.subscriptionPlan = "pro";
+            const now = new Date();
+            const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+            user.subscriptionPlan = "pro"; // Keep for legacy/compat
             user.subscriptionStatus = "active";
-            user.plan = "PRO"; // Sync with frontend access control
+            user.plan = "PRO";
+
+            // New Pro Fields
+            user.isPro = true;
+            user.proStartedAt = now;
+            user.proExpiresAt = expiresAt;
+
             user.razorpayPaymentId = razorpay_payment_id;
             user.razorpayOrderId = razorpay_order_id;
 
@@ -75,8 +84,9 @@ export const verifyPayment = async (req, res) => {
                     fullname: user.fullname,
                     email: user.email,
                     profilePic: user.profilePic,
-                    plan: user.plan, // Old field if used
-                    subscriptionPlan: user.subscriptionPlan // New field
+                    plan: user.plan,
+                    isPro: user.isPro,
+                    proExpiresAt: user.proExpiresAt
                 }
             });
         } else {

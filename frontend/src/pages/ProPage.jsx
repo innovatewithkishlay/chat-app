@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from "react";
 import SettingsLayout from "../components/SettingsLayout";
-import { Crown, Zap, Video, Phone, Shield, BarChart, HardDrive, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Crown, Zap, Video, Phone, Shield, BarChart, CheckCircle, AlertTriangle } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
-import { differenceInDays, differenceInSeconds, format } from "date-fns";
+import { differenceInSeconds, format } from "date-fns";
+import { axiosInstance } from "../lib/axios";
+import toast from "react-hot-toast";
 
 const ProPage = () => {
-    const { authUser, activatePro } = useAuthStore();
-    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    const { authUser, checkAuth } = useAuthStore();
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
     const [progress, setProgress] = useState(0);
+    const [loading, setLoading] = useState(false);
 
     const isPro = authUser?.isPro;
     const expiresAt = authUser?.proExpiresAt ? new Date(authUser.proExpiresAt) : null;
-    const startedAt = authUser?.proStartedAt ? new Date(authUser.proStartedAt) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Fallback
+    const startedAt = authUser?.proStartedAt ? new Date(authUser.proStartedAt) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const isExpired = expiresAt && new Date() > expiresAt;
 
-    // Calculate time left and progress
+    // Countdown Logic
     useEffect(() => {
         if (!isPro || !expiresAt || isExpired) return;
 
@@ -26,8 +29,7 @@ const ProPage = () => {
             const elapsed = differenceInSeconds(now, startedAt);
 
             if (totalSeconds <= 0) {
-                // Handle expiry (UI update only, backend should handle real logic)
-                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                setTimeLeft({ days: 0, hours: 0, minutes: 0 });
                 setProgress(100);
                 return;
             }
@@ -35,9 +37,8 @@ const ProPage = () => {
             const days = Math.floor(totalSeconds / (3600 * 24));
             const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = Math.floor(totalSeconds % 60);
 
-            setTimeLeft({ days, hours, minutes, seconds });
+            setTimeLeft({ days, hours, minutes });
 
             // Calculate progress percentage
             const p = Math.min(Math.max((elapsed / totalDuration) * 100, 0), 100);
@@ -45,180 +46,177 @@ const ProPage = () => {
         };
 
         calculateTime();
-        const timer = setInterval(calculateTime, 1000);
+        const timer = setInterval(calculateTime, 60000); // 1 minute update is enough for "29d 23h"
 
         return () => clearInterval(timer);
     }, [isPro, expiresAt, startedAt, isExpired]);
+
+    // Payment Handler
+    const handleUpgrade = async () => {
+        if (loading) return;
+        setLoading(true);
+
+        try {
+            // 1. Create Order
+            const { data: orderData } = await axiosInstance.post("/payment/create-order");
+
+            const options = {
+                key: orderData.keyId,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "Toukii Pro",
+                description: "Upgrade to Toukii Pro Plan",
+                order_id: orderData.orderId,
+                handler: async function (response) {
+                    try {
+                        // 2. Verify Payment
+                        const verifyRes = await axiosInstance.post("/payment/verify-payment", {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+
+                        if (verifyRes.data.success) {
+                            toast.success("Welcome to Pro!");
+                            await checkAuth(); // Refresh user state
+                        }
+                    } catch (error) {
+                        console.error("Verification failed:", error);
+                        toast.error("Payment verification failed.");
+                    }
+                },
+                theme: {
+                    color: "#0F172A" // Slate-900 or Primary
+                }
+            };
+
+            const rzp1 = new window.Razorpay(options);
+            rzp1.open();
+
+        } catch (error) {
+            console.error("Order creation failed:", error);
+            toast.error(error.response?.data?.message || "Failed to initiate payment");
+        } finally {
+            setLoading(false);
+        }
+    };
 
 
     return (
         <SettingsLayout>
             <div className="space-y-6 mx-auto max-w-[820px]">
                 {/* Intro Text */}
-                <div className="mb-6 flex justify-between items-end">
-                    <div>
-                        <h2 className="text-2xl font-bold text-base-content mb-2">Pro Plan</h2>
-                        <p className="text-base-content/60">Unlock the full potential of Toukii</p>
-                    </div>
+                <div className="mb-2">
+                    <h2 className="text-2xl font-bold text-base-content mb-1">Pro Plan</h2>
+                    <p className="text-sm text-base-content/60">Unlock the full potential of Toukii</p>
                 </div>
 
                 {isPro && !isExpired ? (
-                    // PRO USER UI
+                    // PRO USER UI (SaaS Design)
                     <div className="space-y-6">
-                        {/* Status Card */}
-                        <div className="bg-gradient-to-br from-primary/10 via-base-100 to-base-100 border border-primary/20 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10">
-                                <Crown size={120} className="text-primary" />
+                        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm relative overflow-hidden">
+                            {/* Texture/Bg */}
+                            <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
+                                <Crown size={180} />
                             </div>
 
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-lg font-semibold text-base-content">Current Plan</h3>
-                                            <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-content flex items-center gap-1">
-                                                <CheckCircle size={12} /> Active
-                                            </span>
+                                    <div className="flex gap-4">
+                                        <div className="size-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                            <Crown size={24} />
                                         </div>
-                                        <p className="text-4xl font-bold text-primary">Pro</p>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-lg font-bold text-slate-800">Pro Plan</h3>
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase tracking-wide">
+                                                    Active
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-slate-500 mt-1">Your subscription is active.</p>
+                                        </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs text-base-content/60 uppercase tracking-wider font-semibold mb-1">Valid Until</p>
-                                        <p className="text-sm font-medium text-base-content">
+                                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Valid Until</p>
+                                        <p className="text-sm font-semibold text-slate-700">
                                             {expiresAt ? format(expiresAt, "MMMM d, yyyy") : "Lifetime"}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Countdown Timer */}
-                                <div className="bg-base-100/50 backdrop-blur-sm rounded-xl p-4 border border-base-content/5 mt-4">
-                                    <div className="flex items-center justify-between mb-3 text-sm text-base-content/70">
-                                        <div className="flex items-center gap-2">
-                                            <Clock size={16} className="text-primary" />
-                                            <span>Time Remaining</span>
-                                        </div>
-                                        <span className="text-xs font-medium text-primary">{Math.round(progress)}% of cycle used</span>
-                                    </div>
-                                    <div className="grid grid-cols-4 gap-4 text-center mb-4">
-                                        <TimeBlock value={timeLeft.days} label="Days" />
-                                        <TimeBlock value={timeLeft.hours} label="Hours" />
-                                        <TimeBlock value={timeLeft.minutes} label="Mins" />
-                                        <TimeBlock value={timeLeft.seconds} label="Secs" />
+                                {/* Compact Countdown & Progress */}
+                                <div className="mt-8">
+                                    <div className="flex items-end justify-between mb-2">
+                                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Time Remaining</span>
+                                        <p className="text-lg font-bold text-slate-700 font-mono tracking-tight">
+                                            {timeLeft.days}d <span className="text-slate-400 mx-1">/</span> {timeLeft.hours}h <span className="text-slate-400 mx-1">/</span> {timeLeft.minutes}m
+                                        </p>
                                     </div>
 
-                                    {/* Progress Bar */}
-                                    <div className="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                                    {/* Thin Progress Bar */}
+                                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear"
+                                            className="h-full bg-indigo-600 rounded-full transition-all duration-1000 ease-in-out"
                                             style={{ width: `${progress}%` }}
                                         />
                                     </div>
-                                </div>
 
-                                {/* Renewal Warning */}
-                                {timeLeft.days < 7 && (
-                                    <div className="mt-4 flex items-center gap-3 p-3 bg-warning/10 text-warning rounded-lg border border-warning/20 text-sm">
-                                        <AlertTriangle size={18} />
-                                        <span>Your subscription is expiring soon. Renew now to keep your features.</span>
+                                    {/* Renewal Text */}
+                                    <div className="mt-3 flex justify-between items-center">
+                                        <p className="text-xs text-slate-400">
+                                            Renews on <span className="font-medium text-slate-600">{expiresAt ? format(expiresAt, "MMM d, yyyy") : "N/A"}</span>
+                                        </p>
+
+                                        {timeLeft.days < 5 && (
+                                            <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 flex items-center gap-1">
+                                                <AlertTriangle size={10} /> Expiring Soon
+                                            </span>
+                                        )}
                                     </div>
-                                )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Premium Features List */}
+                        {/* Features List */}
                         <div className="grid md:grid-cols-2 gap-6">
-                            <section>
-                                <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                                    <Zap size={18} className="text-amber-500" />
-                                    Your Premium Features
-                                </h3>
-                                <div className="bg-base-100 border border-base-300 rounded-2xl p-6 shadow-sm space-y-4">
-                                    <FeatureItem icon={<Video size={18} />} title="HD Video Calling" desc="Active" active />
-                                    <FeatureItem icon={<Phone size={18} />} title="Unlimited Voice Calls" desc="Active" active />
-                                    <FeatureItem icon={<Shield size={18} />} title="Ghost Mode" desc="Active" active />
-                                    <FeatureItem icon={<BarChart size={18} />} title="Viewer Analytics" desc="Active" active />
-                                </div>
-                            </section>
-
-                            <section>
-                                <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                                    <HardDrive size={18} className="text-blue-500" />
-                                    Usage Stats
-                                </h3>
-                                <div className="bg-base-100 border border-base-300 rounded-2xl p-6 shadow-sm space-y-5">
-                                    <UsageItem label="Status Updates" used={8} limit={30} active />
-                                    <UsageItem label="Cloud Storage" used={1.2} limit={50} unit="GB" active />
-                                </div>
-                            </section>
+                            <FeaturesSection />
+                            <UsageSection active user={authUser} />
                         </div>
                     </div>
                 ) : (
-                    // FREE USER UI
+                    // FREE USER UI (Upgrade CTA)
                     <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-base-100 to-base-200 border border-base-300 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10">
-                                <Crown size={120} />
+                        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-8 relative overflow-hidden shadow-lg">
+                            <div className="absolute top-0 right-0 p-8 opacity-10">
+                                <Crown size={200} />
                             </div>
-                            <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-base-content">Current Plan</h3>
-                                        <p className="text-3xl font-bold text-base-content/70 mt-2">Free</p>
-                                    </div>
-                                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-base-300 text-base-content/70">
-                                        Active
-                                    </span>
+
+                            <div className="relative z-10 max-w-lg">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-medium mb-4 backdrop-blur-sm border border-white/10">
+                                    <Crown size={12} />
+                                    <span>Recommended Plan</span>
                                 </div>
-                                <p className="text-base-content/60 text-sm mb-6 max-w-md">
-                                    You are currently on the free plan. Upgrade to remove limits and access exclusive features.
+                                <h2 className="text-3xl font-bold mb-3">Upgrade to Pro</h2>
+                                <p className="text-white/70 mb-8 leading-relaxed">
+                                    Get unlimited access to video calls, advanced analytics, ghost mode, and priority support.
                                 </p>
-                                <button className="btn btn-primary px-6" onClick={activatePro}>
-                                    Upgrade to Pro
-                                </button>
+
+                                <div className="flex flex-col sm:flex-row items-center gap-4">
+                                    <button
+                                        onClick={handleUpgrade}
+                                        disabled={loading}
+                                        className="btn bg-white text-indigo-900 border-none hover:bg-indigo-50 w-full sm:w-auto px-8"
+                                    >
+                                        {loading ? "Processing..." : "Get Pro for ₹499"}
+                                    </button>
+                                    <p className="text-xs text-white/50">Secure payment via Razorpay</p>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Features Comparison */}
                         <div className="grid md:grid-cols-2 gap-6">
-                            <section>
-                                <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                                    <Zap size={18} className="text-amber-500" />
-                                    Premium Features
-                                </h3>
-                                <div className="bg-base-100 border border-base-300 rounded-2xl p-6 shadow-sm space-y-4 opacity-70">
-                                    <FeatureItem icon={<Video size={18} />} title="HD Video Calling" desc="Locked" />
-                                    <FeatureItem icon={<Phone size={18} />} title="Unlimited Voice Calls" desc="Locked" />
-                                    <FeatureItem icon={<Shield size={18} />} title="Advanced Privacy" desc="Locked" />
-                                    <FeatureItem icon={<BarChart size={18} />} title="Viewer Analytics" desc="Locked" />
-                                </div>
-                            </section>
-
-                            <section>
-                                <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                                    <HardDrive size={18} className="text-blue-500" />
-                                    Usage Limits
-                                </h3>
-                                <div className="bg-base-100 border border-base-300 rounded-2xl p-6 shadow-sm space-y-5">
-                                    <UsageItem label="Status Updates" used={3} limit={5} />
-                                    <UsageItem label="Cloud Storage" used={150} limit={500} unit="MB" />
-                                </div>
-                            </section>
-                        </div>
-
-                        {/* Upgrade CTA */}
-                        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-primary/10 rounded-xl text-primary hidden sm:block">
-                                    <Crown size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-base-content">Go Pro Today</h3>
-                                    <p className="text-sm text-base-content/60">Get instant access to all features for just $5/month.</p>
-                                </div>
-                            </div>
-                            <button className="btn btn-primary w-full md:w-auto whitespace-nowrap" onClick={activatePro}>
-                                Unlock Premium
-                            </button>
+                            <FeaturesSection locked />
+                            <UsageSection user={authUser} />
                         </div>
                     </div>
                 )}
@@ -227,37 +225,61 @@ const ProPage = () => {
     );
 };
 
-// Helper Components
-const TimeBlock = ({ value, label }) => (
-    <div className="bg-base-200/50 rounded-lg p-2 flex flex-col items-center">
-        <span className="text-2xl font-bold font-mono text-primary">{String(value).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase text-base-content/50 font-medium">{label}</span>
-    </div>
+// Sub-components
+const FeaturesSection = ({ locked = false }) => (
+    <section>
+        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <Zap size={18} className="text-amber-500" />
+            Premium Features
+        </h3>
+        <div className={`bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 ${locked ? 'opacity-70' : ''}`}>
+            <FeatureItem icon={<Video size={16} />} title="HD Video Calling" desc="Crystal clear 1080p video calls" locked={locked} />
+            <FeatureItem icon={<Phone size={16} />} title="Unlimited Voice Calls" desc="Talk for as long as you want" locked={locked} />
+            <FeatureItem icon={<Shield size={16} />} title="Advanced Privacy" desc="Ghost mode and screenshot alerts" locked={locked} />
+            <FeatureItem icon={<BarChart size={16} />} title="Viewer Analytics" desc="See who views your profile" locked={locked} />
+        </div>
+    </section>
 );
 
-const FeatureItem = ({ icon, title, desc, active = false }) => (
-    <div className="flex items-start gap-3">
-        <div className={`p-2 rounded-lg mt-0.5 ${active ? 'bg-primary/10 text-primary' : 'bg-base-200 text-base-content/40'}`}>
+const UsageSection = ({ active = false, user }) => (
+    <section>
+        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <BarChart size={18} className="text-blue-500" />
+            Usage Limits
+        </h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-5">
+            <UsageItem label="Status Updates" used={user?.usage?.statusCount || 3} limit={active ? 30 : 5} />
+            <UsageItem label="Cloud Storage" used={150} limit={active ? 2048 : 500} unit="MB" />
+        </div>
+    </section>
+);
+
+const FeatureItem = ({ icon, title, desc, locked }) => (
+    <div className="flex items-start gap-3 group">
+        <div className={`p-2 rounded-lg mt-0.5 transition-colors ${locked ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600'}`}>
             {icon}
         </div>
         <div>
-            <h4 className={`text-sm font-medium ${active ? 'text-base-content' : 'text-base-content/70'}`}>{title}</h4>
-            <p className="text-xs text-base-content/60">{desc}</p>
+            <div className="flex items-center gap-2">
+                <h4 className={`text-sm font-medium ${locked ? 'text-slate-500' : 'text-slate-800'}`}>{title}</h4>
+                {locked && <span className="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded border border-slate-200">LOCKED</span>}
+            </div>
+            <p className="text-xs text-slate-400">{desc}</p>
         </div>
     </div>
 );
 
-const UsageItem = ({ label, used, limit, unit = "", active = false }) => {
+const UsageItem = ({ label, used, limit, unit = "" }) => {
     const percentage = Math.min((used / limit) * 100, 100);
     return (
         <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
-                <span className="font-medium text-base-content/70">{label}</span>
-                <span className="text-base-content/50">{used} / {limit} {unit}</span>
+                <span className="font-medium text-slate-600">{label}</span>
+                <span className="text-slate-400">{used} / {limit} {unit}</span>
             </div>
-            <div className="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div
-                    className={`h-full rounded-full transition-all duration-500 ${active ? 'bg-primary' : 'bg-base-content/30'}`}
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-500"
                     style={{ width: `${percentage}%` }}
                 />
             </div>
