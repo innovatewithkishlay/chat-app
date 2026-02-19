@@ -168,6 +168,7 @@ const ChatContainer = ({ onOpenMemory }) => {
             className="flex-1 overflow-y-auto w-full relative custom-scrollbar px-4 py-6 space-y-6"
             ref={scrollContainerRef}
             onScroll={handleScroll}
+            style={{ WebkitOverflowScrolling: "touch" }}
           >
             <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
 

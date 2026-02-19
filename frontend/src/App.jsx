@@ -49,7 +49,7 @@ const App = () => {
       </div>
     );
   return (
-    <div data-theme={theme} className="h-screen w-full overflow-hidden bg-base-100 flex flex-col">
+    <div data-theme={theme} className="h-[100dvh] w-full overflow-hidden bg-base-100 flex flex-col">
       <div className="flex-1 h-full overflow-hidden">
         <Routes>
           <Route
