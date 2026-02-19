@@ -212,9 +212,7 @@ const Sidebar = () => {
           <h1 className="text-[16px] font-semibold text-base-content tracking-tight flex items-center gap-2">
             Toukii
             {authUser?.isPro && (
-              <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-primary to-secondary text-[10px] font-bold text-white shadow-sm">
-                PRO
-              </span>
+              <Crown size={16} className="text-yellow-500 fill-yellow-500" />
             )}
           </h1>
         </div>
