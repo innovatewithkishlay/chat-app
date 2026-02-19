@@ -22,47 +22,35 @@ const HomePage = () => {
   // But here we need to pass the *document* to StatusViewer.
 
   return (
-    <div className="h-screen bg-base-200">
-      <div className="flex items-center justify-center pt-16 px-0 lg:pt-20 lg:px-4">
-        <div className="bg-base-100 rounded-none lg:rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-4rem)] lg:h-[calc(100vh-8rem)]">
-          <div className="flex h-full rounded-none lg:rounded-lg overflow-hidden">
+    <div className="chat-wrapper bg-base-200">
+      <div className="flex h-full pt-16 lg:pt-20 lg:px-4 justify-center">
+        <div className="bg-base-100 w-full h-full max-w-6xl lg:h-[calc(100vh-8rem)] lg:rounded-lg shadow-xl overflow-hidden flex">
 
-            {/* Sidebar: 
-                - Mobile: Hidden if selectedUser OR activeStatus OR activeStatusCreation is true 
-                - Desktop: Always visible
-            */}
-            <div className={`${(selectedUser || activeStatus || activeStatusCreation) ? 'hidden' : 'block'} lg:block w-full lg:w-80 border-r border-base-300`}>
-              <Sidebar />
-            </div>
+          {/* Sidebar */}
+          <div className={`${(selectedUser || activeStatus || activeStatusCreation) ? 'hidden' : 'block'} lg:block w-full lg:w-80 border-r border-base-300 h-full`}>
+            <Sidebar />
+          </div>
 
-            {/* Main Content Area:
-                - If activeStatus -> Show StatusViewer
-                - Else If activeStatusCreation -> Show StatusCreationPanel
-                - Else If selectedUser -> Show ChatContainer
-                - Else -> Show NoChatSelected
-            */}
-            <div className={`${(!selectedUser && !activeStatus && !activeStatusCreation) ? 'hidden' : 'block'} flex-1 h-full relative`}>
-              {activeStatus ? (
-                <div className="w-full h-full absolute inset-0 z-10 bg-black">
-                  <StatusViewer
-                    stories={activeStatus.stories}
-                    userId={activeStatus.userId._id || activeStatus.userId} // Handle populated/unpopulated
-                    initialStoryIndex={0} // Default to 0, or could pass from store if needed
-                    onClose={closeStatus}
-                  // Future: onNextUser logic could go here to switch activeStatus
-                  />
-                </div>
-              ) : activeStatusCreation ? (
-                <div className="w-full h-full absolute inset-0 z-10 bg-base-100">
-                  <StatusCreationPanel onClose={closeCreateStatus} />
-                </div>
-              ) : selectedUser ? (
-                <ChatContainer />
-              ) : (
-                <NoChatSelected />
-              )}
-            </div>
-
+          {/* Main Content */}
+          <div className={`${(!selectedUser && !activeStatus && !activeStatusCreation) ? 'hidden' : 'block'} flex-1 h-full relative flex flex-col`}>
+            {activeStatus ? (
+              <div className="w-full h-full absolute inset-0 z-20 bg-black">
+                <StatusViewer
+                  stories={activeStatus.stories}
+                  userId={activeStatus.userId._id || activeStatus.userId}
+                  initialStoryIndex={0}
+                  onClose={closeStatus}
+                />
+              </div>
+            ) : activeStatusCreation ? (
+              <div className="w-full h-full absolute inset-0 z-20 bg-base-100">
+                <StatusCreationPanel onClose={closeCreateStatus} />
+              </div>
+            ) : selectedUser ? (
+              <ChatContainer />
+            ) : (
+              <NoChatSelected />
+            )}
           </div>
         </div>
       </div>

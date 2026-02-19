@@ -126,20 +126,20 @@ const ChatHeader = ({ onOpenMemory }) => {
         isDangerous={confirmModal.isDangerous}
       />
 
-      <div className="px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="px-3 py-2 lg:px-4 lg:py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 lg:gap-3">
           {/* Back Button (Mobile) */}
-          <button onClick={() => setSelectedUser(null)} className="lg:hidden btn btn-ghost btn-circle btn-sm">
-            <ArrowLeft size={20} />
+          <button onClick={() => setSelectedUser(null)} className="lg:hidden btn btn-ghost btn-circle btn-sm size-8">
+            <ArrowLeft size={18} />
           </button>
 
           <div
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-2 lg:gap-3 cursor-pointer"
             onClick={() => isGroup && setShowGroupInfo(!showGroupInfo)}
           >
             {/* Avatar */}
             <div className="avatar">
-              <div className="size-10 rounded-full relative">
+              <div className="size-8 lg:size-10 rounded-full relative">
                 <img
                   src={isGroup ? (selectedUser.avatar || "/avatar.png") : (selectedUser.profilePic || "/avatar.png")}
                   alt={isGroup ? selectedUser.name : selectedUser.fullname}
@@ -149,10 +149,10 @@ const ChatHeader = ({ onOpenMemory }) => {
 
             {/* User/Group info */}
             <div className="min-w-0 flex-1">
-              <h3 className="font-medium flex items-center gap-2 truncate">
+              <h3 className="font-medium flex items-center gap-2 truncate text-sm lg:text-base">
                 {isGroup ? selectedUser.name : selectedUser.fullname}
               </h3>
-              <p className="text-sm text-base-content/70 truncate">
+              <p className="text-xs text-base-content/70 truncate">
                 {isGroup
                   ? `${selectedUser.members.length} members`
                   : (onlineUsers.includes(selectedUser._id)
@@ -166,7 +166,7 @@ const ChatHeader = ({ onOpenMemory }) => {
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 lg:gap-2">
           {/* Memory Button - Hidden on mobile, added to dropdown */}
           <button onClick={onOpenMemory} className="hidden sm:flex btn btn-ghost btn-circle btn-sm" title="Chat Memory">
             <BrainCircuit size={18} />
@@ -176,14 +176,14 @@ const ChatHeader = ({ onOpenMemory }) => {
             <>
               <button
                 onClick={handleVoiceCall}
-                className={`btn btn-circle btn-sm transition-all duration-300 relative group overflow-hidden ${!isPro ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-500" : "btn-primary"}`}
+                className={`btn btn-circle btn-sm size-8 lg:size-8 transition-all duration-300 relative group overflow-hidden ${!isPro ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-500" : "btn-primary"}`}
                 title={isPro ? "Voice Call" : "Unlock Voice Call"}
               >
                 {isPro ? (
-                  <Phone size={18} />
+                  <Phone size={16} className="lg:size-[18px]" />
                 ) : (
                   <>
-                    <Phone size={18} className="opacity-80 group-hover:opacity-100 transition-opacity" />
+                    <Phone size={16} className="lg:size-[18px] opacity-80 group-hover:opacity-100 transition-opacity" />
                     <div className="absolute top-0 right-0 p-[3px]">
                       <Lock size={8} className="text-amber-500 fill-amber-500" />
                     </div>
@@ -193,14 +193,14 @@ const ChatHeader = ({ onOpenMemory }) => {
 
               <button
                 onClick={handleVideoCall}
-                className={`btn btn-circle btn-sm transition-all duration-300 relative group overflow-hidden ${!isPro ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-500" : "btn-primary"}`}
+                className={`btn btn-circle btn-sm size-8 lg:size-8 transition-all duration-300 relative group overflow-hidden ${!isPro ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-500" : "btn-primary"}`}
                 title={isPro ? "Video Call" : "Unlock Video Call"}
               >
                 {isPro ? (
-                  <Video size={18} />
+                  <Video size={16} className="lg:size-[18px]" />
                 ) : (
                   <>
-                    <Video size={18} className="opacity-80 group-hover:opacity-100 transition-opacity" />
+                    <Video size={16} className="lg:size-[18px] opacity-80 group-hover:opacity-100 transition-opacity" />
                     <div className="absolute top-0 right-0 p-[3px]">
                       <Lock size={8} className="text-amber-500 fill-amber-500" />
                     </div>
@@ -221,8 +221,8 @@ const ChatHeader = ({ onOpenMemory }) => {
           )}
 
           <div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm">
-              <Settings size={20} />
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm size-8 lg:size-8">
+              <Settings size={18} className="lg:size-[20px]" />
             </div>
             <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
               {/* Mobile Only: View Memory */}
@@ -269,26 +269,26 @@ const ChatHeader = ({ onOpenMemory }) => {
       </div>
 
       {/* Productivity Tabs */}
-      <div className="flex px-4 gap-6 text-sm font-medium border-t border-base-200/50">
+      <div className="flex px-3 lg:px-4 gap-4 lg:gap-6 text-xs lg:text-sm font-medium border-t border-base-200/50">
         <button
           onClick={() => setActiveTab("chat")}
-          className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "chat" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
+          className={`py-2 lg:py-2 flex items-center gap-1.5 lg:gap-2 border-b-2 transition-colors ${activeTab === "chat" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
         >
-          <MessageSquare size={16} /> Chat
+          <MessageSquare size={14} className="lg:size-[16px]" /> Chat
         </button>
 
         <button
           onClick={() => setActiveTab("notes")}
-          className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "notes" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
+          className={`py-2 lg:py-2 flex items-center gap-1.5 lg:gap-2 border-b-2 transition-colors ${activeTab === "notes" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
         >
-          <FileText size={16} /> Notes
+          <FileText size={14} className="lg:size-[16px]" /> Notes
         </button>
         {isGroup && (
           <button
             onClick={() => setActiveTab("polls")}
-            className={`py-2 flex items-center gap-2 border-b-2 transition-colors ${activeTab === "polls" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
+            className={`py-2 lg:py-2 flex items-center gap-1.5 lg:gap-2 border-b-2 transition-colors ${activeTab === "polls" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
           >
-            <BarChart2 size={16} /> Polls
+            <BarChart2 size={14} className="lg:size-[16px]" /> Polls
           </button>
         )}
       </div>

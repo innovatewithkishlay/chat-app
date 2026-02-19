@@ -177,24 +177,24 @@ const ChatContainer = ({ onOpenMemory }) => {
 
                     <div className="chat-header mb-1">
                       {isGroup && !isMyMessage && (
-                        <span className="text-xs font-bold mr-2 opacity-70">
+                        <span className="text-[10px] lg:text-xs font-bold mr-2 opacity-70">
                           {message.senderId.fullname}
                         </span>
                       )}
-                      <time className="text-[10px] opacity-50 ml-1">
+                      <time className="text-[9px] lg:text-[10px] opacity-50 ml-1">
                         {formatMessageTime(message.createdAt)}
                       </time>
                     </div>
 
-                    <div className={`chat-bubble p-0 overflow-hidden shadow-md flex flex-col min-w-[280px] sm:min-w-[320px] 
+                    <div className={`chat-bubble p-0 overflow-hidden shadow-md flex flex-col min-w-[240px] sm:min-w-[320px] 
                           ${isMyMessage ? "chat-bubble-primary" : "chat-bubble-secondary"}`}>
 
-                      <div className="p-4 border-b border-base-content/10 bg-base-100/10">
-                        <div className="font-bold text-lg mb-1">{poll.question}</div>
-                        <div className="text-xs opacity-70">📊 Poll</div>
+                      <div className="p-3 lg:p-4 border-b border-base-content/10 bg-base-100/10">
+                        <div className="font-bold text-[15px] lg:text-lg mb-0.5 lg:mb-1">{poll.question}</div>
+                        <div className="text-[10px] lg:text-xs opacity-70">📊 Poll</div>
                       </div>
 
-                      <div className="p-3 space-y-2 bg-base-100/5">
+                      <div className="p-2 lg:p-3 space-y-1.5 lg:space-y-2 bg-base-100/5">
                         {poll.options.map((option, idx) => {
                           const percentage = totalVotes === 0 ? 0 : Math.round((option.voteCount / totalVotes) * 100);
                           const isVoted = poll.votes.some(v => v.userId === authUser._id && v.optionIndex === idx);
@@ -203,7 +203,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                             <div
                               key={idx}
                               onClick={() => !isVoted && votePoll(poll._id, idx)}
-                              className={`relative p-2 rounded cursor-pointer border transition-all overflow-hidden ${isVoted ? "border-base-100 bg-base-100/20" : "border-base-content/10 hover:bg-base-content/5"}`}
+                              className={`relative p-1.5 lg:p-2 rounded cursor-pointer border transition-all overflow-hidden ${isVoted ? "border-base-100 bg-base-100/20" : "border-base-content/10 hover:bg-base-content/5"}`}
                             >
                               {/* Progress Bar */}
                               <div
@@ -211,12 +211,12 @@ const ChatContainer = ({ onOpenMemory }) => {
                                 style={{ width: `${percentage}%` }}
                               />
 
-                              <div className="relative flex items-center justify-between z-10 text-sm">
+                              <div className="relative flex items-center justify-between z-10 text-[13px] lg:text-sm">
                                 <span className="font-medium flex items-center gap-2">
                                   {option.text}
-                                  {isVoted && <span className="text-xs">✓</span>}
+                                  {isVoted && <span className="text-[10px] lg:text-xs">✓</span>}
                                 </span>
-                                <span className="opacity-70 text-xs">
+                                <span className="opacity-70 text-[10px] lg:text-xs">
                                   {percentage}% ({option.voteCount})
                                 </span>
                               </div>
@@ -225,7 +225,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                         })}
                       </div>
 
-                      <div className="px-3 py-2 text-right text-[10px] opacity-60 bg-base-100/10">
+                      <div className="px-3 py-1.5 lg:py-2 text-right text-[9px] lg:text-[10px] opacity-60 bg-base-100/10">
                         Total votes: {totalVotes}
                       </div>
                     </div>
@@ -257,18 +257,18 @@ const ChatContainer = ({ onOpenMemory }) => {
                   </div>
                   <div className="chat-header mb-1">
                     {isGroup && !isMyMessage && (
-                      <span className="text-xs font-bold mr-2 opacity-70">
+                      <span className="text-[10px] lg:text-xs font-bold mr-2 opacity-70">
                         {message.senderId.fullname}
                       </span>
                     )}
-                    <time className="text-[10px] opacity-50 ml-1">
+                    <time className="text-[9px] lg:text-[10px] opacity-50 ml-1">
                       {formatMessageTime(message.createdAt)}
                     </time>
                   </div>
 
                   <div className="relative group/message">
                     <div
-                      className={`chat-bubble flex flex-col shadow-md relative min-w-[120px]
+                      className={`chat-bubble flex flex-col shadow-md relative min-w-[100px] lg:min-w-[120px] py-2 px-3 lg:py-2 lg:px-4
                         ${isMyMessage
                           ? "chat-bubble-primary"
                           : "chat-bubble-secondary"
@@ -292,7 +292,7 @@ const ChatContainer = ({ onOpenMemory }) => {
 
                       {/* Intent Label */}
                       {message.intent && message.intent !== 'none' && !message.isDeleted && (
-                        <span className="text-[10px] uppercase font-bold opacity-70 mb-1 block bg-black/20 px-1 rounded w-fit">
+                        <span className="text-[9px] lg:text-[10px] uppercase font-bold opacity-70 mb-1 block bg-black/20 px-1 rounded w-fit">
                           {message.intent === 'important' && '🔔 Important'}
                           {message.intent === 'question' && '❓ Question'}
                           {message.intent === 'action' && '✅ Action'}
@@ -329,7 +329,7 @@ const ChatContainer = ({ onOpenMemory }) => {
                           </div>
                         </div>
                       ) : (
-                        message.text && <p className="leading-relaxed">{message.text}</p>
+                        message.text && <p className="leading-relaxed text-[14px] lg:text-base">{message.text}</p>
                       )}
 
                       {/* Edited Tag */}

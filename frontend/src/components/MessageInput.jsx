@@ -206,17 +206,18 @@ const MessageInput = () => {
   };
 
   return (
-    <div className="p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative z-50">
+    <div className="p-2 lg:p-4 w-full bg-base-100/50 backdrop-blur-lg border-t border-base-300/50 relative z-50 transition-all">
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div ref={emojiPickerRef} className="absolute bottom-full left-4 mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-base-300">
+        <div ref={emojiPickerRef} className="absolute bottom-full left-2 lg:left-4 mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-base-300">
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             theme={document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"}
             lazyLoadEmojis={true}
             searchDisabled={false}
             width={300}
-            height={400}
+            height={350}
+            previewConfig={{ showPreview: false }}
           />
         </div>
       )}
@@ -224,9 +225,9 @@ const MessageInput = () => {
       {showScheduleModal && <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />}
 
       {imagePreview && (
-        <div className="mb-3 flex items-center gap-2 animate-in slide-in-from-bottom-2">
+        <div className="mb-2 lg:mb-3 flex items-center gap-2 animate-in slide-in-from-bottom-2 px-2">
           <div className="relative">
-            <img src={imagePreview} alt="Preview" className="w-20 h-20 object-cover rounded-xl border border-zinc-700 shadow-lg" />
+            <img src={imagePreview} alt="Preview" className="w-16 h-16 lg:w-20 lg:h-20 object-cover rounded-xl border border-zinc-700 shadow-lg" />
             <button onClick={removeImage} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center hover:bg-base-200 transition-colors">
               <X className="size-3" />
             </button>
@@ -236,26 +237,26 @@ const MessageInput = () => {
 
       {audioBlob && (
         <div className="mb-3 flex items-center gap-3 bg-base-200/50 p-2 rounded-xl w-fit">
-          <audio src={URL.createObjectURL(audioBlob)} controls className="h-8 w-48" />
+          <audio src={URL.createObjectURL(audioBlob)} controls className="h-8 w-40 lg:w-48" />
           <button onClick={() => setAudioBlob(null)} className="btn btn-ghost btn-xs text-error"><Trash2 size={16} /></button>
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex items-end gap-3">
-        <div className="flex-1 flex gap-2 relative items-end bg-base-200/50 rounded-2xl p-1.5 border border-transparent focus-within:border-primary/20 transition-all">
+      <form onSubmit={handleSendMessage} className="flex items-end gap-2 lg:gap-3">
+        <div className="flex-1 flex gap-1 lg:gap-2 relative items-end bg-base-200/50 rounded-xl lg:rounded-2xl p-1 lg:p-1.5 border border-transparent focus-within:border-primary/20 transition-all shadow-sm">
 
           <button
             type="button"
             className={`btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-primary transition-colors`}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
-            <Smile size={20} />
+            <Smile size={20} className="lg:size-5 size-[18px]" />
           </button>
 
           <textarea
             ref={textareaRef}
-            className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-[150px] py-2 text-sm leading-relaxed scrollbar-hide outline-none focus:outline-none"
-            placeholder={isRecording ? "Recording audio..." : "Type a message..."}
+            className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-[120px] lg:max-h-[150px] py-1.5 lg:py-2 text-sm leading-relaxed scrollbar-hide outline-none focus:outline-none min-h-[36px]"
+            placeholder={isRecording ? "Recording..." : "Type a message..."}
             value={text}
             onChange={handleTyping}
             onKeyDown={handleKeyDown}
@@ -274,6 +275,16 @@ const MessageInput = () => {
             <Image size={20} />
           </button>
 
+          {/* Mobile Image Button (Visible only on mobile inside input) */}
+          <button
+            type="button"
+            className={`sm:hidden btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
+            onClick={handleImageClick}
+            disabled={isRecording || isSending}
+          >
+            <Image size={18} />
+          </button>
+
           <button
             type="button"
             className={`hidden sm:flex btn btn-circle btn-sm btn-ghost text-zinc-400 hover:text-zinc-300`}
@@ -289,18 +300,18 @@ const MessageInput = () => {
           <button
             type="submit"
             disabled={isSending}
-            className="btn btn-circle btn-primary shadow-lg hover:scale-105 transition-transform mb-1"
+            className="btn btn-circle btn-primary shadow-lg hover:scale-105 transition-transform mb-0.5 btn-sm lg:btn-md"
           >
             {isSending ? <span className="loading loading-spinner loading-xs"></span> : <Send size={18} />}
           </button>
         ) : (
           <button
             type="button"
-            className={`btn btn-circle mb-1 ${isRecording ? "btn-error animate-pulse" : "btn-ghost text-zinc-400"}`}
+            className={`btn btn-circle mb-0.5 btn-sm lg:btn-md ${isRecording ? "btn-error animate-pulse" : "btn-ghost text-zinc-400"}`}
             onClick={isRecording ? stopRecording : startRecording}
             disabled={isSending}
           >
-            {isRecording ? <StopCircle size={20} /> : <Mic size={20} />}
+            {isRecording ? <StopCircle size={20} /> : <Mic size={20} className="lg:size-5 size-[18px]" />}
           </button>
         )}
 

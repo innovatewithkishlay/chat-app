@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const noteVersionSchema = new mongoose.Schema({
-    content: { type: String, required: true },
+    content: { type: String, default: "" },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     timestamp: { type: Date, default: Date.now },
 });
