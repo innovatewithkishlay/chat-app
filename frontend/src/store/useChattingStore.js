@@ -750,8 +750,11 @@ export const useChatStore = create((set, get) => ({
   showGroupInfo: false,
   setShowGroupInfo: (show) => set({ showGroupInfo: show }),
 
+  showUserInfo: false,
+  setShowUserInfo: (show) => set({ showUserInfo: show }),
+
   setSelectedUser: async (selectedUser) => {
-    set({ selectedUser, typingUsers: [], showGroupInfo: false }); // Clear typing users and close group info when switching chats
+    set({ selectedUser, typingUsers: [], showGroupInfo: false, showUserInfo: false }); // Clear typing users and info modals when switching chats
     if (selectedUser && selectedUser.email) {
       try {
         await axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`);

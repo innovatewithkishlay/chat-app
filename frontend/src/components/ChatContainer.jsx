@@ -16,6 +16,7 @@ import TimelineScrubber from "./TimelineScrubber";
 import MessageStatus from "./MessageStatus";
 
 import GroupSettingsModal from "./GroupSettingsModal";
+import UserInfoModal from "./UserInfoModal";
 import DeleteMessagesModal from "./DeleteMessagesModal";
 import NoChatSelected from "./NoChatSelected";
 
@@ -34,6 +35,8 @@ const ChatContainer = ({ onOpenMemory }) => {
     currentTypingUsers,
     showGroupInfo,
     setShowGroupInfo,
+    showUserInfo,
+    setShowUserInfo,
   } = useChatStore();
 
   const isGroup = !!selectedUser?.members;
@@ -153,6 +156,10 @@ const ChatContainer = ({ onOpenMemory }) => {
 
       {showGroupInfo && isGroup && (
         <GroupSettingsModal onClose={() => setShowGroupInfo(false)} />
+      )}
+
+      {showUserInfo && !isGroup && (
+        <UserInfoModal user={selectedUser} onClose={() => setShowUserInfo(false)} />
       )}
 
       {/* Delete Message Modal */}

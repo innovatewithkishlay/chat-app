@@ -17,6 +17,8 @@ const ChatHeader = () => {
     leaveGroup,
     setShowGroupInfo,
     showGroupInfo,
+    showUserInfo,
+    setShowUserInfo,
     clearChat,
     deleteChat
   } = useChatStore();
@@ -154,7 +156,7 @@ const ChatHeader = () => {
 
           <div
             className="flex items-center gap-3 cursor-pointer"
-            onClick={() => isGroup && setShowGroupInfo(!showGroupInfo)}
+            onClick={() => isGroup ? setShowGroupInfo(!showGroupInfo) : setShowUserInfo(!showUserInfo)}
           >
             <div className="relative">
               <img
@@ -221,6 +223,7 @@ const ChatHeader = () => {
                 </>
               ) : (
                 <>
+                  <li><button onClick={() => setShowUserInfo(true)}>Contact Info</button></li>
                   <li><button onClick={handleClearChat}>Clear Chat</button></li>
                   <li><button onClick={handleDeleteChat} className="text-red-500 hover:bg-red-50">Delete Chat</button></li>
                 </>
