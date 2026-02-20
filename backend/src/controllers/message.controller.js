@@ -392,7 +392,7 @@ export const markMessagesAsSeen = async (req, res) => {
       );
 
       // Check if any messages are now read by ALL members (excluding sender)
-      const unreadMessages = await Message.find({ groupId: targetId, status: { $ne: "seen" } });
+      const unreadMessages = await Message.find({ groupId: targetId, status: { $ne: "read" } });
 
       for (const msg of unreadMessages) {
         const readers = new Set(msg.readBy.map(id => id.toString()));
@@ -404,7 +404,7 @@ export const markMessagesAsSeen = async (req, res) => {
         });
 
         if (allMembersRead) {
-          msg.status = "seen";
+          msg.status = "read";
           await msg.save();
 
           // Notify everyone that this message is fully seen
@@ -413,7 +413,7 @@ export const markMessagesAsSeen = async (req, res) => {
             if (socketId) {
               io.to(socketId).emit("messageStatusUpdate", {
                 messageId: msg._id,
-                status: "seen",
+                status: "read",
                 groupId: targetId
               });
             }
@@ -433,8 +433,8 @@ export const markMessagesAsSeen = async (req, res) => {
       }
 
       await Message.updateMany(
-        { senderId: targetId, recieverId: myId, status: { $ne: "seen" } },
-        { $set: { status: "seen" } }
+        { senderId: targetId, recieverId: myId, status: { $ne: "read" } },
+        { $set: { status: "read" } }
       );
 
       const senderSocketId = getReceiverSocketId(targetId);

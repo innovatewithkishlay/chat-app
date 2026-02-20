@@ -128,6 +128,47 @@ io.on("connection", async (socket) => {
     }
   });
 
+  // --- Message Status Tracking ---
+  socket.on("messageDelivered", async (messageId) => {
+    try {
+      const Message = (await import("../models/message.model.js")).default;
+      const message = await Message.findByIdAndUpdate(messageId, { status: "delivered" }, { new: true });
+
+      if (message) {
+        const senderSocketId = getReceiverSocketId(message.senderId);
+        if (senderSocketId) {
+          // Tell the sender that their message was delivered
+          io.to(senderSocketId).emit("messagesDelivered", {
+            messageId: message._id,
+            receiverId: userId
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error marking message as delivered via socket:", error);
+    }
+  });
+
+  socket.on("messagesRead", async (chatId) => {
+    try {
+      const Message = (await import("../models/message.model.js")).default;
+      // Mark all messages from the sender as 'read'
+      await Message.updateMany(
+        { senderId: chatId, recieverId: userId, status: { $ne: "read" } },
+        { $set: { status: "read" } }
+      );
+
+      const senderSocketId = getReceiverSocketId(chatId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messageRead", {
+          chatId: userId
+        });
+      }
+    } catch (error) {
+      console.error("Error marking messages as read via socket:", error);
+    }
+  });
+
   // WebRTC Signaling
   // --- WebRTC Signaling (Strict State Machine) ---
 

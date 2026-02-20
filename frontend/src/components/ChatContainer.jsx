@@ -79,7 +79,7 @@ const ChatContainer = ({ onOpenMemory }) => {
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
 
         const lastMessage = messages[messages.length - 1];
-        const isMyNewMessage = lastMessage && (lastMessage.senderId?._id || lastMessage.senderId) === authUser._id && lastMessage.status === "pending";
+        const isMyNewMessage = lastMessage && (lastMessage.senderId?._id || lastMessage.senderId) === authUser._id && lastMessage.status === "sending";
 
         if (isNearBottom || isMyNewMessage) {
           if (isMyNewMessage) {

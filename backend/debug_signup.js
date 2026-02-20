@@ -10,7 +10,7 @@ async function debug() {
         const res = await axios.post(`${BASE_URL}/auth/signup`, {
             fullname: username,
             email: `${username}@gmail.com`,
-            password: "password123",
+            password: "password123",    
             username: username
         });
 

@@ -84,7 +84,7 @@ const MessageBubble = ({
     };
 
     useEffect(() => {
-        if (bubbleRef.current && message.status === "pending") {
+        if (bubbleRef.current && message.status === "sending") {
             gsap.fromTo(
                 bubbleRef.current,
                 { opacity: 0, y: 15, scale: 0.95 },
@@ -189,7 +189,7 @@ const MessageBubble = ({
                             : "bg-base-100 text-base-content border border-base-300 rounded-tl-none"
                         }
             ${(message.isDeleted || message.deletedForEveryone) ? "italic opacity-80" : ""}
-            ${message.status === "pending" ? "opacity-70" : ""}
+            ${message.status === "sending" ? "opacity-70" : ""}
           `}>
                         {/* Reply block */}
                         {replyData && !(message.isDeleted || message.deletedForEveryone) && (
@@ -289,7 +289,7 @@ const MessageBubble = ({
                                 <Reply size={16} />
                             </button>
 
-                            {isMyMessage && message.status !== "pending" && (
+                            {isMyMessage && message.status !== "sending" && (
                                 <>
                                     <button onClick={() => handleEditStart(message)} className="p-1.5 text-base-content/40 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors" title="Edit">
                                         <Edit2 size={16} />

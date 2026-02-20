@@ -106,6 +106,7 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
 
     socket.on("newMessage", (newMessage) => {
+      socket.emit("messageDelivered", newMessage._id);
       const { selectedUser, showNotifications, showPreview, messages } = get();
       const isChatOpen = selectedUser && selectedUser._id === newMessage.senderId;
 
@@ -136,6 +137,7 @@ export const useChatStore = create((set, get) => ({
     });
 
     socket.on("newGroupMessage", (newMessage) => {
+      socket.emit("messageDelivered", newMessage._id);
       const { selectedUser, groups, showNotifications, showPreview, messages } = get();
       const isGroupOpen = selectedUser && selectedUser._id === newMessage.groupId;
 
@@ -268,7 +270,20 @@ export const useChatStore = create((set, get) => ({
         set((state) => {
           const updatedMessages = state.messages.map((m) => ({
             ...m,
-            status: "seen",
+            status: m.status === "sending" ? "sending" : "read",
+          }));
+          return { messages: updatedMessages };
+        });
+      }
+    });
+
+    socket.on("messagesDelivered", ({ receiverId }) => {
+      const { selectedUser } = get();
+      if (selectedUser && selectedUser._id === receiverId) {
+        set((state) => {
+          const updatedMessages = state.messages.map((m) => ({
+            ...m,
+            status: m.status === "sent" ? "delivered" : m.status,
           }));
           return { messages: updatedMessages };
         });
@@ -546,7 +561,7 @@ export const useChatStore = create((set, get) => ({
       text: messageData.text,
       image: messageData.image,
       replyTo: messageData.replyTo ? { _id: messageData.replyTo } : null,
-      status: "pending",
+      status: "sending",
       createdAt: new Date().toISOString(),
       type: "text" // Assume text/image for now
     };
@@ -629,7 +644,7 @@ export const useChatStore = create((set, get) => ({
       text: messageData.text,
       image: messageData.image,
       replyTo: messageData.replyTo ? { _id: messageData.replyTo } : null,
-      status: "pending",
+      status: "sending",
       createdAt: new Date().toISOString(),
       type: "text"
     };
@@ -775,6 +790,10 @@ export const useChatStore = create((set, get) => ({
     if (selectedUser && selectedUser.email) {
       try {
         await axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`);
+        const socket = useAuthStore.getState().socket;
+        if (socket) {
+          socket.emit("messagesRead", selectedUser._id);
+        }
         set((state) => {
           const updatedConversations = state.conversations.map((c) => {
             if (c.participants.some((p) => p._id === selectedUser._id)) {
