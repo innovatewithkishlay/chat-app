@@ -65,7 +65,9 @@ const ChatContainer = ({ onOpenMemory }) => {
 
   useLayoutEffect(() => {
     if (messages.length > 0 && selectedUser?._id !== prevChatId.current) {
-      messageEndRef.current?.scrollIntoView({ behavior: "auto" });
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
       prevChatId.current = selectedUser?._id;
     }
   }, [messages, selectedUser?._id]);
@@ -73,14 +75,18 @@ const ChatContainer = ({ onOpenMemory }) => {
   useEffect(() => {
     if (messages.length > 0 && selectedUser?._id === prevChatId.current) {
       if (scrollContainerRef.current) {
-        const isNearBottom =
-          scrollContainerRef.current.scrollHeight - scrollContainerRef.current.scrollTop - scrollContainerRef.current.clientHeight < 150;
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
 
         const lastMessage = messages[messages.length - 1];
         const isMyNewMessage = lastMessage && (lastMessage.senderId?._id || lastMessage.senderId) === authUser._id && lastMessage.status === "pending";
 
         if (isNearBottom || isMyNewMessage) {
-          messageEndRef.current?.scrollIntoView({ behavior: isMyNewMessage ? "auto" : "smooth" });
+          if (isMyNewMessage) {
+            scrollContainerRef.current.scrollTop = scrollHeight;
+          } else {
+            scrollContainerRef.current.scrollTo({ top: scrollHeight, behavior: "smooth" });
+          }
         }
       }
     }
@@ -94,7 +100,9 @@ const ChatContainer = ({ onOpenMemory }) => {
   };
 
   const scrollToBottom = () => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: "smooth" });
+    }
   };
 
   const handleEditStart = (message) => {
@@ -139,9 +147,13 @@ const ChatContainer = ({ onOpenMemory }) => {
   if (isMessagesLoading) {
     return (
       <div className="flex-1 flex flex-col h-full bg-base-200">
-        <ChatHeader onOpenMemory={onOpenMemory} />
+        <div className="shrink-0 z-30">
+          <ChatHeader onOpenMemory={onOpenMemory} />
+        </div>
         <MessageSkeleton />
-        <MessageInput />
+        <div className="shrink-0 z-30">
+          <MessageInput />
+        </div>
       </div>
     );
   }
@@ -244,7 +256,7 @@ const ChatContainer = ({ onOpenMemory }) => {
           )}
 
           {/* Fixed Input Area */}
-          <div className="chat-input-wrapper z-30 bg-base-200 w-full">
+          <div className="chat-input-wrapper shrink-0 z-30 bg-base-200 w-full">
             <MessageInput />
           </div>
         </>
