@@ -20,7 +20,8 @@ const ChatHeader = () => {
     showUserInfo,
     setShowUserInfo,
     clearChat,
-    deleteChat
+    deleteChat,
+    typingUsers,
   } = useChatStore();
   const { onlineUsers = [], authUser } = useAuthStore();
   const { activeTab, setActiveTab } = useProductivityStore();
@@ -41,6 +42,10 @@ const ChatHeader = () => {
 
   const isGroup = !!selectedUser.members;
   const isPro = authUser.plan === "PRO";
+
+  const isTyping = typingUsers?.some(
+    (u) => isGroup ? u.groupId === selectedUser._id : u.senderId === selectedUser._id
+  );
 
   const handleVideoCall = () => {
     if (!isPro) {
@@ -173,15 +178,23 @@ const ChatHeader = () => {
               <h3 className="text-base font-semibold text-base-content flex items-center gap-1">
                 {isGroup ? selectedUser.name : selectedUser.fullname}
               </h3>
-              <p className="text-xs text-base-content/60">
-                {isGroup
-                  ? `${selectedUser.members.length} members`
-                  : (onlineUsers.includes(selectedUser._id)
-                    ? "Online"
-                    : "Offline"
-                  )
-                }
-              </p>
+              <div className="text-xs text-base-content/60 h-4 flex items-center overflow-hidden">
+                {isTyping ? (
+                  <span className="text-primary font-medium flex items-center transition-all duration-300">
+                    <span className="animate-pulse">Typing...</span>
+                  </span>
+                ) : (
+                  <span className="transition-all duration-300">
+                    {isGroup
+                      ? `${selectedUser.members.length} members`
+                      : (onlineUsers.includes(selectedUser._id)
+                        ? "Online"
+                        : "Offline"
+                      )
+                    }
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

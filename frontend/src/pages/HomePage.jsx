@@ -30,10 +30,10 @@ const HomePage = () => {
       {/* Main Content Area */}
       <div className={`
          ${(!selectedUser && !activeStatus && !activeStatusCreation) ? 'hidden lg:flex' : 'flex'}
-         flex-1 h-full relative flex-col min-w-0 bg-base-200 overflow-hidden
+         flex-1 h-full flex-col min-w-0 bg-base-200 overflow-hidden relative
        `}>
         {activeStatus ? (
-          <div className="absolute inset-0 z-50 bg-black">
+          <div className="flex-1 flex w-full h-full bg-black">
             <StatusViewer
               stories={activeStatus.stories}
               userId={activeStatus.userId._id || activeStatus.userId}
@@ -42,7 +42,7 @@ const HomePage = () => {
             />
           </div>
         ) : activeStatusCreation ? (
-          <div className="absolute inset-0 z-50 bg-white">
+          <div className="flex-1 flex w-full h-full bg-white">
             <StatusCreationPanel onClose={closeCreateStatus} />
           </div>
         ) : selectedUser ? (

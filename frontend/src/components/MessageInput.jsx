@@ -28,7 +28,7 @@ const MessageInput = () => {
 
   const isGroup = !!selectedUser?.members;
 
-  // Close menus when clicking outside
+  // Close menus when clicking outside and cleanup typing on unmount
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
@@ -39,8 +39,16 @@ const MessageInput = () => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (isTypingRef.current && selectedUser) {
+        const receiverId = selectedUser._id;
+        const groupId = selectedUser.members ? selectedUser._id : null;
+        sendTypingStop(receiverId, groupId);
+      }
+    };
+  }, [selectedUser, sendTypingStop]);
 
   // GSAP Animation for Emoji Picker
   useEffect(() => {
@@ -165,11 +173,11 @@ const MessageInput = () => {
   const startRecording = () => { toast.success("Voice messages coming soon!"); };
 
   return (
-    <div className="bg-base-100 border-t border-base-300 p-2 lg:px-4 lg:py-2 min-h-[60px] flex items-end gap-2 relative z-30">
+    <div className="bg-base-100 border-t border-base-300 w-full flex flex-col z-30">
 
-      {/* Reply Preview */}
+      {/* Reply Preview (Flex Stacked instead of Absolute) */}
       {replyToMessage && (
-        <div className="absolute -top-[52px] left-0 right-0 bg-base-200 border-x border-t border-base-300 rounded-t-2xl p-2 px-4 mx-2 flex items-center justify-between shadow-sm opacity-95">
+        <div className="bg-base-200 border-b border-base-300 p-2 px-4 flex items-center justify-between opacity-95">
           <div className="flex flex-col border-l-4 border-primary pl-2 overflow-hidden w-full">
             <span className="text-xs font-bold text-primary truncate">
               Replying to {(replyToMessage.senderId?._id === authUser._id || replyToMessage.senderId === authUser._id) ? "You" : (replyToMessage.senderId?.fullname || selectedUser?.fullname || "User")}
@@ -182,88 +190,90 @@ const MessageInput = () => {
         </div>
       )}
 
-      {/* Popovers */}
-      {showEmojiPicker && (
-        <div ref={emojiPickerRef} className="absolute bottom-[70px] left-4 z-50">
-          <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} theme="auto" />
-        </div>
-      )}
-
-      {showScheduleModal && <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />}
-
-      {/* Attach Menu */}
-      {showAttachMenu && (
-        <div ref={attachMenuRef} className="absolute bottom-[70px] left-14 bg-base-100 shadow-xl rounded-xl border border-base-300 p-2 flex flex-col gap-1 min-w-[140px] animate-fade-in z-50">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
-          >
-            <Image size={16} className="text-blue-500" /> Photo
-          </button>
-          <button
-            onClick={() => { setShowScheduleModal(true); setShowAttachMenu(false); }}
-            className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
-          >
-            <Clock size={16} className="text-orange-500" /> Schedule
-          </button>
-        </div>
-      )}
-      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
-
-      {/* Left Icons */}
-      <div className="flex items-center gap-1 mb-2">
-        <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 text-base-content/40 hover:text-amber-500 hover:bg-base-200 rounded-full transition-colors"
-        >
-          <Smile size={20} />
-        </button>
-        <button
-          onClick={() => setShowAttachMenu(!showAttachMenu)}
-          className={`p-2 rounded-full transition-colors ${showAttachMenu ? 'bg-base-200 text-base-content/60' : 'text-base-content/40 hover:text-base-content/60 hover:bg-base-200'}`}
-        >
-          <Plus size={20} />
-        </button>
-      </div>
-
-      {/* Input Area */}
-      <div className="flex-1 bg-base-200 rounded-[20px] px-4 py-2 flex flex-col justify-center min-h-[44px] focus-within:ring-1 focus-within:ring-base-content/20 transition-all mb-1.5 border border-transparent focus-within:bg-base-100 focus-within:border-base-300">
-        {imagePreview && (
-          <div className="mb-2 relative w-fit">
-            <img src={imagePreview} className="h-20 rounded-lg border border-base-300" alt="Preview" />
-            <button onClick={removeImage} className="absolute -top-1 -right-1 bg-base-100 rounded-full p-0.5 shadow border border-base-300 hover:text-red-500"><X size={14} /></button>
+      {/* Main Input Bar */}
+      <div className="p-2 lg:px-4 lg:py-2 min-h-[60px] flex items-end gap-2 relative">
+        {showEmojiPicker && (
+          <div ref={emojiPickerRef} className="absolute bottom-[70px] left-4 z-50">
+            <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} theme="auto" />
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleTyping}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          rows={1}
-          className="w-full bg-transparent border-none outline-none text-base-content placeholder:text-base-content/40 text-[16px] resize-none max-h-[150px] scrollbar-hide"
-        />
-      </div>
 
-      {/* Right Icon (Send/Mic) */}
-      <div className="mb-2">
-        {text.trim() || imagePreview ? (
-          <button
-            onClick={handleSendMessage}
-            className="p-2.5 bg-primary text-primary-content rounded-full hover:bg-primary-focus shadow-sm hover:shadow-md transition-all active:scale-95"
-          >
-            <Send size={18} />
-          </button>
-        ) : (
-          <button
-            onClick={startRecording}
-            className="p-2.5 text-base-content/40 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-          >
-            <Mic size={20} />
-          </button>
+        {showScheduleModal && <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />}
+
+        {/* Attach Menu */}
+        {showAttachMenu && (
+          <div ref={attachMenuRef} className="absolute bottom-[70px] left-14 bg-base-100 shadow-xl rounded-xl border border-base-300 p-2 flex flex-col gap-1 min-w-[140px] animate-fade-in z-50">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
+            >
+              <Image size={16} className="text-blue-500" /> Photo
+            </button>
+            <button
+              onClick={() => { setShowScheduleModal(true); setShowAttachMenu(false); }}
+              className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
+            >
+              <Clock size={16} className="text-orange-500" /> Schedule
+            </button>
+          </div>
         )}
-      </div>
+        <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
 
+        {/* Left Icons */}
+        <div className="flex items-center gap-1 mb-2">
+          <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-2 text-base-content/40 hover:text-amber-500 hover:bg-base-200 rounded-full transition-colors"
+          >
+            <Smile size={20} />
+          </button>
+          <button
+            onClick={() => setShowAttachMenu(!showAttachMenu)}
+            className={`p-2 rounded-full transition-colors ${showAttachMenu ? 'bg-base-200 text-base-content/60' : 'text-base-content/40 hover:text-base-content/60 hover:bg-base-200'}`}
+          >
+            <Plus size={20} />
+          </button>
+        </div>
+
+        {/* Input Area */}
+        <div className="flex-1 bg-base-200 rounded-[20px] px-4 py-2 flex flex-col justify-center min-h-[44px] focus-within:ring-1 focus-within:ring-base-content/20 transition-all mb-1.5 border border-transparent focus-within:bg-base-100 focus-within:border-base-300">
+          {imagePreview && (
+            <div className="mb-2 relative w-fit">
+              <img src={imagePreview} className="h-20 rounded-lg border border-base-300" alt="Preview" />
+              <button onClick={removeImage} className="absolute -top-1 -right-1 bg-base-100 rounded-full p-0.5 shadow border border-base-300 hover:text-red-500"><X size={14} /></button>
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={handleTyping}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            rows={1}
+            className="w-full bg-transparent border-none outline-none text-base-content placeholder:text-base-content/40 text-[16px] resize-none max-h-[150px] scrollbar-hide"
+          />
+        </div>
+
+        {/* Right Icon (Send/Mic) */}
+        <div className="mb-2">
+          {text.trim() || imagePreview ? (
+            <button
+              onClick={handleSendMessage}
+              className="p-2.5 bg-primary text-primary-content rounded-full hover:bg-primary-focus shadow-sm hover:shadow-md transition-all active:scale-95"
+            >
+              <Send size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={startRecording}
+              className="p-2.5 text-base-content/40 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+            >
+              <Mic size={20} />
+            </button>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 };

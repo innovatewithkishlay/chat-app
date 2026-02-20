@@ -150,35 +150,52 @@ export const useChatStore = create((set, get) => ({
           typingUsers: state.typingUsers.filter(u => u.senderId !== newMessage.senderId._id)
         }));
       } else if (showNotifications) {
-        const groupName = groups.find(g => g._id === newMessage.groupId)?.name || "Group";
-        if (newMessage.senderId._id !== useAuthStore.getState().authUser._id) {
-          const toastMessage = showPreview
-            ? `New message in ${groupName}: ${newMessage.text || "Sent an attachment"}`
-            : `New message in ${groupName}`;
-          toast.success(toastMessage);
+        const groupName = newMessage.groupId?.name || "Group";
+        const senderName = newMessage.senderId?.fullname || "Someone";
+        const toastMessage = showPreview
+          ? `Message in ${groupName} from ${senderName}: ${newMessage.text || "Sent an attachment"}`
+          : `New message in ${groupName}`;
+
+        toast.success(toastMessage);
+
+        if (document.visibilityState === "hidden" && Notification.permission === "granted") {
+          new Notification(`New message in ${groupName}`, {
+            body: showPreview ? (newMessage.text || "Sent an attachment") : "You have a new message",
+            icon: "/vite.svg",
+          });
         }
       }
     });
 
     // ... (other listeners)
 
-    socket.on("typing", ({ senderId, groupId }) => {
+    socket.on("typing", (data) => {
       const { selectedUser } = get();
-      // Only show typing if it matches the current conversation
-      if (selectedUser) {
-        const isCurrentChat = groupId ? groupId === selectedUser._id : senderId === selectedUser._id;
-        if (isCurrentChat) {
-          set(state => {
-            if (state.typingUsers.some(u => u.senderId === senderId)) return state;
-            return { typingUsers: [...state.typingUsers, { senderId, groupId }] };
-          });
+      if (!selectedUser) return; // Prevent memory leak when no chat is open
+
+      set((state) => {
+        // Only track typing if the sender is NOT the current logged-in user
+        // and we are either in a 1-on-1 chat with them (no groupId)
+        // OR we are currently viewing the group they are typing in.
+        const authUserId = useAuthStore.getState().authUser?._id;
+        if (data.senderId === authUserId) return state;
+
+        if (data.groupId && selectedUser._id !== data.groupId) return state; // Ignore typing in other groups
+        if (!data.groupId && selectedUser._id !== data.senderId) return state; // Ignore typing from other single chats
+
+        // Prevent duplicates
+        if (state.typingUsers.some((u) => u.senderId === data.senderId && u.groupId === data.groupId)) {
+          return state;
         }
-      }
+        return { typingUsers: [...state.typingUsers, data] };
+      });
     });
 
-    socket.on("stopTyping", ({ senderId }) => {
-      set(state => ({
-        typingUsers: state.typingUsers.filter(u => u.senderId !== senderId)
+    socket.on("stopTyping", (data) => {
+      set((state) => ({
+        typingUsers: state.typingUsers.filter(
+          (u) => !(u.senderId === data.senderId && u.groupId === data.groupId)
+        ),
       }));
     });
 
@@ -754,7 +771,7 @@ export const useChatStore = create((set, get) => ({
   setShowUserInfo: (show) => set({ showUserInfo: show }),
 
   setSelectedUser: async (selectedUser) => {
-    set({ selectedUser, typingUsers: [], showGroupInfo: false, showUserInfo: false }); // Clear typing users and info modals when switching chats
+    set({ selectedUser, typingUsers: [], showGroupInfo: false, showUserInfo: false, replyToMessage: null }); // Clear typing users and info modals when switching chats
     if (selectedUser && selectedUser.email) {
       try {
         await axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`);
