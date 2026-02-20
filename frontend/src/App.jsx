@@ -49,8 +49,8 @@ const App = () => {
       </div>
     );
   return (
-    <div data-theme={theme} className="chat-page w-full bg-base-100">
-      <div className="flex-1 h-full overflow-hidden">
+    <div data-theme={theme} className="chat-page w-full h-[100dvh] flex flex-col bg-base-100 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <Routes>
           <Route
             path="/"
