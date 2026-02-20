@@ -74,3 +74,54 @@ export const updateMood = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const blockUser = async (req, res) => {
+    try {
+        const { targetUserId } = req.body;
+        const currentUserId = req.user._id;
+
+        if (targetUserId === currentUserId.toString()) {
+            return res.status(400).json({ message: "You cannot block yourself" });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            currentUserId,
+            { $addToSet: { blockedUsers: targetUserId } },
+            { new: true }
+        ).populate("blockedUsers", "fullname profilePic username");
+
+        res.status(200).json(user.blockedUsers);
+    } catch (error) {
+        console.error("Error in blockUser:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const unblockUser = async (req, res) => {
+    try {
+        const { targetUserId } = req.body;
+        const currentUserId = req.user._id;
+
+        const user = await User.findByIdAndUpdate(
+            currentUserId,
+            { $pull: { blockedUsers: targetUserId } },
+            { new: true }
+        ).populate("blockedUsers", "fullname profilePic username");
+
+        res.status(200).json(user.blockedUsers);
+    } catch (error) {
+        console.error("Error in unblockUser:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getBlockedUsers = async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const user = await User.findById(currentUserId).populate("blockedUsers", "fullname profilePic username");
+        res.status(200).json(user.blockedUsers);
+    } catch (error) {
+        console.error("Error in getBlockedUsers:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

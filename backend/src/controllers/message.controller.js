@@ -132,6 +132,18 @@ export const sendMessage = async (req, res) => {
       imageUrl = uploadResponse.secure_url;
     }
 
+    const receiver = await User.findById(receiverId).select("blockedUsers");
+    if (!receiver) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const senderBlockedReceiver = req.user.blockedUsers?.includes(receiverId);
+    const receiverBlockedSender = receiver.blockedUsers?.includes(senderId);
+
+    if (senderBlockedReceiver || receiverBlockedSender) {
+      return res.status(403).json({ message: "You cannot send messages to this user." });
+    }
+
     const newMessage = new Message({
       senderId,
       recieverId: receiverId,

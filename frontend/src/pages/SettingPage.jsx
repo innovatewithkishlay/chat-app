@@ -2,8 +2,9 @@ import { THEMES } from "../constants";
 import { useThemeStore } from "../store/useThemeStore";
 import { useChatStore } from "../store/useChattingStore";
 import toast from "react-hot-toast";
-import { Send, Bell, Eye, EyeOff, Palette, Monitor, Mail, MessageSquare } from "lucide-react";
+import { Send, Bell, Eye, EyeOff, Palette, Monitor, Mail, MessageSquare, ShieldAlert, Unlock } from "lucide-react";
 import SettingsLayout from "../components/SettingsLayout";
+import { useAuthStore } from "../store/useAuthStore";
 
 const PREVIEW_MESSAGES = [
   { id: 1, content: "Hey! How's it going?", isSent: false },
@@ -17,6 +18,7 @@ const PREVIEW_MESSAGES = [
 const SettingPage = () => {
   const { theme, setTheme } = useThemeStore();
   const { showNotifications, showPreview, toggleNotificationSetting } = useChatStore();
+  const { blockedUsers, unblockUser } = useAuthStore();
 
   return (
     <SettingsLayout>
@@ -115,6 +117,53 @@ const SettingPage = () => {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Privacy & Safety Section */}
+        <section>
+          <div className="flex items-center gap-2 text-lg font-semibold text-error border-b border-error/10 pb-2 mb-4">
+            <ShieldAlert size={18} />
+            <h2>Privacy & Safety</h2>
+          </div>
+
+          <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm">
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center mb-1">
+                <h3 className="font-medium text-base-content text-sm">Blocked Users</h3>
+                <span className="text-xs text-base-content/60">{blockedUsers?.length || 0} blocked</span>
+              </div>
+
+              {!blockedUsers || blockedUsers.length === 0 ? (
+                <div className="text-center py-6 border border-dashed border-base-300 rounded-xl bg-base-200/50">
+                  <p className="text-sm text-base-content/50">You haven't blocked any users.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                  {blockedUsers.map((user) => (
+                    <div key={user._id} className="flex items-center justify-between p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-base-200/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="avatar">
+                          <div className="w-10 h-10 rounded-full border border-base-300">
+                            <img src={user.profilePic || "/avatar.png"} alt={user.fullname} />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">{user.fullname}</h4>
+                          <p className="text-xs text-base-content/60">@{user.username}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => unblockUser(user._id)}
+                        className="btn btn-sm btn-ghost hover:bg-error/10 hover:text-error rounded-lg"
+                      >
+                        <Unlock size={16} className="mr-1" /> Unblock
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>

@@ -41,34 +41,6 @@ const App = () => {
     };
   }, [authUser]);
 
-
-  useEffect(() => {
-    const handleResize = () => {
-      const chatPage = document.querySelector(".chat-page");
-      if (chatPage && window.visualViewport) {
-        if (Math.abs(window.visualViewport.scale - 1) < 0.01) {
-          chatPage.style.height = window.visualViewport.height + "px";
-          window.scrollTo(0, 0);
-        } else {
-          chatPage.style.height = "100dvh";
-        }
-      }
-    };
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
-      window.visualViewport.addEventListener("scroll", handleResize);
-      handleResize(); // Initial adjustment
-    }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
-        window.visualViewport.removeEventListener("scroll", handleResize);
-      }
-    };
-  }, []);
-
   if (isCheckingAuth && !authUser)
     return (
       <div className="flex items-center justify-center h-screen">

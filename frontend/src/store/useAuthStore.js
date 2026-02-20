@@ -12,6 +12,7 @@ export const useAuthStore = create((set, get) => ({
     isUpdatingProfile: false,
     isCheckingAuth: true,
     onlineUsers: [],
+    blockedUsers: [],
     socket: null,
 
     checkAuth: async () => {
@@ -19,10 +20,11 @@ export const useAuthStore = create((set, get) => ({
             const res = await axiosInstance.get("/auth/check");
 
             set({ authUser: res.data });
+            get().fetchBlockedUsers();
             get().connectSocket();
         } catch (error) {
             console.log("Error in checkAuth:", error);
-            set({ authUser: null });
+            set({ authUser: null, blockedUsers: [] });
         } finally {
             set({ isCheckingAuth: false });
         }
@@ -49,6 +51,7 @@ export const useAuthStore = create((set, get) => ({
             set({ authUser: res.data });
             toast.success("Logged in successfully");
 
+            get().fetchBlockedUsers();
             get().connectSocket();
         } catch (error) {
             toast.error(error.response.data.message);
@@ -60,7 +63,7 @@ export const useAuthStore = create((set, get) => ({
     logout: async () => {
         try {
             await axiosInstance.post("/auth/logout");
-            set({ authUser: null });
+            set({ authUser: null, blockedUsers: [] });
             toast.success("Logged out successfully");
             get().disconnectSocket();
         } catch (error) {
@@ -96,6 +99,35 @@ export const useAuthStore = create((set, get) => ({
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to upgrade");
             return false;
+        }
+    },
+
+    fetchBlockedUsers: async () => {
+        try {
+            const res = await axiosInstance.get("/users/blocked");
+            set({ blockedUsers: res.data });
+        } catch (error) {
+            console.error("Error fetching blocked users:", error);
+        }
+    },
+
+    blockUser: async (targetUserId) => {
+        try {
+            const res = await axiosInstance.post("/users/block", { targetUserId });
+            set({ blockedUsers: res.data });
+            toast.success("User blocked successfully");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to block user");
+        }
+    },
+
+    unblockUser: async (targetUserId) => {
+        try {
+            const res = await axiosInstance.post("/users/unblock", { targetUserId });
+            set({ blockedUsers: res.data });
+            toast.success("User unblocked successfully");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to unblock user");
         }
     },
 
