@@ -520,14 +520,39 @@ export const useChatStore = create((set, get) => ({
 
   sendMessage: async (messageData) => {
     const { selectedUser, messages } = get();
+    // 1. Create Optimistic Message
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage = {
+      _id: tempId,
+      senderId: useAuthStore.getState().authUser._id,
+      recieverId: selectedUser._id,
+      text: messageData.text,
+      image: messageData.image,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      type: "text" // Assume text/image for now
+    };
+
+    // 2. Instantly update UI
+    set({ messages: [...messages, optimisticMessage] });
+
     try {
+      // 3. Send to backend in background
       const res = await axiosInstance.post(
         `/messages/send/${selectedUser._id}`,
         messageData
       );
-      set({ messages: [...messages, res.data] });
+
+      // 4. Replace real message on success
+      set(state => ({
+        messages: state.messages.map(m => m._id === tempId ? res.data : m)
+      }));
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to send");
+      // Optional: Remove pending message on failure or mark as failed
+      set(state => ({
+        messages: state.messages.filter(m => m._id !== tempId)
+      }));
     }
   },
 
@@ -577,11 +602,36 @@ export const useChatStore = create((set, get) => ({
 
   sendGroupMessage: async (groupId, messageData) => {
     const { messages } = get();
+    // 1. Create Optimistic Message
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage = {
+      _id: tempId,
+      senderId: useAuthStore.getState().authUser._id,
+      groupId: groupId,
+      text: messageData.text,
+      image: messageData.image,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      type: "text"
+    };
+
+    // 2. Instantly update UI
+    set({ messages: [...messages, optimisticMessage] });
+
     try {
+      // 3. Send to backend in background
       const res = await axiosInstance.post(`/groups/${groupId}/messages`, messageData);
-      set({ messages: [...messages, res.data] });
+
+      // 4. Replace real message on success
+      set(state => ({
+        messages: state.messages.map(m => m._id === tempId ? res.data : m)
+      }));
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to send to group");
+      // Optional: Remove pending message on failure
+      set(state => ({
+        messages: state.messages.filter(m => m._id !== tempId)
+      }));
     }
   },
 

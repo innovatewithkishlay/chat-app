@@ -13,7 +13,7 @@ const MessageInput = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false); // For Plus button
-  const [isSending, setIsSending] = useState(false);
+
   const [isRecording, setIsRecording] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -83,9 +83,7 @@ const MessageInput = () => {
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!text.trim() && !imagePreview) return;
-    if (isSending) return;
 
-    setIsSending(true);
     setShowEmojiPicker(false);
 
     // Stop typing
@@ -95,23 +93,31 @@ const MessageInput = () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     }
 
-    try {
-      let content = { text: text.trim(), image: imagePreview };
-      await (isGroup ? sendGroupMessage(selectedUser._id, content) : sendMessage(content));
+    // Capture values before clearing state
+    const currentText = text;
+    const currentImagePreview = imagePreview;
 
-      setText("");
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.focus(); // Keep keyboard open
+    // Instantly clear input
+    setText("");
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.focus(); // Keep keyboard open
+    }
+
+    try {
+      let content = { text: currentText.trim(), image: currentImagePreview };
+      // Sending happens in background
+      if (isGroup) {
+        sendGroupMessage(selectedUser._id, content);
+      } else {
+        sendMessage(content);
       }
     } catch (error) {
-      console.error("Failed to send message:", error);
-      toast.error("Failed to send message");
+      console.error("Failed to send message async:", error);
     } finally {
-      setIsSending(false);
-      // Ensure focus is regained even if lost during async op
+      // Ensure focus is regained even if lost
       setTimeout(() => textareaRef.current?.focus(), 10);
     }
   };
@@ -226,10 +232,9 @@ const MessageInput = () => {
         {text.trim() || imagePreview ? (
           <button
             onClick={handleSendMessage}
-            disabled={isSending}
             className="p-2.5 bg-primary text-primary-content rounded-full hover:bg-primary-focus shadow-sm hover:shadow-md transition-all active:scale-95"
           >
-            {isSending ? <span className="loading loading-spinner loading-xs" /> : <Send size={18} />}
+            <Send size={18} />
           </button>
         ) : (
           <button
