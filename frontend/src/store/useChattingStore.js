@@ -6,7 +6,7 @@ import { useAuthStore } from "./useAuthStore";
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
-    .replace(/\-/g, "+")
+    .replace(/-/g, "+")
     .replace(/_/g, "/");
 
   const rawData = window.atob(base64);
@@ -100,7 +100,6 @@ export const useChatStore = create((set, get) => ({
   // ... (getFriends, removeFriend, etc. - keep existing)
 
   subscribeToMessages: () => {
-    const { selectedUser } = get();
     get().unsubscribeFromMessages(); // Prevent duplicates
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
@@ -140,14 +139,27 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("newGroupMessage", (newMessage) => {
       socket.emit("messageDelivered", newMessage._id);
-      const { selectedUser, groups, showNotifications, showPreview, messages } = get();
-      const isGroupOpen = selectedUser && selectedUser._id === newMessage.groupId;
+      const { selectedUser, showNotifications, showPreview, messages } = get();
+
+      const groupIdValue = newMessage.groupId?._id || newMessage.groupId;
+      const isGroupOpen = selectedUser && selectedUser._id === groupIdValue;
+
+      // Bump group to top locally since backend doesn't emit groupUpdated on send
+      set(state => {
+        const newGroups = [...state.groups];
+        const groupIndex = newGroups.findIndex(g => g._id === groupIdValue);
+        if (groupIndex > -1) {
+          const group = newGroups.splice(groupIndex, 1)[0];
+          newGroups.unshift(group);
+        }
+        return { groups: newGroups };
+      });
 
       if (isGroupOpen) {
         // Prevent duplicates
         if (messages.some(m => m._id === newMessage._id)) return;
 
-        set({ messages: [...messages, newMessage] });
+        set(state => ({ messages: [...state.messages, newMessage] }));
 
         // Stop typing indicator for this user immediately
         set(state => ({
@@ -257,11 +269,24 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("conversationUpdated", (updatedConversation) => {
       set((state) => {
+        const { selectedUser } = state;
+        const authUserId = useAuthStore.getState().authUser?._id;
+
+        let finalConv = { ...updatedConversation };
+
+        // If this conversation is currently open, force unreadCount to 0 locally
+        if (selectedUser && finalConv.participants.some(p => p._id === selectedUser._id)) {
+          if (finalConv.unreadCount && finalConv.unreadCount[authUserId] > 0) {
+            finalConv.unreadCount[authUserId] = 0;
+            axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`).catch(() => { });
+          }
+        }
+
         const otherConversations = state.conversations.filter(
-          (c) => c._id !== updatedConversation._id
+          (c) => c._id !== finalConv._id
         );
         return {
-          conversations: [updatedConversation, ...otherConversations],
+          conversations: [finalConv, ...otherConversations],
         };
       });
     });
@@ -553,7 +578,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser } = get();
     // 1. Create Optimistic Message
     const tempId = `temp_${Date.now()}`;
     const optimisticMessage = {
@@ -645,7 +670,6 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendGroupMessage: async (groupId, messageData) => {
-    const { messages } = get();
     // 1. Create Optimistic Message
     const tempId = `temp_${Date.now()}`;
     const optimisticMessage = {
