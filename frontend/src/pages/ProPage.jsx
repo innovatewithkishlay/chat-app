@@ -186,18 +186,18 @@ const ProPage = () => {
                 ) : (
                     // FREE USER UI (Upgrade CTA)
                     <div className="space-y-6">
-                        <div className="bg-neutral text-neutral-content rounded-2xl p-8 relative overflow-hidden shadow-lg">
-                            <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <div className="bg-base-100 border border-base-300 rounded-2xl p-8 relative overflow-hidden shadow-lg">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 text-primary">
                                 <Crown size={200} />
                             </div>
 
                             <div className="relative z-10 max-w-lg">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-base-100/10 text-neutral-content/90 text-xs font-medium mb-4 backdrop-blur-sm border border-base-100/10">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-4 border border-primary/20 uppercase tracking-wide">
                                     <Crown size={12} />
                                     <span>Recommended Plan</span>
                                 </div>
-                                <h2 className="text-3xl font-bold mb-3">Upgrade to Pro</h2>
-                                <p className="text-neutral-content/70 mb-8 leading-relaxed">
+                                <h2 className="text-3xl font-bold mb-3 text-base-content">Upgrade to Pro</h2>
+                                <p className="text-base-content/70 mb-8 leading-relaxed">
                                     Get unlimited access to video calls, advanced analytics, ghost mode, and priority support.
                                 </p>
 
@@ -209,7 +209,7 @@ const ProPage = () => {
                                     >
                                         {loading ? "Processing..." : "Get Pro for ₹499"}
                                     </button>
-                                    <p className="text-xs text-neutral-content/50">Secure payment via Razorpay</p>
+                                    <p className="text-xs text-base-content/50">Secure payment via Razorpay</p>
                                 </div>
                             </div>
                         </div>
