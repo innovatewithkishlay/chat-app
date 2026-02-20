@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -42,6 +42,7 @@ const ChatContainer = ({ onOpenMemory }) => {
 
   const messageEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const prevChatId = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState("");
@@ -59,26 +60,33 @@ const ChatContainer = ({ onOpenMemory }) => {
     return () => unsubscribeFromMessages();
   }, [selectedUser?._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
 
+  useLayoutEffect(() => {
+    if (messages.length > 0 && selectedUser?._id !== prevChatId.current) {
+      messageEndRef.current?.scrollIntoView({ behavior: "auto" });
+      prevChatId.current = selectedUser?._id;
+    }
+  }, [messages, selectedUser?._id]);
+
   useEffect(() => {
-    if (messageEndRef.current && messages) {
-      const isNearBottom = scrollContainerRef.current &&
-        (scrollContainerRef.current.scrollHeight - scrollContainerRef.current.scrollTop - scrollContainerRef.current.clientHeight < 300);
+    if (messages.length > 0 && selectedUser?._id === prevChatId.current) {
+      if (scrollContainerRef.current) {
+        const isNearBottom =
+          scrollContainerRef.current.scrollHeight - scrollContainerRef.current.scrollTop - scrollContainerRef.current.clientHeight < 150;
 
-      const lastMessage = messages[messages.length - 1];
-      const isMyNewMessage = lastMessage && (lastMessage.senderId?._id || lastMessage.senderId) === authUser._id && lastMessage.status === "pending";
+        const lastMessage = messages[messages.length - 1];
+        const isMyNewMessage = lastMessage && (lastMessage.senderId?._id || lastMessage.senderId) === authUser._id && lastMessage.status === "pending";
 
-      // Auto-scroll only if near bottom, it's a new message load, or I just sent a message
-      if (isNearBottom || messages.length < 20 || isMyNewMessage) {
-        // Use smooth for receiving, auto (instant) for sending to feel snappy
-        messageEndRef.current.scrollIntoView({ behavior: isMyNewMessage ? "auto" : "smooth" });
+        if (isNearBottom || isMyNewMessage) {
+          messageEndRef.current?.scrollIntoView({ behavior: isMyNewMessage ? "auto" : "smooth" });
+        }
       }
     }
-  }, [messages, authUser._id]);
+  }, [messages, authUser._id, selectedUser?._id]);
 
   const handleScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      setShowScrollButton(scrollHeight - scrollTop - clientHeight > 300);
+      setShowScrollButton(scrollHeight - scrollTop - clientHeight > 150);
     }
   };
 
@@ -222,9 +230,9 @@ const ChatContainer = ({ onOpenMemory }) => {
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="absolute bottom-20 right-8 btn btn-circle btn-sm btn-primary shadow-lg animate-bounce z-20"
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 overflow-hidden px-4 py-1.5 bg-primary text-primary-content rounded-full shadow-xl animate-bounce z-20 text-sm font-bold flex items-center justify-center border border-primary-content/20 max-w-[90%] whitespace-nowrap"
             >
-              ⬇️
+              New Messages ↓
             </button>
           )}
 
