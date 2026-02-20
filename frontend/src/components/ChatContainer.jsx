@@ -47,6 +47,7 @@ const ChatContainer = ({ onOpenMemory }) => {
   const scrollContainerRef = useRef(null);
   const prevChatId = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadInActiveChat, setUnreadInActiveChat] = useState(0);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState("");
   const [messageToDelete, setMessageToDelete] = useState(null);
@@ -87,6 +88,13 @@ const ChatContainer = ({ onOpenMemory }) => {
           } else {
             scrollContainerRef.current.scrollTo({ top: scrollHeight, behavior: "smooth" });
           }
+        } else {
+          // If we are scrolled up and a new message arrives from the other user
+          const senderIdValue = lastMessage.senderId?._id || lastMessage.senderId;
+          if (!isMyNewMessage && senderIdValue !== authUser._id) {
+            setUnreadInActiveChat(prev => prev + 1);
+            setShowScrollButton(true);
+          }
         }
       }
     }
@@ -95,13 +103,18 @@ const ChatContainer = ({ onOpenMemory }) => {
   const handleScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      setShowScrollButton(scrollHeight - scrollTop - clientHeight > 150);
+      const nearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      setShowScrollButton(!nearBottom || unreadInActiveChat > 0);
+      if (nearBottom && unreadInActiveChat > 0) {
+        setUnreadInActiveChat(0);
+      }
     }
   };
 
   const scrollToBottom = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: "smooth" });
+      setUnreadInActiveChat(0);
     }
   };
 
@@ -251,7 +264,7 @@ const ChatContainer = ({ onOpenMemory }) => {
               onClick={scrollToBottom}
               className="absolute bottom-20 left-1/2 -translate-x-1/2 overflow-hidden px-4 py-1.5 bg-primary text-primary-content rounded-full shadow-xl animate-bounce z-20 text-sm font-bold flex items-center justify-center border border-primary-content/20 max-w-[90%] whitespace-nowrap"
             >
-              New Messages ↓
+              {unreadInActiveChat > 0 ? `New Messages (${unreadInActiveChat}) ↓` : "New Messages ↓"}
             </button>
           )}
 

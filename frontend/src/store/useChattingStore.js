@@ -568,8 +568,17 @@ export const useChatStore = create((set, get) => ({
       type: "text" // Assume text/image for now
     };
 
-    // 2. Instantly update UI
-    set({ messages: [...messages, optimisticMessage] });
+    // 2. Instantly update UI and reorder conversation
+    set(state => {
+      const newConvs = [...state.conversations];
+      const convIndex = newConvs.findIndex(c => c.participants.some(p => p._id === selectedUser._id));
+      if (convIndex > -1) {
+        const conv = newConvs.splice(convIndex, 1)[0];
+        conv.lastMessage = optimisticMessage;
+        newConvs.unshift(conv);
+      }
+      return { messages: [...state.messages, optimisticMessage], conversations: newConvs };
+    });
 
     try {
       // 3. Send to backend in background
@@ -651,8 +660,16 @@ export const useChatStore = create((set, get) => ({
       type: "text"
     };
 
-    // 2. Instantly update UI
-    set({ messages: [...messages, optimisticMessage] });
+    // 2. Instantly update UI and reorder groups
+    set(state => {
+      const newGroups = [...state.groups];
+      const groupIndex = newGroups.findIndex(g => g._id === groupId);
+      if (groupIndex > -1) {
+        const group = newGroups.splice(groupIndex, 1)[0];
+        newGroups.unshift(group);
+      }
+      return { messages: [...state.messages, optimisticMessage], groups: newGroups };
+    });
 
     try {
       // 3. Send to backend in background
@@ -880,7 +897,8 @@ export const useChatStore = create((set, get) => ({
       await axiosInstance.delete(`/reminders/${id}`);
       set(state => ({ reminders: state.reminders.filter(r => r._id !== id) }));
       toast.success("Reminder removed");
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to remove reminder");
     }
   },

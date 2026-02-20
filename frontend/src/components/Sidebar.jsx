@@ -12,6 +12,7 @@ import StatusList from "./status/StatusList";
 import ConfirmModal from "./ConfirmModal";
 import ProModal from "./ProModal";
 import gsap from "gsap";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Sidebar = () => {
   const {
@@ -171,7 +172,7 @@ const Sidebar = () => {
     }
   }, [activeTab, fetchStatuses, statuses.length]);
 
-  // GSAP Animation for list items
+  // GSAP Animation for list items mapping (only on tab or search change)
   useEffect(() => {
     if (listRef.current) {
       gsap.fromTo(
@@ -180,7 +181,7 @@ const Sidebar = () => {
         { opacity: 1, y: 0, duration: 0.2, stagger: 0.03, ease: "power2.out" }
       );
     }
-  }, [activeTab, isSearching, conversations, friends, talkRequests, groups]);
+  }, [activeTab, isSearching]);
 
   // Helper to get the other user from conversation participants
   const getOtherUser = (conversation) => {
@@ -345,83 +346,95 @@ const Sidebar = () => {
         ) : (
           <div className="space-y-0.5 mt-1">
             {/* Groups */}
-            {groups.length > 0 && (
-              groups.map(group => (
-                <div
-                  key={group._id}
-                  onClick={() => setSelectedUser(group)}
-                  className={`
+            <AnimatePresence initial={false}>
+              {groups.length > 0 && (
+                groups.map(group => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    key={group._id}
+                    onClick={() => setSelectedUser(group)}
+                    className={`
                              p-2 flex items-center gap-3 rounded-lg cursor-pointer transition-colors
                              ${selectedUser?._id === group._id ? 'bg-primary/5' : 'hover:bg-base-200'}
                            `}
-                >
-                  <div className="relative">
-                    {group.avatar ? (
-                      <img src={group.avatar} className="size-10 rounded-xl object-cover border border-base-300" />
-                    ) : (
-                      <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-base-300">
-                        <Users size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-base-content/70 truncate">{group.name}</div>
-                    <div className="text-xs text-base-content/40 flex items-center gap-1">
-                      <Users size={12} />
-                      {group.members.length} members
+                  >
+                    <div className="relative">
+                      {group.avatar ? (
+                        <img src={group.avatar} className="size-10 rounded-xl object-cover border border-base-300" />
+                      ) : (
+                        <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-base-300">
+                          <Users size={20} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              ))
-            )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-base-content/70 truncate">{group.name}</div>
+                      <div className="text-xs text-base-content/40 flex items-center gap-1">
+                        <Users size={12} />
+                        {group.members.length} members
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
 
             {/* DM Conversations */}
-            {filteredConversations.map(c => {
-              const otherUser = getOtherUser(c);
-              if (!otherUser) return null;
-              const unread = c.unreadCount?.[authUser._id] || 0;
-              const isSelected = selectedUser?._id === otherUser._id;
+            <AnimatePresence initial={false}>
+              {filteredConversations.map(c => {
+                const otherUser = getOtherUser(c);
+                if (!otherUser) return null;
+                const unread = c.unreadCount?.[authUser._id] || 0;
+                const isSelected = selectedUser?._id === otherUser._id;
 
-              return (
-                <div
-                  key={c._id}
-                  onClick={() => setSelectedUser(otherUser)}
-                  onContextMenu={(e) => handleContextMenu(e, c, otherUser)}
-                  className={`
+                return (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    key={c._id}
+                    onClick={() => setSelectedUser(otherUser)}
+                    onContextMenu={(e) => handleContextMenu(e, c, otherUser)}
+                    className={`
                              p-2 flex items-center gap-3 rounded-[10px] cursor-pointer transition-colors mb-0.5
                              ${isSelected ? 'bg-primary/10' : 'hover:bg-base-200'}
                            `}
-                >
-                  <div className="relative">
-                    <img src={otherUser.profilePic || "/avatar.png"} className="size-[40px] rounded-full object-cover bg-base-200" />
-                    {onlineUsers.includes(otherUser._id) && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-base-100 rounded-full"></span>}
-                  </div>
+                  >
+                    <div className="relative">
+                      <img src={otherUser.profilePic || "/avatar.png"} className="size-[40px] rounded-full object-cover bg-base-200" />
+                      {onlineUsers.includes(otherUser._id) && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-base-100 rounded-full"></span>}
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline">
-                      <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-primary' : 'text-base-content/70'}`}>
-                        {otherUser.fullname}
-                      </span>
-                      {c.lastMessage && (
-                        <span className="text-[10px] text-base-content/40 whitespace-nowrap ml-1">
-                          {new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline">
+                        <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-primary' : 'text-base-content/70'}`}>
+                          {otherUser.fullname}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center mt-0.5">
-                      <span className={`text-[12px] truncate max-w-[140px] ${unread > 0 ? 'text-base-content font-medium' : 'text-base-content/60'}`}>
-                        {c.lastMessage?.text || (c.lastMessage?.image ? "📷 Photo" : "Start a chat")}
-                      </span>
-                      {unread > 0 && (
-                        <span className="bg-primary text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full">
-                          {unread}
+                        {c.lastMessage && (
+                          <span className="text-[10px] text-base-content/40 whitespace-nowrap ml-1">
+                            {new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center mt-0.5">
+                        <span className={`text-[12px] truncate max-w-[140px] ${unread > 0 ? 'text-base-content font-medium' : 'text-base-content/60'}`}>
+                          {c.lastMessage?.text || (c.lastMessage?.image ? "📷 Photo" : "Start a chat")}
                         </span>
-                      )}
+                        {unread > 0 && (
+                          <span className="bg-primary text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full">
+                            {unread}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
 
             {filteredConversations.length === 0 && groups.length === 0 && (
               <div className="text-center text-base-content/40 py-10 flex flex-col items-center">
