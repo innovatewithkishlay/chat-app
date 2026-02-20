@@ -1,8 +1,9 @@
 import React, { memo, useEffect, useRef } from "react";
 import { formatMessageTime } from "../lib/util";
 import MessageStatus from "./MessageStatus";
-import { Smile, Edit2, Trash2 } from "lucide-react";
+import { Smile, Edit2, Trash2, Reply } from "lucide-react";
 import gsap from "gsap";
+import { useChatStore } from "../store/useChattingStore";
 
 const MessageBubble = ({
     message,
@@ -21,6 +22,66 @@ const MessageBubble = ({
     votePoll
 }) => {
     const bubbleRef = useRef(null);
+    const { setReplyToMessage } = useChatStore();
+    const swipeRef = useRef(null);
+    const swiping = useRef(false);
+
+    const handleTouchStart = (e) => {
+        swipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, active: true, isScrolling: false };
+    };
+
+    const handleTouchMove = (e) => {
+        if (!swipeRef.current?.active) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const diffX = currentX - swipeRef.current.startX;
+        const diffY = Math.abs(currentY - swipeRef.current.startY);
+
+        // If we determine the user is scrolling vertically, abort the swipe
+        if (!swiping.current) {
+            if (diffY > Math.abs(diffX)) {
+                swipeRef.current.isScrolling = true;
+                swipeRef.current.active = false;
+                return;
+            }
+        }
+
+        if (swipeRef.current.isScrolling) return;
+
+        if (diffX > 0 && diffX < 80) { // Max swipe visual
+            if (bubbleRef.current) {
+                bubbleRef.current.style.transform = `translateX(${diffX}px)`;
+                swiping.current = true;
+                // Preemptively prevent default to stop Android back gestures or overscroll if we are genuinely swiping
+                if (e.cancelable) e.preventDefault();
+            }
+        }
+    };
+
+    const handleTouchEnd = (e) => {
+        if (!swipeRef.current?.active && !swiping.current) return;
+        swipeRef.current.active = false;
+
+        if (!swiping.current) return;
+        swiping.current = false;
+
+        const currentX = e.changedTouches[0].clientX;
+        const diffX = currentX - swipeRef.current.startX;
+
+        if (bubbleRef.current) {
+            bubbleRef.current.style.transition = "transform 0.2s ease-out";
+            bubbleRef.current.style.transform = "translateX(0px)";
+            setTimeout(() => {
+                if (bubbleRef.current) bubbleRef.current.style.transition = "";
+            }, 200);
+        }
+
+        if (diffX > 60) {
+            setReplyToMessage(message);
+            if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+        }
+    };
 
     useEffect(() => {
         if (bubbleRef.current && message.status === "pending") {
@@ -84,13 +145,25 @@ const MessageBubble = ({
     }
 
     // Normal Message
+    const replyData = message.replyTo;
+
     return (
         <div
             id={`msg-${message._id}`}
-            ref={bubbleRef}
-            className={`flex w-full ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
+            className={`flex w-full relative overflow-hidden py-1 ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
         >
-            <div className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-base-content/40">
+                <Reply size={20} />
+            </div>
+
+            <div
+                ref={bubbleRef}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDoubleClick={() => setReplyToMessage(message)}
+                className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"} z-10 cursor-pointer lg:cursor-default`}
+            >
 
                 {/* Avatar */}
                 <div className="avatar flex-shrink-0 self-end">
@@ -122,6 +195,18 @@ const MessageBubble = ({
             ${(message.isDeleted || message.deletedForEveryone) ? "italic opacity-80" : ""}
             ${message.status === "pending" ? "opacity-70" : ""}
           `}>
+                        {/* Reply block */}
+                        {replyData && !(message.isDeleted || message.deletedForEveryone) && (
+                            <div className="mb-2 p-2 rounded block border-l-4 border-primary bg-base-content/5 text-sm cursor-pointer hover:bg-base-content/10 transition-colors"
+                                onClick={() => {
+                                    const el = document.getElementById(`msg-${replyData._id}`);
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }}>
+                                <div className="font-bold text-xs opacity-80 text-primary">{replyData.senderId?.fullname || 'User'}</div>
+                                <div className="truncate opacity-70 max-w-full text-xs mt-0.5">{replyData.text || 'Attachment'}</div>
+                            </div>
+                        )}
+
                         {/* Attachments */}
                         {message.image && !(message.isDeleted || message.deletedForEveryone) && (
                             <div className="mb-2">
@@ -200,6 +285,11 @@ const MessageBubble = ({
                                     ))}
                                 </ul>
                             </div>
+
+                            {/* Reply Button */}
+                            <button onClick={(e) => { e.stopPropagation(); setReplyToMessage(message); }} className="p-1.5 text-base-content/40 hover:text-primary hover:bg-base-200 rounded-full transition-colors" title="Reply">
+                                <Reply size={16} />
+                            </button>
 
                             {isMyMessage && message.status !== "pending" && (
                                 <>

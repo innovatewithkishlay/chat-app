@@ -34,11 +34,11 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false,
   typingUsers: [], // Array of { senderId, groupId (optional) }
   currentTypingUsers: [], // Derived state for UI
-
-
+  replyToMessage: null,
+  setReplyToMessage: (message) => set({ replyToMessage: message }),
+  clearReplyToMessage: () => set({ replyToMessage: null }),
 
   deleteMessages: async (messageId, deleteType = "me") => {
-    // deleteType: "me" | "everyone"
     try {
       await axiosInstance.delete(`/messages/${messageId}?type=${deleteType}`);
 
@@ -528,6 +528,7 @@ export const useChatStore = create((set, get) => ({
       recieverId: selectedUser._id,
       text: messageData.text,
       image: messageData.image,
+      replyTo: messageData.replyTo ? { _id: messageData.replyTo } : null,
       status: "pending",
       createdAt: new Date().toISOString(),
       type: "text" // Assume text/image for now
@@ -610,6 +611,7 @@ export const useChatStore = create((set, get) => ({
       groupId: groupId,
       text: messageData.text,
       image: messageData.image,
+      replyTo: messageData.replyTo ? { _id: messageData.replyTo } : null,
       status: "pending",
       createdAt: new Date().toISOString(),
       type: "text"

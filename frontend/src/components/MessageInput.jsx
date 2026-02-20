@@ -21,7 +21,7 @@ const MessageInput = () => {
   const emojiPickerRef = useRef(null);
   const attachMenuRef = useRef(null);
 
-  const { sendMessage, sendGroupMessage, selectedUser, sendTypingStart, sendTypingStop } = useChatStore();
+  const { sendMessage, sendGroupMessage, selectedUser, sendTypingStart, sendTypingStop, replyToMessage, clearReplyToMessage } = useChatStore();
   const { authUser } = useAuthStore();
   const typingTimeoutRef = useRef(null);
   const isTypingRef = useRef(false);
@@ -106,8 +106,11 @@ const MessageInput = () => {
       textareaRef.current.focus(); // Keep keyboard open
     }
 
+    const replyId = replyToMessage?._id;
+    if (replyId) clearReplyToMessage();
+
     try {
-      let content = { text: currentText.trim(), image: currentImagePreview };
+      let content = { text: currentText.trim(), image: currentImagePreview, replyTo: replyId };
       // Sending happens in background
       if (isGroup) {
         sendGroupMessage(selectedUser._id, content);
@@ -163,6 +166,21 @@ const MessageInput = () => {
 
   return (
     <div className="bg-base-100 border-t border-base-300 p-2 lg:px-4 lg:py-2 min-h-[60px] flex items-end gap-2 relative z-30">
+
+      {/* Reply Preview */}
+      {replyToMessage && (
+        <div className="absolute -top-[52px] left-0 right-0 bg-base-200 border-x border-t border-base-300 rounded-t-2xl p-2 px-4 mx-2 flex items-center justify-between shadow-sm opacity-95">
+          <div className="flex flex-col border-l-4 border-primary pl-2 overflow-hidden w-full">
+            <span className="text-xs font-bold text-primary truncate">
+              Replying to {(replyToMessage.senderId?._id === authUser._id || replyToMessage.senderId === authUser._id) ? "You" : (replyToMessage.senderId?.fullname || "User")}
+            </span>
+            <span className="text-xs text-base-content/70 truncate">{replyToMessage.text || 'Attachment'}</span>
+          </div>
+          <button onClick={clearReplyToMessage} className="p-1 hover:bg-base-300 rounded-full ml-2 flex-shrink-0">
+            <X size={16} className="text-base-content/60" />
+          </button>
+        </div>
+      )}
 
       {/* Popovers */}
       {showEmojiPicker && (

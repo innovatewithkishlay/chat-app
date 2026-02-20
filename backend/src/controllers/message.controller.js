@@ -101,7 +101,16 @@ export const getMessages = async (req, res) => {
       deletedFor: { $ne: myId }, // Filter out messages deleted for me
       // We DO NOT filter out isDeleted/deletedForEveryone here anymore, 
       // because we want to show "This message was deleted" placeholder.
-    }).populate("pollId");
+    })
+      .populate("pollId")
+      .populate({
+        path: "replyTo",
+        select: "text image type senderId",
+        populate: {
+          path: "senderId",
+          select: "fullname profilePic"
+        }
+      });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -112,7 +121,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text, image, replyTo } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -128,9 +137,21 @@ export const sendMessage = async (req, res) => {
       recieverId: receiverId,
       text,
       image: imageUrl,
+      replyTo: replyTo || null,
     });
 
     await newMessage.save();
+
+    if (newMessage.replyTo) {
+      await newMessage.populate({
+        path: "replyTo",
+        select: "text image type senderId",
+        populate: {
+          path: "senderId",
+          select: "fullname"
+        }
+      });
+    }
 
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },

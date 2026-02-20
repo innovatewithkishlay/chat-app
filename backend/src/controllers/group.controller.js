@@ -81,6 +81,14 @@ export const getGroupMessages = async (req, res) => {
         const messages = await Message.find({ groupId })
             .populate("senderId", "fullname username profilePic")
             .populate("pollId")
+            .populate({
+                path: "replyTo",
+                select: "text image type senderId",
+                populate: {
+                    path: "senderId",
+                    select: "fullname profilePic"
+                }
+            })
             .sort({ createdAt: 1 });
 
         res.status(200).json(messages);
@@ -152,7 +160,7 @@ export const leaveGroup = async (req, res) => {
 export const sendGroupMessage = async (req, res) => {
     try {
         const { groupId } = req.params;
-        const { text, image, audio } = req.body;
+        const { text, image, audio, replyTo } = req.body;
         const senderId = req.user._id;
 
         const group = await Group.findById(groupId);
@@ -183,12 +191,21 @@ export const sendGroupMessage = async (req, res) => {
             text,
             image: imageUrl,
             type: messageType,
+            replyTo: replyTo || null,
         });
 
         await newMessage.save();
 
         const populatedMessage = await Message.findById(newMessage._id)
-            .populate("senderId", "fullname username profilePic");
+            .populate("senderId", "fullname username profilePic")
+            .populate({
+                path: "replyTo",
+                select: "text image type senderId",
+                populate: {
+                    path: "senderId",
+                    select: "fullname"
+                }
+            });
 
         // Notify all members
         const webpush = await import("../lib/webpush.js").then(m => m.default);
