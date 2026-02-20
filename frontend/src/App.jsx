@@ -42,6 +42,33 @@ const App = () => {
   }, [authUser]);
 
 
+  useEffect(() => {
+    const handleResize = () => {
+      const chatPage = document.querySelector(".chat-page");
+      if (chatPage && window.visualViewport) {
+        if (Math.abs(window.visualViewport.scale - 1) < 0.01) {
+          chatPage.style.height = window.visualViewport.height + "px";
+          window.scrollTo(0, 0);
+        } else {
+          chatPage.style.height = "100dvh";
+        }
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+      window.visualViewport.addEventListener("scroll", handleResize);
+      handleResize(); // Initial adjustment
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+        window.visualViewport.removeEventListener("scroll", handleResize);
+      }
+    };
+  }, []);
+
   if (isCheckingAuth && !authUser)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -49,7 +76,7 @@ const App = () => {
       </div>
     );
   return (
-    <div data-theme={theme} className="h-[100dvh] w-full overflow-hidden bg-base-100 flex flex-col">
+    <div data-theme={theme} className="chat-page w-full bg-base-100">
       <div className="flex-1 h-full overflow-hidden">
         <Routes>
           <Route

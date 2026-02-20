@@ -241,7 +241,7 @@ const MessageInput = () => {
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           rows={1}
-          className="w-full bg-transparent border-none outline-none text-base-content placeholder:text-base-content/40 text-sm resize-none max-h-[150px] scrollbar-hide"
+          className="w-full bg-transparent border-none outline-none text-base-content placeholder:text-base-content/40 text-[16px] resize-none max-h-[150px] scrollbar-hide"
         />
       </div>
 

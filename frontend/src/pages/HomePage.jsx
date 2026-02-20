@@ -13,25 +13,9 @@ const HomePage = () => {
   const { selectedUser } = useChatStore();
   const { activeStatus, activeStatusCreation, closeStatus, closeCreateStatus } = useStatusStore();
   const { authUser } = useAuthStore();
-  const layoutRef = useRef(null);
-
-  useEffect(() => {
-    if (!window.visualViewport) return;
-
-    const handleResize = () => {
-      if (layoutRef.current) {
-        layoutRef.current.style.height = `${window.visualViewport.height}px`;
-      }
-    };
-
-    window.visualViewport.addEventListener("resize", handleResize);
-    handleResize(); // Initial set
-
-    return () => window.visualViewport.removeEventListener("resize", handleResize);
-  }, []);
 
   return (
-    <div ref={layoutRef} className="h-[100dvh] w-full flex bg-base-200 overflow-hidden font-sans text-base-content">
+    <div className="h-full w-full flex bg-base-200 overflow-hidden font-sans text-base-content">
 
       {/* Sidebar - Fixed 280px */}
       <div className={`

@@ -229,7 +229,7 @@ const ChatContainer = ({ onOpenMemory }) => {
           )}
 
           {/* Fixed Input Area */}
-          <div className="flex-shrink-0 z-30 bg-base-200">
+          <div className="chat-input-wrapper z-30 bg-base-200 w-full">
             <MessageInput />
           </div>
         </>
