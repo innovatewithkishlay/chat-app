@@ -108,7 +108,9 @@ export const useChatStore = create((set, get) => ({
     socket.on("newMessage", (newMessage) => {
       socket.emit("messageDelivered", newMessage._id);
       const { selectedUser, showNotifications, showPreview, messages } = get();
-      const isChatOpen = selectedUser && selectedUser._id === newMessage.senderId;
+
+      const senderIdValue = newMessage.senderId?._id || newMessage.senderId;
+      const isChatOpen = selectedUser && selectedUser._id === senderIdValue;
 
       if (isChatOpen) {
         // Prevent duplicates
@@ -118,10 +120,10 @@ export const useChatStore = create((set, get) => ({
 
         // Stop typing indicator for this user immediately
         set(state => ({
-          typingUsers: state.typingUsers.filter(u => u.senderId !== newMessage.senderId)
+          typingUsers: state.typingUsers.filter(u => u.senderId !== senderIdValue)
         }));
       } else if (showNotifications) {
-        const senderName = newMessage.senderId.fullname || "User";
+        const senderName = newMessage.senderId?.fullname || "User";
         const toastMessage = showPreview
           ? `New message from ${senderName}: ${newMessage.text || "Sent an attachment"}`
           : `New message from ${senderName}`;

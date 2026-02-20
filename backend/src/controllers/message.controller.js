@@ -154,6 +154,11 @@ export const sendMessage = async (req, res) => {
 
     await newMessage.save();
 
+    await newMessage.populate({
+      path: "senderId",
+      select: "fullname profilePic"
+    });
+
     if (newMessage.replyTo) {
       await newMessage.populate({
         path: "replyTo",
@@ -191,9 +196,14 @@ export const sendMessage = async (req, res) => {
 
     await conversation.save();
 
+    const populatedConversation = await Conversation.findById(conversation._id)
+      .populate({ path: "participants", select: "-password" })
+      .populate("lastMessage");
+
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
+      io.to(receiverSocketId).emit("conversationUpdated", populatedConversation);
     }
 
     if (image) {
