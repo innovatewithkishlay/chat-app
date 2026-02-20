@@ -152,10 +152,6 @@ const MessageBubble = ({
             id={`msg-${message._id}`}
             className={`flex w-full relative overflow-hidden py-1 ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
         >
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-base-content/40">
-                <Reply size={20} />
-            </div>
-
             <div
                 ref={bubbleRef}
                 onTouchStart={handleTouchStart}
