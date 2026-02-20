@@ -4,6 +4,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import SettingPage from "./pages/SettingPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProPage from "./pages/ProPage";
 import DeveloperPage from "./pages/DeveloperPage";
@@ -64,6 +65,7 @@ const App = () => {
             element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
           />
           <Route path="/settings" element={<SettingPage />} />
+          <Route path="/settings/privacy" element={authUser ? <PrivacyPage /> : <Navigate to={"/login"} />} />
           <Route path="/settings/pro" element={<ProPage />} />
           <Route path="/settings/developer" element={<DeveloperPage />} />
           <Route
