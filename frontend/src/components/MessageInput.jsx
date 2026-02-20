@@ -172,7 +172,7 @@ const MessageInput = () => {
         <div className="absolute -top-[52px] left-0 right-0 bg-base-200 border-x border-t border-base-300 rounded-t-2xl p-2 px-4 mx-2 flex items-center justify-between shadow-sm opacity-95">
           <div className="flex flex-col border-l-4 border-primary pl-2 overflow-hidden w-full">
             <span className="text-xs font-bold text-primary truncate">
-              Replying to {(replyToMessage.senderId?._id === authUser._id || replyToMessage.senderId === authUser._id) ? "You" : (replyToMessage.senderId?.fullname || "User")}
+              Replying to {(replyToMessage.senderId?._id === authUser._id || replyToMessage.senderId === authUser._id) ? "You" : (replyToMessage.senderId?.fullname || selectedUser?.fullname || "User")}
             </span>
             <span className="text-xs text-base-content/70 truncate">{replyToMessage.text || 'Attachment'}</span>
           </div>

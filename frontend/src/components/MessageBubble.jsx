@@ -198,7 +198,9 @@ const MessageBubble = ({
                                     const el = document.getElementById(`msg-${replyData._id}`);
                                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 }}>
-                                <div className="font-bold text-xs opacity-80 text-primary">{replyData.senderId?.fullname || 'User'}</div>
+                                <div className="font-bold text-xs opacity-80 text-primary">
+                                    {(replyData.senderId?._id === authUser._id || replyData.senderId === authUser._id) ? "You" : (replyData.senderId?.fullname || selectedUser?.fullname || "User")}
+                                </div>
                                 <div className="truncate opacity-70 max-w-full text-xs mt-0.5">{replyData.text || 'Attachment'}</div>
                             </div>
                         )}
