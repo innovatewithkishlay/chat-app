@@ -138,7 +138,7 @@ const ChatHeader = () => {
   };
 
   return (
-    <div className="flex flex-col bg-base-100 z-20">
+    <div className="flex flex-col bg-base-100 z-10">
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
 
       <ConfirmModal
@@ -228,7 +228,7 @@ const ChatHeader = () => {
             <button tabIndex={0} className="p-2 text-base-content/40 hover:text-base-content/60 hover:bg-base-200 rounded-full">
               <MoreVertical size={20} />
             </button>
-            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-lg bg-base-100 rounded-xl w-48 border border-base-300 mt-1 z-50 text-sm">
+            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-lg bg-base-100 rounded-xl w-48 border border-base-300 mt-1 z-20 text-sm">
               {isGroup ? (
                 <>
                   <li><button onClick={() => setShowGroupInfo(true)}>Group Info</button></li>

@@ -173,7 +173,7 @@ const MessageInput = () => {
   const startRecording = () => { toast.success("Voice messages coming soon!"); };
 
   return (
-    <div className="bg-base-100 border-t border-base-300 w-full flex flex-col z-30">
+    <div className="bg-base-100 border-t border-base-300 w-full flex flex-col z-10">
 
       {/* Reply Preview (Flex Stacked instead of Absolute) */}
       {replyToMessage && (
@@ -193,7 +193,7 @@ const MessageInput = () => {
       {/* Main Input Bar */}
       <div className="p-2 lg:px-4 lg:py-2 min-h-[60px] flex items-end gap-2 relative">
         {showEmojiPicker && (
-          <div ref={emojiPickerRef} className="absolute bottom-[70px] left-4 z-50">
+          <div ref={emojiPickerRef} className="absolute bottom-[70px] left-4 z-20">
             <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} theme="auto" />
           </div>
         )}
@@ -202,7 +202,7 @@ const MessageInput = () => {
 
         {/* Attach Menu */}
         {showAttachMenu && (
-          <div ref={attachMenuRef} className="absolute bottom-[70px] left-14 bg-base-100 shadow-xl rounded-xl border border-base-300 p-2 flex flex-col gap-1 min-w-[140px] animate-fade-in z-50">
+          <div ref={attachMenuRef} className="absolute bottom-[70px] left-14 bg-base-100 shadow-xl rounded-xl border border-base-300 p-2 flex flex-col gap-1 min-w-[140px] animate-fade-in z-20">
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-3 px-3 py-2 hover:bg-base-200 rounded-lg text-sm text-base-content/70 transition-colors"
