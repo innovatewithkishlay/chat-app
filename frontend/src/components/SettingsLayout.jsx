@@ -22,7 +22,7 @@ const SettingsLayout = ({ children }) => {
     ];
 
     return (
-        <div className="h-screen w-full bg-base-200 flex flex-col font-sans overflow-hidden">
+        <div className="h-[100dvh] w-full bg-base-200 flex flex-col font-sans overflow-hidden">
             {/* Header - 56px height */}
             <div className="h-14 px-4 md:px-6 border-b border-base-300/50 bg-base-100 flex items-center justify-between flex-shrink-0 z-20 relative">
                 <div className="flex items-center gap-3">
@@ -42,7 +42,7 @@ const SettingsLayout = ({ children }) => {
             </div>
 
             {/* Main Layout Grid */}
-            <div className="flex flex-1 overflow-hidden relative" style={{ height: 'calc(100vh - 56px)' }}>
+            <div className="flex flex-1 overflow-hidden relative">
 
                 {/* Mobile Backdrop */}
                 {isMobileMenuOpen && (
@@ -55,7 +55,7 @@ const SettingsLayout = ({ children }) => {
                 {/* Sidebar - Responsive */}
                 <aside
                     className={`
-                        w-72 bg-base-100 border-r border-base-300 flex-shrink-0 flex flex-col justify-between py-6 px-3
+                        w-72 bg-base-100 border-r border-base-300 flex-shrink-0 flex flex-col justify-between pt-6 pb-20 md:pb-6 px-3 overflow-y-auto
                         absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0
                         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                     `}
