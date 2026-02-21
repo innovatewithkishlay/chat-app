@@ -146,7 +146,7 @@ const MessageBubble = ({
     return (
         <div
             id={`msg-${message._id}`}
-            className={`flex w-full relative overflow-hidden py-1 ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
+            className={`flex w-full relative overflow-visible py-1 ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
         >
             <div
                 ref={bubbleRef}
@@ -262,7 +262,7 @@ const MessageBubble = ({
                             {/* React Button */}
                             <div className="dropdown dropdown-top dropdown-end">
                                 <div tabIndex={0} role="button" className="p-1.5 text-base-content/40 hover:text-base-content/60 hover:bg-base-200 rounded-full transition-colors cursor-pointer"><Smile size={16} /></div>
-                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-xl w-52 flex-row flex-wrap gap-1 justify-center">
+                                <ul tabIndex={0} className="dropdown-content z-[50] menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-xl w-52 flex-row flex-wrap gap-1 justify-center">
                                     {["👍", "❤️", "😂", "😮", "😢", "😡"].map(emoji => (
                                         <li key={emoji}>
                                             <button onClick={() => reactToMessage(message._id, emoji)} className="text-xl p-2 hover:bg-base-200 rounded-lg">{emoji}</button>
