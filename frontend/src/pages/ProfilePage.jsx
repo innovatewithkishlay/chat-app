@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User, Calendar, ShieldCheck, Edit2 } from "lucide-react";
 import SettingsLayout from "../components/SettingsLayout";
+import Avatar from "../components/Avatar";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -43,12 +44,8 @@ const ProfilePage = () => {
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative group">
             <div className="relative size-24 rounded-full overflow-hidden border-2 border-base-content/10 shadow-sm ring-2 ring-base-100 transition-all duration-300 group-hover:ring-primary/20">
-              <img
-                src={selectedImg || authUser.profilePic || "/avatar.png"}
-                alt="Profile"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <Avatar user={{ avatar: selectedImg, ...authUser }} size="size-24" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
                 <Camera className="w-5 h-5 text-white/80" />
               </div>
             </div>

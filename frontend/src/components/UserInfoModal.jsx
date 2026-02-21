@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from "../store/useAuthStore";
 import { useState } from "react";
 import ConfirmModal from "./ConfirmModal";
+import Avatar from "./Avatar";
 
 const UserInfoModal = ({ user, onClose }) => {
     const { blockUser, unblockUser, blockedUsers } = useAuthStore();
@@ -30,7 +31,7 @@ const UserInfoModal = ({ user, onClose }) => {
 
     return (
         <>
-            <div className="absolute top-0 right-0 h-full w-80 bg-base-100 border-l border-base-300 shadow-xl flex flex-col z-40 animate-in slide-in-from-right duration-300">
+            <div className="absolute top-0 right-0 h-full w-80 bg-base-100 border-l border-base-300 shadow-soft flex flex-col z-40 animate-in slide-in-from-right duration-300">
                 {/* Header */}
                 <div className="flex items-center gap-4 px-4 py-3 border-b border-base-200 shrink-0 bg-base-100/80 backdrop-blur-md sticky top-0 z-10">
                     <button
@@ -53,12 +54,8 @@ const UserInfoModal = ({ user, onClose }) => {
                     {/* Avatar Section */}
                     <div className="flex flex-col items-center py-8 border-b border-base-200 bg-base-200/30">
                         <div className="relative group">
-                            <div className="size-32 rounded-full bg-base-300 flex items-center justify-center overflow-hidden shadow-xl border-4 border-base-100">
-                                <img
-                                    src={user.profilePic || "/avatar.png"}
-                                    alt={user.fullname}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
+                            <div className="size-32 rounded-full flex items-center justify-center overflow-hidden shadow-soft border-4 border-base-100 transition-transform duration-300 group-hover:scale-105">
+                                <Avatar user={user} size="size-32" />
                             </div>
                         </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import { Phone, PhoneOff, Mic, MicOff } from "lucide-react";
+import Avatar from "./Avatar";
 
 const VoiceCall = () => {
     const {
@@ -40,11 +41,10 @@ const VoiceCall = () => {
 
                 {/* User Avatar & Info */}
                 <div className="flex flex-col items-center gap-4">
-                    <div className="size-32 rounded-full bg-primary/10 flex items-center justify-center relative">
-                        <img
-                            src="/avatar.png" // Placeholder
-                            className="size-28 rounded-full object-cover z-10"
-                        />
+                    <div className="size-32 rounded-full flex items-center justify-center relative">
+                        <div className="z-10">
+                            <Avatar user={incomingCallData || { name: "User" }} size="size-28" />
+                        </div>
                         {/* Pulsing Animation for Calling/Ringing */}
                         {(callStatus === "OUTGOING" || callStatus === "INCOMING") && (
                             <>

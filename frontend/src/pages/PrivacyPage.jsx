@@ -2,6 +2,7 @@ import React from "react";
 import SettingsLayout from "../components/SettingsLayout";
 import { ShieldAlert, Unlock } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
+import Avatar from "../components/Avatar";
 
 const PrivacyPage = () => {
     const { blockedUsers, unblockUser } = useAuthStore();
@@ -35,10 +36,8 @@ const PrivacyPage = () => {
                                     {blockedUsers.map((user) => (
                                         <div key={user._id} className="flex items-center justify-between p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-base-200/50 transition-colors">
                                             <div className="flex items-center gap-3">
-                                                <div className="avatar">
-                                                    <div className="w-10 h-10 rounded-full border border-base-300">
-                                                        <img src={user.profilePic || "/avatar.png"} alt={user.fullname} />
-                                                    </div>
+                                                <div className="flex-shrink-0">
+                                                    <Avatar user={user} size="size-10" />
                                                 </div>
                                                 <div>
                                                     <h4 className="text-sm font-semibold">{user.fullname}</h4>

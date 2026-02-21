@@ -14,6 +14,7 @@ import {
     X
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Avatar from "./Avatar";
 
 const GroupSettingsModal = ({ onClose }) => {
     const {
@@ -121,7 +122,7 @@ const GroupSettingsModal = ({ onClose }) => {
 
 
     return (
-        <div className="absolute top-0 right-0 h-full w-80 bg-base-100 border-l border-base-300 shadow-xl flex flex-col z-40 animate-in slide-in-from-right duration-300">
+        <div className="absolute top-0 right-0 h-full w-80 bg-base-100 border-l border-base-300 shadow-soft flex flex-col z-40 animate-in slide-in-from-right duration-300">
             {/* Header */}
             <div className="flex items-center gap-4 px-4 py-3 border-b border-base-200 shrink-0 bg-base-100/80 backdrop-blur-md sticky top-0 z-10">
                 <button
@@ -147,12 +148,8 @@ const GroupSettingsModal = ({ onClose }) => {
                 {/* Avatar Section */}
                 <div className="flex flex-col items-center py-8 border-b border-base-200 bg-base-200/30">
                     <div className="relative group">
-                        <div className="size-32 rounded-full bg-base-300 flex items-center justify-center overflow-hidden shadow-xl border-4 border-base-100">
-                            <img
-                                src={imagePreview || "/avatar.png"}
-                                alt="Group"
-                                className="w-full h-full object-cover"
-                            />
+                        <div className="size-32 rounded-full flex items-center justify-center overflow-hidden shadow-soft border-4 border-base-100">
+                            <Avatar user={{ avatar: imagePreview, name: selectedUser.name }} size="size-32" />
                         </div>
 
                         {isAdmin && (
@@ -296,11 +293,7 @@ const GroupSettingsModal = ({ onClose }) => {
                                             onClick={() => handleAddMember(friend._id)}
                                             className="w-full flex items-center gap-3 p-2 hover:bg-base-100 rounded-lg transition-all text-left"
                                         >
-                                            <div className="avatar">
-                                                <div className="w-8 rounded-full">
-                                                    <img src={friend.profilePic || "/avatar.png"} alt={friend.fullname} />
-                                                </div>
-                                            </div>
+                                            <Avatar user={friend} size="size-8" />
                                             <span className="text-sm font-medium flex-1 truncate">{friend.fullname}</span>
                                             <UserPlus size={16} className="text-primary" />
                                         </button>
@@ -326,11 +319,7 @@ const GroupSettingsModal = ({ onClose }) => {
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="relative flex-shrink-0">
-                                            <div className="avatar">
-                                                <div className="size-10 rounded-full border border-base-200">
-                                                    <img src={member.profilePic || "/avatar.png"} alt={member.fullname} />
-                                                </div>
-                                            </div>
+                                            <Avatar user={member} size="size-10" />
                                             {isMemberAdmin && (
                                                 <div className="absolute -bottom-1 -right-1 bg-primary text-white p-0.5 rounded-full border-2 border-base-100" title="Admin">
                                                     <ShieldCheck size={10} />

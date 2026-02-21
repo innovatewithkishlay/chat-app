@@ -8,6 +8,7 @@ import { useProductivityStore } from "../store/useProductivityStore";
 import ProModal from "./ProModal";
 import CreateGroupModal from "./CreateGroupModal"; // Assuming this is the 'Group Info' modal basically
 import ConfirmModal from "./ConfirmModal";
+import Avatar from "./Avatar";
 import toast from "react-hot-toast";
 
 const ChatHeader = () => {
@@ -163,16 +164,7 @@ const ChatHeader = () => {
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => isGroup ? setShowGroupInfo(!showGroupInfo) : setShowUserInfo(!showUserInfo)}
           >
-            <div className="relative">
-              <img
-                src={isGroup ? (selectedUser.avatar || "/avatar.png") : (selectedUser.profilePic || "/avatar.png")}
-                alt={selectedUser.fullname}
-                className="size-8 rounded-full object-cover border border-base-300"
-              />
-              {!isGroup && onlineUsers.includes(selectedUser._id) && (
-                <span className="absolute bottom-0 right-0 size-2.5 bg-green-500 border-2 border-base-100 rounded-full"></span>
-              )}
-            </div>
+            <Avatar user={selectedUser} size="size-9" showOnline={!isGroup} onlineUsers={onlineUsers} />
 
             <div className="leading-tight">
               <h3 className="text-base font-semibold text-base-content flex items-center gap-1">

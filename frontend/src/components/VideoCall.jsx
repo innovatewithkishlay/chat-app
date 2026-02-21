@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
 import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff } from "lucide-react";
+import Avatar from "./Avatar";
 
 const VideoCall = () => {
     const {
@@ -53,11 +54,8 @@ const VideoCall = () => {
                 {callStatus === "INCOMING" && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
                         <div className="text-center p-8 bg-zinc-800 rounded-xl">
-                            <div className="size-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                                <img
-                                    src="/avatar.png" // Placeholder
-                                    className="size-20 rounded-full object-cover"
-                                />
+                            <div className="size-24 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Avatar user={incomingCallData} size="size-24" />
                             </div>
                             <h3 className="text-2xl font-semibold text-white mb-2">{incomingCallData?.name}</h3>
                             <p className="text-zinc-400 mb-8">Incoming Video Call...</p>
@@ -77,11 +75,8 @@ const VideoCall = () => {
                 {callStatus === "OUTGOING" && (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
-                            <div className="size-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
-                                <img
-                                    src="/avatar.png"
-                                    className="size-20 rounded-full object-cover"
-                                />
+                            <div className="size-24 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                <Avatar user={{ name: "Calling" }} size="size-24" />
                             </div>
                             <h3 className="text-2xl font-semibold text-white">Calling...</h3>
                         </div>

@@ -9,8 +9,8 @@ import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
 import StatusList from "./status/StatusList";
-import ConfirmModal from "./ConfirmModal";
 import ProModal from "./ProModal";
+import Avatar from "./Avatar";
 import gsap from "gsap";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -361,15 +361,7 @@ const Sidebar = () => {
                              ${selectedUser?._id === group._id ? 'bg-primary/5' : 'hover:bg-base-200'}
                            `}
                   >
-                    <div className="relative">
-                      {group.avatar ? (
-                        <img src={group.avatar} className="size-10 rounded-xl object-cover border border-base-300" />
-                      ) : (
-                        <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-base-300">
-                          <Users size={20} />
-                        </div>
-                      )}
-                    </div>
+                    <Avatar user={group} size="size-10" rounded="rounded-2xl" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-base-content/70 truncate">{group.name}</div>
                       <div className="text-xs text-base-content/40 flex items-center gap-1">
@@ -404,10 +396,7 @@ const Sidebar = () => {
                              ${isSelected ? 'bg-primary/10' : 'hover:bg-base-200'}
                            `}
                   >
-                    <div className="relative">
-                      <img src={otherUser.profilePic || "/avatar.png"} className="size-[40px] rounded-full object-cover bg-base-200" />
-                      {onlineUsers.includes(otherUser._id) && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-base-100 rounded-full"></span>}
-                    </div>
+                    <Avatar user={otherUser} size="size-11" rounded="rounded-full" showOnline={true} onlineUsers={onlineUsers} />
 
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline">

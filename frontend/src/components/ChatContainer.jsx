@@ -244,11 +244,10 @@ const ChatContainer = ({ onOpenMemory }) => {
 
             {currentTypingUsers && currentTypingUsers.length > 0 && (
               <div className="flex gap-3">
-                <div className="avatar">
-                  <div className="size-8 rounded-full border border-base-300">
-                    <img src={isGroup && currentTypingUsers.length === 1 ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId)?.profilePic || "/avatar.png" : selectedUser.profilePic || "/avatar.png"} alt="typing" />
-                  </div>
-                </div>
+                <Avatar
+                  user={isGroup && currentTypingUsers.length === 1 ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId) : selectedUser}
+                  size="size-8"
+                />
                 <div className="bg-base-100 border border-base-300 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
                   <span className="loading loading-dots loading-xs text-base-content/40"></span>
                   <span className="text-xs text-base-content/40 italic">{getTypingText()}</span>
@@ -273,8 +272,9 @@ const ChatContainer = ({ onOpenMemory }) => {
             <MessageInput />
           </div>
         </>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };
 

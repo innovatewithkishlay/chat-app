@@ -4,6 +4,7 @@ import MessageStatus from "./MessageStatus";
 import { Smile, Edit2, Trash2, Reply } from "lucide-react";
 import gsap from "gsap";
 import { useChatStore } from "../store/useChattingStore";
+import Avatar from "./Avatar";
 
 const MessageBubble = ({
     message,
@@ -111,13 +112,8 @@ const MessageBubble = ({
         return (
             <div className={`flex w-full ${isMyMessage ? "justify-end" : "justify-start"} animate-fade-in-up`}>
                 <div className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
-                    <div className="avatar flex-shrink-0 self-end">
-                        <div className="size-8 lg:size-10 rounded-full border border-base-300 shadow-sm">
-                            <img
-                                src={isMyMessage ? authUser.profilePic || "/avatar.png" : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")}
-                                alt="avatar"
-                            />
-                        </div>
+                    <div className="flex-shrink-0 self-end shadow-sm rounded-full">
+                        <Avatar user={isMyMessage ? authUser : (isGroup ? message.senderId : selectedUser)} size="size-8 lg:size-10" />
                     </div>
 
                     <div className={`p-4 rounded-2xl shadow-sm border ${isMyMessage ? "bg-base-100 border-primary/20" : "bg-base-100 border-base-300"} `}>
@@ -162,17 +158,8 @@ const MessageBubble = ({
             >
 
                 {/* Avatar */}
-                <div className="avatar flex-shrink-0 self-end">
-                    <div className="size-8 lg:size-10 rounded-full border border-base-300 shadow-sm">
-                        <img
-                            src={
-                                isMyMessage
-                                    ? authUser.profilePic || "/avatar.png"
-                                    : (isGroup ? message.senderId.profilePic || "/avatar.png" : selectedUser?.profilePic || "/avatar.png")
-                            }
-                            alt="avatar"
-                        />
-                    </div>
+                <div className="flex-shrink-0 self-end shadow-sm rounded-full">
+                    <Avatar user={isMyMessage ? authUser : (isGroup ? message.senderId : selectedUser)} size="size-8 lg:size-10" />
                 </div>
 
                 <div className="flex flex-col min-w-0">

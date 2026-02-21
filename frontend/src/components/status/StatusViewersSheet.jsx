@@ -3,6 +3,7 @@ import { X, Clock, User } from "lucide-react";
 import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
+import Avatar from "../Avatar";
 
 const StatusViewersSheet = ({ storyId, isOpen, onClose }) => {
     const { fetchStatusViewers } = useStatusStore();
@@ -94,11 +95,7 @@ const StatusViewersSheet = ({ storyId, isOpen, onClose }) => {
                         <div className="divide-y divide-base-200">
                             {viewers.map((viewer) => (
                                 <div key={viewer._id} className="flex items-center gap-3 p-4 hover:bg-base-200/50 transition-colors">
-                                    <img
-                                        src={viewer.profilePic || "/avatar.png"}
-                                        alt={viewer.username}
-                                        className="size-10 rounded-full object-cover border border-base-200"
-                                    />
+                                    <Avatar user={{ ...viewer, profilePic: viewer.profilePic, name: viewer.username }} size="size-10" />
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium truncate">{viewer.username}</div>
                                         <div className="text-xs text-zinc-500 flex items-center gap-1">

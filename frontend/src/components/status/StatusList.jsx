@@ -3,6 +3,7 @@ import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { Plus, Moon, Lock } from "lucide-react";
 import StatusViewer from "./StatusViewer";
+import Avatar from "../Avatar";
 import toast from "react-hot-toast";
 
 const StatusList = () => {
@@ -28,11 +29,9 @@ const StatusList = () => {
             <div className="p-4 py-2">
                 <div className="flex items-center gap-3 p-2 hover:bg-base-200 rounded-xl cursor-pointer transition-colors" onClick={() => myStatus?.stories?.length > 0 ? handleViewStatus(myStatus) : handleCreateClick()}>
                     <div className="relative">
-                        <img
-                            src={authUser?.profilePic || "/avatar.png"}
-                            alt="Me"
-                            className={`size-12 object-cover rounded-full ${myStatus?.stories?.length > 0 ? "p-[2px] border-2 border-primary" : ""}`}
-                        />
+                        <div className={myStatus?.stories?.length > 0 ? "p-[2px] border-2 border-primary rounded-full inline-block" : ""}>
+                            <Avatar user={authUser} size="size-12" rounded="rounded-full" />
+                        </div>
                         {!myStatus?.stories?.length && (
                             <div className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1 border-2 border-base-100">
                                 <Plus size={10} strokeWidth={3} />
@@ -90,11 +89,9 @@ const StatusList = () => {
                                 onClick={() => handleViewStatus(doc)}
                             >
                                 <div className={`relative rounded-full p-[2px] ${isUnread ? "border-2 border-primary" : "border-2 border-zinc-300"}`}>
-                                    <img
-                                        src={doc.userId.profilePic || "/avatar.png"}
-                                        alt={doc.userId.fullname}
-                                        className="size-10 object-cover rounded-full border-2 border-base-100"
-                                    />
+                                    <div className="border-2 border-base-100 rounded-full overflow-hidden">
+                                        <Avatar user={doc.userId} size="size-10" />
+                                    </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="font-medium truncate text-sm">{doc.userId.fullname}</div>

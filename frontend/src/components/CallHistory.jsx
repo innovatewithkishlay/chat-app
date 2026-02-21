@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useCallHistoryStore } from "../store/useCallHistoryStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Phone, Video, ArrowDownLeft, ArrowUpRight, Clock, XCircle, CheckCircle } from "lucide-react";
+import Avatar from "./Avatar";
 
 const CallHistory = () => {
     const { calls, isLoading, getCallHistory, subscribeToCallUpdates, unsubscribeFromCallUpdates } = useCallHistoryStore();
@@ -80,12 +81,7 @@ const CallHistory = () => {
 
                     return (
                         <div key={call._id} className="flex items-center gap-3 p-3 hover:bg-base-200 transition-colors border-b border-base-100 cursor-default group">
-                            {/* Avatar */}
-                            <div className="avatar">
-                                <div className="size-10 rounded-full border border-base-200">
-                                    <img src={otherUser.profilePic || "/avatar.png"} alt={otherUser.fullname} />
-                                </div>
-                            </div>
+                            <Avatar user={otherUser} size="size-10" />
 
                             {/* Info */}
                             <div className="flex-1 min-w-0">

@@ -20,8 +20,7 @@ body,
 
 .chat-page {
   width: 100%;
-  min-height: 100dvh;
-  height: 100dvh;
+  height: var(--app-height, 100dvh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -36,6 +35,18 @@ body,
 @layer utilities {
   .modal-open {
     overflow: hidden !important;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(var(--fallback-p, 89 26 255), 0.2);
+  }
+
+  .shadow-float {
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
   }
 }
 
