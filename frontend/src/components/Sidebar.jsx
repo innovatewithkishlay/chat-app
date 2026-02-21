@@ -11,6 +11,7 @@ import CallHistory from "./CallHistory";
 import StatusList from "./status/StatusList";
 import ProModal from "./ProModal";
 import Avatar from "./Avatar";
+import ConfirmModal from "./ConfirmModal";
 import gsap from "gsap";
 import { motion, AnimatePresence } from "framer-motion";
 
