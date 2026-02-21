@@ -210,40 +210,48 @@ const ChatContainer = ({ onOpenMemory }) => {
         <>
           {/* Scrollable Messages Area */}
           <div
-            className="flex-1 overflow-y-auto w-full relative custom-scrollbar px-4 py-6 space-y-6"
+            className="flex-1 overflow-y-auto w-full relative custom-scrollbar px-4 py-4"
             ref={scrollContainerRef}
             onScroll={handleScroll}
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             <TimelineScrubber messages={messages} onScrollToMessage={handleScrollToMessage} />
 
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               const senderId = message.senderId?._id || message.senderId;
               const isMyMessage = senderId === authUser._id;
 
+              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const prevSenderId = prevMessage ? (prevMessage.senderId?._id || prevMessage.senderId) : null;
+              const isSequential = prevSenderId === senderId;
+
+              const marginTopClass = index === 0 ? "mt-2" : (isSequential ? "mt-[2px]" : "mt-4");
+
               return (
-                <MessageBubble
-                  key={message._id}
-                  message={message}
-                  isMyMessage={isMyMessage}
-                  authUser={authUser}
-                  selectedUser={selectedUser}
-                  isGroup={isGroup}
-                  isEditing={editingMessageId === message._id}
-                  editText={editText}
-                  setEditText={setEditText}
-                  handleEditSave={handleEditSave}
-                  handleEditCancel={handleEditCancel}
-                  handleEditStart={handleEditStart}
-                  setMessageToDelete={setMessageToDelete}
-                  reactToMessage={reactToMessage}
-                  votePoll={votePoll}
-                />
+                <div key={message._id} className={marginTopClass}>
+                  <MessageBubble
+                    message={message}
+                    isMyMessage={isMyMessage}
+                    isSequential={isSequential}
+                    authUser={authUser}
+                    selectedUser={selectedUser}
+                    isGroup={isGroup}
+                    isEditing={editingMessageId === message._id}
+                    editText={editText}
+                    setEditText={setEditText}
+                    handleEditSave={handleEditSave}
+                    handleEditCancel={handleEditCancel}
+                    handleEditStart={handleEditStart}
+                    setMessageToDelete={setMessageToDelete}
+                    reactToMessage={reactToMessage}
+                    votePoll={votePoll}
+                  />
+                </div>
               );
             })}
 
             {currentTypingUsers && currentTypingUsers.length > 0 && (
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-4">
                 <Avatar
                   user={isGroup && currentTypingUsers.length === 1 ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId) : selectedUser}
                   size="size-8"

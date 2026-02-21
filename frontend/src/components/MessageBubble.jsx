@@ -9,6 +9,7 @@ import Avatar from "./Avatar";
 const MessageBubble = ({
     message,
     isMyMessage,
+    isSequential,
     authUser,
     selectedUser,
     isGroup,
@@ -146,7 +147,7 @@ const MessageBubble = ({
     return (
         <div
             id={`msg-${message._id}`}
-            className={`flex w-full relative overflow-visible py-1 ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
+            className={`flex w-full relative overflow-visible ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
         >
             <div
                 ref={bubbleRef}
@@ -158,12 +159,12 @@ const MessageBubble = ({
             >
 
                 {/* Avatar */}
-                <div className="flex-shrink-0 self-end shadow-sm rounded-full">
+                <div className={`flex-shrink-0 self-end shadow-sm rounded-full ${isSequential ? "invisible w-8 lg:w-10 opacity-0" : ""}`}>
                     <Avatar user={isMyMessage ? authUser : (isGroup ? message.senderId : selectedUser)} size="size-8 lg:size-10" />
                 </div>
 
                 <div className="flex flex-col min-w-0">
-                    {isGroup && !isMyMessage && (
+                    {isGroup && !isMyMessage && !isSequential && (
                         <span className="text-xs font-semibold text-base-content/60 mb-1 ml-1">
                             {message.senderId.fullname}
                         </span>
@@ -295,4 +296,16 @@ const MessageBubble = ({
     );
 };
 
-export default memo(MessageBubble);
+export default memo(MessageBubble, (prev, next) => {
+    // Custom comparison to heavily optimize re-renders
+    if (prev.message._id !== next.message._id) return false;
+    if (prev.message.status !== next.message.status) return false;
+    if (prev.message.text !== next.message.text) return false;
+    if (prev.message.isDeleted !== next.message.isDeleted) return false;
+    if (prev.message.deletedForEveryone !== next.message.deletedForEveryone) return false;
+    if (prev.isSequential !== next.isSequential) return false;
+    // Also re-render if it transitions between normal and editing state
+    if (prev.isEditing !== next.isEditing) return false;
+    if (prev.editText !== next.editText) return false;
+    return true;
+});
