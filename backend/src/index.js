@@ -17,6 +17,7 @@ import Reminder from "./models/reminder.model.js";
 import { connectDb } from "./lib/db.js";
 
 app.use(express.json({ limit: "10mb" }));
+app.set("trust proxy", 1);
 app.use(cookieParser());
 app.use(
   cors({
