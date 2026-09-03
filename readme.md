@@ -9,6 +9,8 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 - Delivery pipeline with sending → sent → delivered → read states, driven by Socket.io
 - Typing indicators, online presence, and optimistic UI on send
 - In-chat message search, scoped to the open conversation or group
+- Star any message and browse everything you've starred across every chat in one place
+- "Last seen" timestamp when a contact is offline, not just an Online/Offline flag
 - User blocking and per-conversation "memory" notes (pinned context tied to a message)
 
 **Productivity, scoped to a conversation**
@@ -26,7 +28,7 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 - Email/password auth with rate-limited login and a full forgot/reset password flow (emailed reset link, 30-minute expiry, single use)
 
 **Pro tier** (Razorpay subscription)
-- 1-1 voice and video calling over WebRTC, signaled through Socket.io
+- 1-1 voice and video calling over WebRTC, signaled through Socket.io — busy detection, a 45s no-answer timeout, and a brief "call ended" recap screen (with duration) instead of the call just vanishing
 - 24-hour disappearing statuses with a viewer list
 - Web Push notifications for offline users
 
@@ -54,6 +56,8 @@ A few decisions that shaped the backend, documented in more detail in [`docs/cha
 - **Route-level code splitting.** Everything past the login/signup screen (chat UI, the productivity suite, WebRTC call components) is lazy-loaded, so an unauthenticated visitor's first paint doesn't wait on code they haven't reached yet.
 - **ICE servers come from the backend, not a hardcoded frontend list.** `GET /api/video-call/ice-servers` builds the list from env config, so a TURN provider can be added without a frontend deploy — see `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` below.
 - **Password reset tokens are never stored in plaintext.** `forgotPassword` generates a random token, emails the raw value, and stores only its SHA-256 hash with a 30-minute expiry; `resetPassword` re-hashes the submitted token to look it up. The endpoint also responds identically whether or not the email is registered, so it can't be used to enumerate accounts.
+- **Redis is configured to fail fast, not hang.** By default ioredis queues commands while disconnected and waits for reconnection, which meant a Redis outage silently turned every login/rate-limit check into a multi-second (sometimes much longer) hang instead of degrading gracefully. `enableOfflineQueue: false` plus a bounded `connectTimeout` make a Redis-touching request fail in milliseconds instead, so the app stays responsive if Redis is unreachable.
+- **A remote autoplay block doesn't fail silently.** Mobile browsers (Safari especially) often block autoplay of the remote call stream if it's not tightly coupled to a user gesture — the call connects but the other person is silent with no visible error. The call UI explicitly calls `.play()`, catches the rejection, and shows a one-tap "enable audio" prompt instead of leaving the user wondering why they can't hear anything.
 
 ## Getting started
 
@@ -83,7 +87,7 @@ cp .env.example .env   # set VITE_API_BASE_URL to the backend URL
 npm run dev
 ```
 
-The frontend runs on `http://localhost:5173` by default and expects the backend at `http://localhost:5001`.
+The frontend runs on `http://localhost:5173` by default and calls the backend at whatever `VITE_API_BASE_URL` is set to (falls back to `http://localhost:5001` if unset) — make sure it matches the `PORT` your backend is actually running on.
 
 ## Known limitations
 

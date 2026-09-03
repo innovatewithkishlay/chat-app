@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVideoCallStore } from "../store/useVideoCallStore";
-import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff, Volume2 } from "lucide-react";
 import Avatar from "./Avatar";
 
 const VideoCall = () => {
@@ -15,11 +15,18 @@ const VideoCall = () => {
         toggleMic,
         toggleCamera,
         isMicOn,
-        isCameraOn
+        isCameraOn,
+        endReason,
+        callDuration
     } = useVideoCallStore();
 
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
+    // Mobile browsers (Safari in particular) frequently block autoplay of a
+    // remote stream with audio if it's not tied closely enough to a user
+    // gesture - the call still connects, but the other person is silent
+    // with no visible error. Detect that and offer a one-tap way to unlock it.
+    const [playbackBlocked, setPlaybackBlocked] = useState(false);
 
     useEffect(() => {
         if (localStream && localVideoRef.current) {
@@ -30,10 +37,27 @@ const VideoCall = () => {
     useEffect(() => {
         if (remoteStream && remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current
+                .play()
+                .then(() => setPlaybackBlocked(false))
+                .catch(() => setPlaybackBlocked(true));
         }
     }, [remoteStream]);
 
+    const unlockPlayback = () => {
+        remoteVideoRef.current
+            ?.play()
+            .then(() => setPlaybackBlocked(false))
+            .catch(() => {});
+    };
+
     if (callStatus === "IDLE") return null;
+
+    const formatDuration = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, "0")}`;
+    };
 
     return (
         <div className="fixed inset-0 bg-black/90 z-[9999] flex flex-col items-center justify-center p-0 md:p-4">
@@ -47,6 +71,31 @@ const VideoCall = () => {
                         playsInline
                         className="w-full h-full object-cover"
                     />
+                )}
+
+                {callStatus === "CONNECTED" && playbackBlocked && (
+                    <button
+                        onClick={unlockPlayback}
+                        className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/70 text-white"
+                    >
+                        <Volume2 size={40} />
+                        <span className="text-sm font-medium">Tap to enable audio &amp; video</span>
+                    </button>
+                )}
+
+                {/* Call Ended UI */}
+                {callStatus === "ENDED" && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 z-10">
+                        <div className="text-center">
+                            <div className="size-24 rounded-full flex items-center justify-center mx-auto mb-4 bg-zinc-800">
+                                <PhoneOff size={32} className="text-red-500" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white">{endReason || "Call ended"}</h3>
+                            {typeof callDuration === "number" && (
+                                <p className="text-zinc-400 mt-1">{formatDuration(callDuration)}</p>
+                            )}
+                        </div>
+                    </div>
                 )}
 
                 {/* Incoming Call UI */}
@@ -83,7 +132,7 @@ const VideoCall = () => {
                 )}
 
                 {/* Local Video */}
-                {callStatus !== "INCOMING" && (
+                {(callStatus === "OUTGOING" || callStatus === "CONNECTED") && (
                     <div className="absolute bottom-4 right-4 w-48 aspect-video bg-zinc-800 rounded-lg border border-zinc-700 shadow-lg overflow-hidden">
                         <video
                             ref={localVideoRef}
@@ -104,7 +153,7 @@ const VideoCall = () => {
                         <button onClick={toggleCamera} className={`btn btn-circle btn-ghost ${!isCameraOn ? "bg-red-500/20 text-red-500" : "bg-zinc-800 text-white"} hover:bg-zinc-700`}>
                             {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
                         </button>
-                        <button onClick={endCall} className="btn btn-circle btn-error text-white">
+                        <button onClick={() => endCall()} className="btn btn-circle btn-error text-white">
                             <PhoneOff size={24} />
                         </button>
                     </div>
@@ -113,7 +162,7 @@ const VideoCall = () => {
                 {/* Cancel Call Button (for caller) */}
                 {callStatus === "OUTGOING" && (
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-                        <button onClick={endCall} className="btn btn-circle btn-error text-white">
+                        <button onClick={() => endCall()} className="btn btn-circle btn-error text-white">
                             <PhoneOff size={24} />
                         </button>
                     </div>

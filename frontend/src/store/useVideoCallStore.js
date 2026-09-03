@@ -7,9 +7,9 @@ const ICE_CANDIDATE_POOL_SIZE = 10;
 
 let beforeUnloadHandler = null;
 let ringTimeoutId = null;
+let endScreenTimeoutId = null;
 const RING_TIMEOUT_MS = 45000;
-
-
+const END_SCREEN_MS = 2000;
 
 export const useVideoCallStore = create((set, get) => ({
     // STRICT STATE MACHINE: "IDLE" | "OUTGOING" | "INCOMING" | "CONNECTED" | "ENDED"
@@ -22,6 +22,9 @@ export const useVideoCallStore = create((set, get) => ({
     activeCallId: null, // Store the DB ID of the call
     isMicOn: true,
     isCameraOn: true,
+    endReason: null, // Message shown on the brief "Call ended" screen
+    callStartedAt: null, // Set once CONNECTED, used to show call duration
+    callDuration: null, // Seconds, computed when the call ends
 
     iceCandidateQueue: [], // Queue for early arrival candidates
 
@@ -62,8 +65,7 @@ export const useVideoCallStore = create((set, get) => ({
                 if (peer.iceConnectionState === "disconnected") {
                     toast.error("Connection unstable. Poor network.");
                 } else if (peer.iceConnectionState === "failed") {
-                    toast.error("Call connection lost.");
-                    get().endCall();
+                    get().endCall("Connection lost");
                 }
             };
 
@@ -80,8 +82,7 @@ export const useVideoCallStore = create((set, get) => ({
             get().clearRingTimeout();
             ringTimeoutId = setTimeout(() => {
                 if (get().callStatus === "OUTGOING") {
-                    toast.error("No answer.");
-                    get().endCall();
+                    get().endCall("No answer");
                 }
             }, RING_TIMEOUT_MS);
 
@@ -101,7 +102,12 @@ export const useVideoCallStore = create((set, get) => ({
         }
 
         console.log("Accepting video call from:", incomingCallData.from);
-        set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from, activeCallId: incomingCallData.callId });
+        set({
+            callStatus: "CONNECTED",
+            activeCallUserId: incomingCallData.from,
+            activeCallId: incomingCallData.callId,
+            callStartedAt: Date.now(),
+        });
 
         try {
             const [stream, iceServers] = await Promise.all([
@@ -130,8 +136,7 @@ export const useVideoCallStore = create((set, get) => ({
                 if (peer.iceConnectionState === "disconnected") {
                     toast.error("Connection unstable. Poor network.");
                 } else if (peer.iceConnectionState === "failed") {
-                    toast.error("Call connection lost.");
-                    get().endCall();
+                    get().endCall("Connection lost");
                 }
             };
 
@@ -164,25 +169,22 @@ export const useVideoCallStore = create((set, get) => ({
     rejectCall: () => {
         const { socket } = useAuthStore.getState();
         const { incomingCallData } = get();
-        console.log("Rejecting video call");
         if (socket && incomingCallData) {
             socket.emit("call:reject", { to: incomingCallData.from, callId: incomingCallData.callId });
         }
         get().resetState();
     },
 
-    endCall: () => {
+    endCall: (endReason = null) => {
         const { socket } = useAuthStore.getState();
         const { activeCallUserId, activeCallId, callStatus } = get();
 
-        console.log("Ending video call. Status:", callStatus);
-
-        if (callStatus === "IDLE") return;
+        if (callStatus === "IDLE" || callStatus === "ENDED") return;
 
         if (socket && activeCallUserId) {
             socket.emit("call:end", { to: activeCallUserId, callId: activeCallId });
         }
-        get().resetState();
+        get().resetState(endReason);
     },
 
     // --- Internal Helpers ---
@@ -206,9 +208,21 @@ export const useVideoCallStore = create((set, get) => ({
         }
     },
 
-    resetState: () => {
+    // Tears down media/peer connection immediately, then either returns to
+    // IDLE right away (no reason given - e.g. you just hung up yourself) or
+    // holds on an "ENDED" screen for a couple seconds showing why the call
+    // stopped (the other side hung up, declined, no answer, etc.) before
+    // returning to IDLE - matching how most call UIs briefly confirm what
+    // happened instead of the screen just vanishing.
+    resetState: (endReason = null) => {
         get().clearRingTimeout();
-        const { localStream, peerConnection } = get();
+        if (endScreenTimeoutId) {
+            clearTimeout(endScreenTimeoutId);
+            endScreenTimeoutId = null;
+        }
+
+        const { localStream, peerConnection, callStartedAt } = get();
+        const hadConnected = !!callStartedAt;
 
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
@@ -217,16 +231,42 @@ export const useVideoCallStore = create((set, get) => ({
             peerConnection.close();
         }
 
-        set({
-            callStatus: "IDLE",
-            localStream: null,
-            remoteStream: null,
-            peerConnection: null,
-            incomingCallData: null,
-            activeCallUserId: null,
-            activeCallId: null,
-            iceCandidateQueue: []
-        });
+        if (endReason) {
+            set({
+                callStatus: "ENDED",
+                endReason,
+                localStream: null,
+                remoteStream: null,
+                peerConnection: null,
+                iceCandidateQueue: [],
+                callDuration: hadConnected ? Math.round((Date.now() - callStartedAt) / 1000) : null,
+            });
+            endScreenTimeoutId = setTimeout(() => {
+                set({
+                    callStatus: "IDLE",
+                    incomingCallData: null,
+                    activeCallUserId: null,
+                    activeCallId: null,
+                    endReason: null,
+                    callStartedAt: null,
+                    callDuration: null,
+                });
+            }, END_SCREEN_MS);
+        } else {
+            set({
+                callStatus: "IDLE",
+                localStream: null,
+                remoteStream: null,
+                peerConnection: null,
+                incomingCallData: null,
+                activeCallUserId: null,
+                activeCallId: null,
+                iceCandidateQueue: [],
+                endReason: null,
+                callStartedAt: null,
+                callDuration: null,
+            });
+        }
     },
 
     toggleMic: () => {
@@ -273,7 +313,7 @@ export const useVideoCallStore = create((set, get) => ({
             const { peerConnection, callStatus } = get();
             if (callStatus === "OUTGOING" && peerConnection) {
                 get().clearRingTimeout();
-                set({ callStatus: "CONNECTED", activeCallId: data.callId }); // Ensure we have callId
+                set({ callStatus: "CONNECTED", activeCallId: data.callId, callStartedAt: Date.now() });
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
 
                 // Process whatever queued up during the await above - read
@@ -290,13 +330,11 @@ export const useVideoCallStore = create((set, get) => ({
         });
 
         socket.on("call:rejected", (data) => {
-            toast.error(data.reason || "Call rejected");
-            get().resetState();
+            get().resetState(data.reason || "Call declined");
         });
 
-        socket.on("call:ended", () => {
-            toast.error("Call ended");
-            get().resetState();
+        socket.on("call:ended", (data) => {
+            get().resetState(data?.reason || "Call ended");
         });
 
         socket.on("call:signal", async (data) => {
@@ -314,6 +352,10 @@ export const useVideoCallStore = create((set, get) => ({
         });
 
         socket.on("call:error", (data) => {
+            // Errors before a connection was ever established (not PRO,
+            // user offline, busy) are toasted and closed instantly rather
+            // than shown on the "ended" screen, since there's nothing to
+            // recap - the call never started.
             toast.error(data.message);
             get().resetState();
         });

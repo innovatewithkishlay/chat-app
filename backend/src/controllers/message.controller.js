@@ -104,6 +104,19 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Whether userId can see this message: either a direct participant (1-1),
+// or a member of the group it belongs to.
+async function canAccessMessage(message, userId) {
+  const idStr = userId.toString();
+  if (message.senderId.toString() === idStr || message.recieverId?.toString() === idStr) {
+    return true;
+  }
+  if (message.groupId) {
+    return Group.exists({ _id: message.groupId, members: userId });
+  }
+  return false;
+}
+
 export const searchMessages = async (req, res) => {
   try {
     const { id: chatId } = req.params;
@@ -392,6 +405,10 @@ export const reactToMessage = async (req, res) => {
     const message = await Message.findById(messageId);
     if (!message) return res.status(404).json({ message: "Message not found" });
 
+    if (!(await canAccessMessage(message, userId))) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
     // Check if user already reacted
     const existingReactionIndex = message.reactions.findIndex(r => r.userId.toString() === userId.toString());
 
@@ -429,7 +446,52 @@ export const reactToMessage = async (req, res) => {
 
     res.status(200).json(message);
   } catch (error) {
-    console.log("Error in reactToMessage: ", error.message);
+    console.error("Error in reactToMessage: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const toggleStarMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    if (!(await canAccessMessage(message, userId))) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const alreadyStarred = message.starredBy.some((id) => id.toString() === userId.toString());
+    if (alreadyStarred) {
+      message.starredBy = message.starredBy.filter((id) => id.toString() !== userId.toString());
+    } else {
+      message.starredBy.push(userId);
+    }
+    await message.save();
+
+    res.status(200).json({ starred: !alreadyStarred });
+  } catch (error) {
+    console.error("Error in toggleStarMessage: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getStarredMessages = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const messages = await Message.find({ starredBy: userId })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .populate("senderId", "fullname profilePic")
+      .populate("recieverId", "fullname profilePic")
+      .populate("groupId", "name avatar members");
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error("Error in getStarredMessages: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

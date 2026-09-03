@@ -6,7 +6,7 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
 export const getFriends = async (req, res) => {
     try {
         const userId = req.user._id;
-        const user = await User.findById(userId).populate("friends", "fullname username profilePic");
+        const user = await User.findById(userId).populate("friends", "fullname username profilePic lastSeen");
 
         res.status(200).json(user.friends);
     } catch (error) {

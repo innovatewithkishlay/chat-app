@@ -23,6 +23,7 @@ const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProPage = lazy(() => import("./pages/ProPage"));
 const DeveloperPage = lazy(() => import("./pages/DeveloperPage"));
+const StarredMessagesPage = lazy(() => import("./pages/StarredMessagesPage"));
 const VideoCall = lazy(() => import("./components/VideoCall"));
 const VoiceCall = lazy(() => import("./components/VoiceCall"));
 
@@ -105,6 +106,7 @@ const App = () => {
             />
             <Route path="/settings" element={<SettingPage />} />
             <Route path="/settings/privacy" element={authUser ? <PrivacyPage /> : <Navigate to={"/login"} />} />
+            <Route path="/settings/starred" element={authUser ? <StarredMessagesPage /> : <Navigate to={"/login"} />} />
             <Route path="/settings/pro" element={<ProPage />} />
             <Route path="/settings/developer" element={<DeveloperPage />} />
             <Route

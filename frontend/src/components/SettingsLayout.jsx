@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { User, Settings, LogOut, ArrowLeft, Crown, Code, Menu, X, ShieldAlert } from "lucide-react";
+import { User, Settings, LogOut, ArrowLeft, Crown, Code, Menu, X, ShieldAlert, Star } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useState, useEffect } from "react";
 
@@ -17,6 +17,7 @@ const SettingsLayout = ({ children }) => {
         { label: "Profile", icon: User, path: "/profile" },
         { label: "Account", icon: Settings, path: "/settings" },
         { label: "Privacy", icon: ShieldAlert, path: "/settings/privacy" },
+        { label: "Starred Messages", icon: Star, path: "/settings/starred" },
         { label: "Pro", icon: Crown, path: "/settings/pro" },
         { label: "Developer", icon: Code, path: "/settings/developer" },
     ];

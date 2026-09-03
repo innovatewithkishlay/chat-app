@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from "react";
 import { formatMessageTime } from "../lib/util";
 import MessageStatus from "./MessageStatus";
-import { Smile, Edit2, Trash2, Reply } from "lucide-react";
+import { Smile, Edit2, Trash2, Reply, Star } from "lucide-react";
 import gsap from "gsap";
 import { useChatStore } from "../store/useChattingStore";
 import Avatar from "./Avatar";
@@ -24,7 +24,8 @@ const MessageBubble = ({
     votePoll
 }) => {
     const bubbleRef = useRef(null);
-    const { setReplyToMessage } = useChatStore();
+    const { setReplyToMessage, toggleStarMessage } = useChatStore();
+    const isStarred = message.starredBy?.includes(authUser._id);
     const swipeRef = useRef(null);
     const swiping = useRef(false);
 
@@ -233,6 +234,7 @@ const MessageBubble = ({
 
                         {/* Metadata Row */}
                         <div className={`flex items-center justify-end gap-1 mt-1 ${isMyMessage ? "text-primary-content/70" : "text-base-content/40"}`}>
+                            {isStarred && <Star size={10} className="fill-current" />}
                             {message.isEdited && !(message.isDeleted || message.deletedForEveryone) && <span className="text-[10px] italic">edited</span>}
                             <time className="text-[10px] min-w-[35px] text-right">{formatMessageTime(message.createdAt)}</time>
                             {isMyMessage && (
@@ -277,6 +279,15 @@ const MessageBubble = ({
                                 <Reply size={16} />
                             </button>
 
+                            {/* Star Button */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleStarMessage(message._id); }}
+                                className={`p-1.5 rounded-full transition-colors ${isStarred ? "text-amber-500 hover:bg-amber-50" : "text-base-content/40 hover:text-amber-500 hover:bg-amber-50"}`}
+                                title={isStarred ? "Unstar" : "Star"}
+                            >
+                                <Star size={16} className={isStarred ? "fill-current" : ""} />
+                            </button>
+
                             {isMyMessage && message.status !== "sending" && (
                                 <>
                                     <button onClick={() => handleEditStart(message)} className="p-1.5 text-base-content/40 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors" title="Edit">
@@ -303,6 +314,7 @@ export default memo(MessageBubble, (prev, next) => {
     if (prev.message.text !== next.message.text) return false;
     if (prev.message.isDeleted !== next.message.isDeleted) return false;
     if (prev.message.deletedForEveryone !== next.message.deletedForEveryone) return false;
+    if (prev.message.starredBy?.length !== next.message.starredBy?.length) return false;
     if (prev.isSequential !== next.isSequential) return false;
     // Also re-render if it transitions between normal and editing state
     if (prev.isEditing !== next.isEditing) return false;

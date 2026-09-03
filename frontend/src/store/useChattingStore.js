@@ -832,6 +832,43 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  toggleStarMessage: async (messageId) => {
+    // Optimistic toggle so the star icon flips instantly.
+    const authUserId = useAuthStore.getState().authUser?._id;
+    set((state) => ({
+      messages: state.messages.map((m) => {
+        if (m._id !== messageId) return m;
+        const isStarred = m.starredBy?.includes(authUserId);
+        return {
+          ...m,
+          starredBy: isStarred
+            ? m.starredBy.filter((id) => id !== authUserId)
+            : [...(m.starredBy || []), authUserId],
+        };
+      }),
+    }));
+    try {
+      await axiosInstance.put(`/messages/star/${messageId}`);
+    } catch (error) {
+      console.error("Error starring message:", error);
+      toast.error("Failed to update starred message");
+    }
+  },
+
+  starredMessages: [],
+  isStarredLoading: false,
+  getStarredMessages: async () => {
+    set({ isStarredLoading: true });
+    try {
+      const res = await axiosInstance.get("/messages/starred");
+      set({ starredMessages: res.data });
+    } catch (error) {
+      console.error("Error fetching starred messages:", error);
+    } finally {
+      set({ isStarredLoading: false });
+    }
+  },
+
   showGroupInfo: false,
   setShowGroupInfo: (show) => set({ showGroupInfo: show }),
 

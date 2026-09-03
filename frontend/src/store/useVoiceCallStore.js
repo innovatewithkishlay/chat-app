@@ -7,7 +7,9 @@ const ICE_CANDIDATE_POOL_SIZE = 10;
 
 let beforeUnloadHandler = null;
 let ringTimeoutId = null;
+let endScreenTimeoutId = null;
 const RING_TIMEOUT_MS = 45000;
+const END_SCREEN_MS = 2000;
 
 export const useVoiceCallStore = create((set, get) => ({
     // STRICT STATE MACHINE: "IDLE" | "OUTGOING" | "INCOMING" | "CONNECTED" | "ENDED"
@@ -19,6 +21,9 @@ export const useVoiceCallStore = create((set, get) => ({
     activeCallUserId: null,
     activeCallId: null, // Store the DB ID of the call
     isMicOn: true,
+    endReason: null, // Message shown on the brief "Call ended" screen
+    callStartedAt: null, // Set once CONNECTED, used to show call duration
+    callDuration: null, // Seconds, computed when the call ends
 
     iceCandidateQueue: [], // Queue for early arrival candidates
 
@@ -28,7 +33,6 @@ export const useVoiceCallStore = create((set, get) => ({
         const { socket, authUser } = useAuthStore.getState();
         if (!socket) return;
 
-        console.log("Starting call to:", userToCall);
         get().resetState();
         set({ callStatus: "OUTGOING", activeCallUserId: userToCall });
 
@@ -51,7 +55,6 @@ export const useVoiceCallStore = create((set, get) => ({
             };
 
             peer.ontrack = (event) => {
-                console.log("Remote stream received");
                 set({ remoteStream: event.streams[0] });
             };
 
@@ -59,8 +62,7 @@ export const useVoiceCallStore = create((set, get) => ({
                 if (peer.iceConnectionState === "disconnected") {
                     toast.error("Connection unstable. Poor network.");
                 } else if (peer.iceConnectionState === "failed") {
-                    toast.error("Call connection lost.");
-                    get().endCall();
+                    get().endCall("Connection lost");
                 }
             };
 
@@ -77,8 +79,7 @@ export const useVoiceCallStore = create((set, get) => ({
             get().clearRingTimeout();
             ringTimeoutId = setTimeout(() => {
                 if (get().callStatus === "OUTGOING") {
-                    toast.error("No answer.");
-                    get().endCall();
+                    get().endCall("No answer");
                 }
             }, RING_TIMEOUT_MS);
 
@@ -97,8 +98,12 @@ export const useVoiceCallStore = create((set, get) => ({
             return;
         }
 
-        console.log("Accepting call from:", incomingCallData.from);
-        set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from, activeCallId: incomingCallData.callId });
+        set({
+            callStatus: "CONNECTED",
+            activeCallUserId: incomingCallData.from,
+            activeCallId: incomingCallData.callId,
+            callStartedAt: Date.now(),
+        });
 
         try {
             const [stream, iceServers] = await Promise.all([
@@ -119,7 +124,6 @@ export const useVoiceCallStore = create((set, get) => ({
             };
 
             peer.ontrack = (event) => {
-                console.log("Remote stream received (Answerer)");
                 set({ remoteStream: event.streams[0] });
             };
 
@@ -127,8 +131,7 @@ export const useVoiceCallStore = create((set, get) => ({
                 if (peer.iceConnectionState === "disconnected") {
                     toast.error("Connection unstable. Poor network.");
                 } else if (peer.iceConnectionState === "failed") {
-                    toast.error("Call connection lost.");
-                    get().endCall();
+                    get().endCall("Connection lost");
                 }
             };
 
@@ -138,6 +141,10 @@ export const useVoiceCallStore = create((set, get) => ({
 
             socket.emit("voice:call:accept", { signal: answer, to: incomingCallData.from, callId: incomingCallData.callId });
 
+            // Drain whatever accumulated in the queue while the awaits above
+            // were pending - read it fresh here rather than the value
+            // captured at the top of this function, since candidates can
+            // arrive concurrently with getUserMedia/SDP negotiation.
             set((state) => {
                 state.iceCandidateQueue.forEach((candidate) => {
                     peer.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) =>
@@ -157,25 +164,22 @@ export const useVoiceCallStore = create((set, get) => ({
     rejectCall: () => {
         const { socket } = useAuthStore.getState();
         const { incomingCallData } = get();
-        console.log("Rejecting call");
         if (socket && incomingCallData) {
             socket.emit("voice:call:reject", { to: incomingCallData.from, callId: incomingCallData.callId });
         }
         get().resetState();
     },
 
-    endCall: () => {
+    endCall: (endReason = null) => {
         const { socket } = useAuthStore.getState();
         const { activeCallUserId, activeCallId, callStatus } = get();
 
-        console.log("Ending call. Status:", callStatus, "To:", activeCallUserId);
-
-        if (callStatus === "IDLE") return;
+        if (callStatus === "IDLE" || callStatus === "ENDED") return;
 
         if (socket && activeCallUserId) {
             socket.emit("voice:call:end", { to: activeCallUserId, callId: activeCallId });
         }
-        get().resetState();
+        get().resetState(endReason);
     },
 
     // --- Internal Helpers ---
@@ -199,9 +203,20 @@ export const useVoiceCallStore = create((set, get) => ({
         }
     },
 
-    resetState: () => {
+    // Tears down media/peer connection immediately, then either returns to
+    // IDLE right away (no reason given - e.g. you just hung up yourself) or
+    // holds on an "ENDED" screen for a couple seconds showing why the call
+    // stopped (the other side hung up, declined, no answer, etc.) before
+    // returning to IDLE.
+    resetState: (endReason = null) => {
         get().clearRingTimeout();
-        const { localStream, peerConnection } = get();
+        if (endScreenTimeoutId) {
+            clearTimeout(endScreenTimeoutId);
+            endScreenTimeoutId = null;
+        }
+
+        const { localStream, peerConnection, callStartedAt } = get();
+        const hadConnected = !!callStartedAt;
 
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
@@ -210,16 +225,42 @@ export const useVoiceCallStore = create((set, get) => ({
             peerConnection.close();
         }
 
-        set({
-            callStatus: "IDLE",
-            localStream: null,
-            remoteStream: null,
-            peerConnection: null,
-            incomingCallData: null,
-            activeCallUserId: null,
-            activeCallId: null,
-            iceCandidateQueue: []
-        });
+        if (endReason) {
+            set({
+                callStatus: "ENDED",
+                endReason,
+                localStream: null,
+                remoteStream: null,
+                peerConnection: null,
+                iceCandidateQueue: [],
+                callDuration: hadConnected ? Math.round((Date.now() - callStartedAt) / 1000) : null,
+            });
+            endScreenTimeoutId = setTimeout(() => {
+                set({
+                    callStatus: "IDLE",
+                    incomingCallData: null,
+                    activeCallUserId: null,
+                    activeCallId: null,
+                    endReason: null,
+                    callStartedAt: null,
+                    callDuration: null,
+                });
+            }, END_SCREEN_MS);
+        } else {
+            set({
+                callStatus: "IDLE",
+                localStream: null,
+                remoteStream: null,
+                peerConnection: null,
+                incomingCallData: null,
+                activeCallUserId: null,
+                activeCallId: null,
+                iceCandidateQueue: [],
+                endReason: null,
+                callStartedAt: null,
+                callDuration: null,
+            });
+        }
     },
 
     toggleMic: () => {
@@ -250,7 +291,6 @@ export const useVoiceCallStore = create((set, get) => ({
         });
 
         socket.on("voice:call:incoming", (data) => {
-
             get().setIncomingCall(data);
         });
 
@@ -258,7 +298,7 @@ export const useVoiceCallStore = create((set, get) => ({
             const { peerConnection, callStatus } = get();
             if (callStatus === "OUTGOING" && peerConnection) {
                 get().clearRingTimeout();
-                set({ callStatus: "CONNECTED", activeCallId: data.callId }); // Ensure we have callId
+                set({ callStatus: "CONNECTED", activeCallId: data.callId, callStartedAt: Date.now() });
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
 
                 set((state) => {
@@ -273,13 +313,11 @@ export const useVoiceCallStore = create((set, get) => ({
         });
 
         socket.on("voice:call:rejected", (data) => {
-            toast.error(data.reason || "Call rejected");
-            get().resetState();
+            get().resetState(data.reason || "Call declined");
         });
 
-        socket.on("voice:call:ended", () => {
-            toast.error("Call ended");
-            get().resetState();
+        socket.on("voice:call:ended", (data) => {
+            get().resetState(data?.reason || "Call ended");
         });
 
         socket.on("voice:call:signal", async (data) => {

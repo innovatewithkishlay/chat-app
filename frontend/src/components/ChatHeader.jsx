@@ -9,6 +9,7 @@ import ProModal from "./ProModal";
 import ConfirmModal from "./ConfirmModal";
 import Avatar from "./Avatar";
 import toast from "react-hot-toast";
+import { formatDistanceToNow } from "date-fns";
 
 const ChatHeader = () => {
   const {
@@ -181,7 +182,10 @@ const ChatHeader = () => {
                       ? `${selectedUser.members.length} members`
                       : (onlineUsers.includes(selectedUser._id)
                         ? "Online"
-                        : "Offline"
+                        : (selectedUser.lastSeen
+                          ? `last seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
+                          : "Offline"
+                        )
                       )
                     }
                   </span>
