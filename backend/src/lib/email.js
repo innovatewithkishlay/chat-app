@@ -1,34 +1,39 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-let resendClient = null;
+let transporter = null;
 
-function getClient() {
-    if (resendClient) return resendClient;
-    if (!process.env.RESEND_API_KEY) return null;
+function getTransporter() {
+    if (transporter) return transporter;
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) return null;
 
-    resendClient = new Resend(process.env.RESEND_API_KEY);
-    return resendClient;
+    // Gmail SMTP via an App Password - works with any recipient immediately,
+    // no domain ownership/verification needed. Requires 2-Step Verification
+    // enabled on the Gmail account and an App Password generated at
+    // myaccount.google.com/apppasswords (a regular Gmail password won't work).
+    transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD,
+        },
+    });
+
+    return transporter;
 }
 
-// Sends the password reset email via Resend if an API key is configured. In
-// local dev without one, the link is logged instead so the flow can still be
-// tested end to end without an email provider.
+// Sends the password reset email if Gmail SMTP is configured. In local dev
+// without it, the link is logged instead so the flow can still be tested
+// end to end without setting up email.
 export async function sendPasswordResetEmail(toEmail, resetUrl) {
-    const client = getClient();
+    const client = getTransporter();
 
     if (!client) {
-        console.warn("RESEND_API_KEY not set - password reset link (dev only):", resetUrl);
+        console.warn("Gmail SMTP not configured - password reset link (dev only):", resetUrl);
         return;
     }
 
-    // Resend's sandbox sender ("onboarding@resend.dev") only delivers to the
-    // email address the Resend account itself is registered with, until a
-    // custom domain is verified. Set RESEND_FROM_EMAIL once you've verified
-    // a domain to send to any recipient.
-    const from = process.env.RESEND_FROM_EMAIL || "Toukii <onboarding@resend.dev>";
-
-    const { error } = await client.emails.send({
-        from,
+    await client.sendMail({
+        from: `Toukii <${process.env.GMAIL_USER}>`,
         to: toEmail,
         subject: "Reset your Toukii password",
         text: `Someone requested a password reset for your Toukii account.\n\nReset your password: ${resetUrl}\n\nThis link expires in 30 minutes. If you didn't request this, you can ignore this email.`,
@@ -38,9 +43,4 @@ export async function sendPasswordResetEmail(toEmail, resetUrl) {
             <p>This link expires in 30 minutes. If you didn't request this, you can ignore this email.</p>
         `,
     });
-
-    if (error) {
-        console.error("Resend failed to send password reset email:", error);
-        throw new Error("Failed to send password reset email");
-    }
 }

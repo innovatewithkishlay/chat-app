@@ -42,7 +42,7 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 | Data | MongoDB, Redis (status feed caching, login/reset-request rate limiting) |
 | Media | Cloudinary |
 | Payments | Razorpay, with server-side signature verification |
-| Email | Resend (password reset) |
+| Email | Nodemailer over Gmail SMTP (password reset) |
 
 ## Architecture notes
 
@@ -93,7 +93,7 @@ The frontend runs on `http://localhost:5173` by default and calls the backend at
 
 - No automated test suite yet — changes are currently verified manually and with `npm run lint`.
 - No TURN server is configured out of the box, so calls between peers on restrictive/symmetric NATs may fail to connect until `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` are set (see `.env.example`).
-- Password reset emails require a `RESEND_API_KEY`; without one the reset link is logged to the server console instead, which is fine for local development but not for a real deployment. Resend's sandbox sender also only delivers to the email the Resend account itself is registered with until a domain is verified there and `RESEND_FROM_EMAIL` is set.
+- Password reset emails require `GMAIL_USER`/`GMAIL_APP_PASSWORD` (a Gmail App Password, not the account password); without them the reset link is logged to the server console instead, which is fine for local development but not for a real deployment. Gmail SMTP also caps daily send volume, which is fine at demo scale but not for production traffic.
 - The single background `setInterval` in `index.js` handles both reminders and scheduled messages; it's fine for a single-instance deployment but would need to move to a proper job queue (e.g. BullMQ) to run safely across multiple server instances.
 - The hosted demo runs on a free Render web service, which spins down after a period of inactivity — the first request after idle time pays a cold-start cost (both the API waking up and MongoDB/Redis reconnecting) before the page renders. This is a hosting-tier characteristic, not an application bug; an always-on instance (or a separate static host for the frontend) removes it.
 
