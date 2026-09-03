@@ -3,6 +3,18 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import { isValidEmailDomain } from "../lib/utils/domainValidator.js";
+import { redisClient } from "../lib/redis.js";
+
+const LOGIN_ATTEMPT_LIMIT = 5;
+const LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60;
+
+async function registerFailedLoginAttempt(email) {
+  const attemptsKey = `login_attempts:${email.toLowerCase()}`;
+  const attempts = await redisClient.incr(attemptsKey);
+  if (attempts === 1) {
+    await redisClient.expire(attemptsKey, LOGIN_ATTEMPT_WINDOW_SECONDS);
+  }
+}
 
 export const signup = async (req, res) => {
   const { fullname, email, password, username } = req.body;
@@ -34,7 +46,6 @@ export const signup = async (req, res) => {
       fullname,
       email,
       username,
-      hashedPassword,
       password: hashedPassword,
     });
 
@@ -56,7 +67,7 @@ export const signup = async (req, res) => {
         .json({ message: "Something went wrong while creating your account." });
     }
   } catch (err) {
-    console.log("Error occurred in signup controller of auth", err.message);
+    console.error("Error in signup controller:", err.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -72,16 +83,27 @@ export const login = async (req, res) => {
       });
     }
 
+    const attemptsKey = `login_attempts:${email.toLowerCase()}`;
+    const attempts = Number((await redisClient.get(attemptsKey)) || 0);
+    if (attempts >= LOGIN_ATTEMPT_LIMIT) {
+      return res.status(429).json({
+        message: "Too many failed login attempts. Try again in a few minutes.",
+      });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
+      await registerFailedLoginAttempt(email);
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
     const isCorrectPassword = await bcrypt.compare(password, user.password);
     if (!isCorrectPassword) {
+      await registerFailedLoginAttempt(email);
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    await redisClient.del(attemptsKey);
     generateToken(user._id, res);
     res.status(200).json({
       _id: user._id,
@@ -91,10 +113,7 @@ export const login = async (req, res) => {
       plan: user.plan,
     });
   } catch (err) {
-    console.log(
-      "Something went wrong while handling the controller in login",
-      err
-    );
+    console.error("Error in login controller:", err.message);
     res.status(500).json({ message: "Internal error" });
   }
 };
@@ -104,10 +123,7 @@ export const logout = (req, res) => {
     res.cookie("jwt", "", { maxAge: 0 });
     res.status(200).json({ message: "successfully logged out" });
   } catch (error) {
-    console.log(
-      "something went wrong while handling the logout in controllers ",
-      error.message
-    );
+    console.error("Error in logout controller:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -133,7 +149,7 @@ export const updateProfile = async (req, res) => {
 
     res.status(200).json(updatedUser); // Return the updated user info
   } catch (error) {
-    console.log("Error in update profile:", error);
+    console.error("Error in update profile:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -142,10 +158,7 @@ export const checkUser = (req, res) => {
   try {
     res.status(200).json(req.user);
   } catch (err) {
-    console.log(
-      "something went wrong while checking the user in auth checkuser",
-      err.message
-    );
+    console.error("Error in checkUser controller:", err.message);
     res.status(500).json({ message: "Internal server error " });
   }
 };

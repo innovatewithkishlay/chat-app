@@ -10,12 +10,7 @@ export const checkUploadLimits = async (req, res, next) => {
             return next();
         }
 
-        const userId = req.user._id;
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+        const user = req.user;
 
         // Check if usage needs reset (new day)
         const now = new Date();
@@ -59,7 +54,7 @@ export const checkUploadLimits = async (req, res, next) => {
         req.userWithLimits = user;
         next();
     } catch (error) {
-        console.log("Error in checkUploadLimits middleware:", error);
+        console.error("Error in checkUploadLimits middleware:", error);
         res.status(500).json({ message: "Internal server error checking limits" });
     }
 };
@@ -75,6 +70,6 @@ export const incrementUsage = async (userId, resourceType) => {
 
         await User.findByIdAndUpdate(userId, { $inc: update });
     } catch (error) {
-        console.log("Error incrementing usage:", error);
+        console.error("Error incrementing usage:", error);
     }
 };

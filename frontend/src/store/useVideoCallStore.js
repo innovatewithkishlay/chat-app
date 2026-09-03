@@ -14,6 +14,8 @@ const ICE_SERVERS = {
 };
 
 let beforeUnloadHandler = null;
+let ringTimeoutId = null;
+const RING_TIMEOUT_MS = 45000;
 
 
 
@@ -62,9 +64,11 @@ export const useVideoCallStore = create((set, get) => ({
             };
 
             peer.oniceconnectionstatechange = () => {
-                console.log("ICE State (Video):", peer.iceConnectionState);
-                if (peer.iceConnectionState === "disconnected" || peer.iceConnectionState === "failed") {
-                    toast.error("Connection lost. Poor network.");
+                if (peer.iceConnectionState === "disconnected") {
+                    toast.error("Connection unstable. Poor network.");
+                } else if (peer.iceConnectionState === "failed") {
+                    toast.error("Call connection lost.");
+                    get().endCall();
                 }
             };
 
@@ -78,6 +82,14 @@ export const useVideoCallStore = create((set, get) => ({
                 name: authUser.fullname,
             });
 
+            get().clearRingTimeout();
+            ringTimeoutId = setTimeout(() => {
+                if (get().callStatus === "OUTGOING") {
+                    toast.error("No answer.");
+                    get().endCall();
+                }
+            }, RING_TIMEOUT_MS);
+
         } catch (error) {
             console.error("Error starting video call:", error);
             toast.error("Failed to access camera/microphone: " + error.message);
@@ -87,7 +99,7 @@ export const useVideoCallStore = create((set, get) => ({
 
     acceptCall: async () => {
         const { socket } = useAuthStore.getState();
-        const { incomingCallData, iceCandidateQueue } = get();
+        const { incomingCallData } = get();
         if (!socket || !incomingCallData) {
             console.error("Cannot accept video call: Missing socket or incomingCallData");
             return;
@@ -116,16 +128,33 @@ export const useVideoCallStore = create((set, get) => ({
                 set({ remoteStream: event.streams[0] });
             };
 
+            peer.oniceconnectionstatechange = () => {
+                if (peer.iceConnectionState === "disconnected") {
+                    toast.error("Connection unstable. Poor network.");
+                } else if (peer.iceConnectionState === "failed") {
+                    toast.error("Call connection lost.");
+                    get().endCall();
+                }
+            };
+
             await peer.setRemoteDescription(new RTCSessionDescription(incomingCallData.signal));
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
 
             socket.emit("call:accept", { signal: answer, to: incomingCallData.from, callId: incomingCallData.callId });
 
-            iceCandidateQueue.forEach(candidate => {
-                peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
+            // Drain whatever accumulated in the queue while the awaits above
+            // were pending - read it fresh here rather than the value
+            // captured at the top of this function, since candidates can
+            // arrive concurrently with getUserMedia/SDP negotiation.
+            set((state) => {
+                state.iceCandidateQueue.forEach((candidate) => {
+                    peer.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) =>
+                        console.error("Error adding queued ICE candidate", e)
+                    );
+                });
+                return { iceCandidateQueue: [] };
             });
-            set({ iceCandidateQueue: [] });
 
         } catch (error) {
             console.error("Error accepting video call:", error);
@@ -172,7 +201,15 @@ export const useVideoCallStore = create((set, get) => ({
         });
     },
 
+    clearRingTimeout: () => {
+        if (ringTimeoutId) {
+            clearTimeout(ringTimeoutId);
+            ringTimeoutId = null;
+        }
+    },
+
     resetState: () => {
+        get().clearRingTimeout();
         const { localStream, peerConnection } = get();
 
         if (localStream) {
@@ -235,16 +272,22 @@ export const useVideoCallStore = create((set, get) => ({
         });
 
         socket.on("call:accepted", async (data) => {
-            const { peerConnection, callStatus, iceCandidateQueue } = get();
+            const { peerConnection, callStatus } = get();
             if (callStatus === "OUTGOING" && peerConnection) {
+                get().clearRingTimeout();
                 set({ callStatus: "CONNECTED", activeCallId: data.callId }); // Ensure we have callId
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
 
-                // Process Queue
-                iceCandidateQueue.forEach(candidate => {
-                    peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
+                // Process whatever queued up during the await above - read
+                // the queue fresh rather than a value captured before it.
+                set((state) => {
+                    state.iceCandidateQueue.forEach((candidate) => {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) =>
+                            console.error("Error adding queued ICE candidate", e)
+                        );
+                    });
+                    return { iceCandidateQueue: [] };
                 });
-                set({ iceCandidateQueue: [] });
             }
         });
 

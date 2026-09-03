@@ -23,7 +23,7 @@ export const useAuthStore = create((set, get) => ({
             get().fetchBlockedUsers();
             get().connectSocket();
         } catch (error) {
-            console.log("Error in checkAuth:", error);
+            console.error("Error in checkAuth:", error);
             set({ authUser: null, blockedUsers: [] });
         } finally {
             set({ isCheckingAuth: false });

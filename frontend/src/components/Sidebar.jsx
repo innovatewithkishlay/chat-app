@@ -49,6 +49,9 @@ const Sidebar = () => {
   const [showProModal, setShowProModal] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
 
+  const searchInputRef = useRef(null);
+  const focusSearch = () => searchInputRef.current?.focus();
+
   // Context Menu State
   const [contextMenu, setContextMenu] = useState({
     isOpen: false,
@@ -240,8 +243,9 @@ const Sidebar = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 size-4" />
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Search..."
+            placeholder="Search by username..."
             className="w-full pl-9 pr-4 py-2 bg-base-200 border-none rounded-[10px] text-sm text-base-content/70 focus:outline-none focus:ring-1 focus:ring-base-content/20 placeholder:text-base-content/40"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -306,6 +310,19 @@ const Sidebar = () => {
           </div>
         ) : activeTab === "friends" ? (
           <div className="space-y-0.5 mt-1">
+            {friends.length === 0 && (
+              <div className="text-center text-base-content/40 py-10 flex flex-col items-center px-6">
+                <Users className="size-8 opacity-20 mb-2" />
+                <span className="text-sm font-medium text-base-content/60">No friends yet</span>
+                <span className="text-xs mt-1">Search for someone by username to send a friend request.</span>
+                <button
+                  onClick={focusSearch}
+                  className="mt-4 flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  <Search size={14} /> Find people
+                </button>
+              </div>
+            )}
             {friends.map(friend => (
               <div
                 key={friend._id}
@@ -425,9 +442,24 @@ const Sidebar = () => {
             </AnimatePresence>
 
             {filteredConversations.length === 0 && groups.length === 0 && (
-              <div className="text-center text-base-content/40 py-10 flex flex-col items-center">
+              <div className="text-center text-base-content/40 py-10 flex flex-col items-center px-6">
                 <MessageSquare className="size-8 opacity-20 mb-2" />
-                <span className="text-sm">No messages yet</span>
+                <span className="text-sm font-medium text-base-content/60">No conversations yet</span>
+                <span className="text-xs mt-1">Start chatting with a friend or search for someone new.</span>
+                <div className="flex items-center gap-2 mt-4">
+                  <button
+                    onClick={focusSearch}
+                    className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-full transition-colors"
+                  >
+                    <Search size={14} /> Find people
+                  </button>
+                  <button
+                    onClick={() => setShowCreateGroup(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-base-content/60 bg-base-200 hover:bg-base-300 px-3 py-1.5 rounded-full transition-colors"
+                  >
+                    <Plus size={14} /> New group
+                  </button>
+                </div>
               </div>
             )}
           </div>

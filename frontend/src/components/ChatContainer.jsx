@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -8,15 +8,17 @@ import Avatar from "./Avatar";
 import { useAuthStore } from "../store/useAuthStore";
 import gsap from "gsap";
 import { useProductivityStore } from "../store/useProductivityStore";
-
-import NotesContainer from "./productivity/NotesContainer";
-import PollsList from "./productivity/PollsList";
+import { NotesSkeleton, PollsSkeleton, KanbanSkeleton } from "./skeletons/ProductivitySkeletons";
 import TimelineScrubber from "./TimelineScrubber";
 
 import GroupSettingsModal from "./GroupSettingsModal";
 import UserInfoModal from "./UserInfoModal";
 import DeleteMessagesModal from "./DeleteMessagesModal";
 import NoChatSelected from "./NoChatSelected";
+
+const NotesContainer = lazy(() => import("./productivity/NotesContainer"));
+const PollsList = lazy(() => import("./productivity/PollsList"));
+const KanbanBoard = lazy(() => import("./productivity/KanbanBoard"));
 
 const ChatContainer = ({ onOpenMemory }) => {
   const {
@@ -202,8 +204,21 @@ const ChatContainer = ({ onOpenMemory }) => {
         count={1}
       />
 
-      {activeTab === "notes" && <NotesContainer />}
-      {activeTab === "polls" && <PollsList />}
+      {activeTab === "notes" && (
+        <Suspense fallback={<NotesSkeleton />}>
+          <NotesContainer />
+        </Suspense>
+      )}
+      {activeTab === "polls" && (
+        <Suspense fallback={<PollsSkeleton />}>
+          <PollsList />
+        </Suspense>
+      )}
+      {activeTab === "kanban" && (
+        <Suspense fallback={<KanbanSkeleton />}>
+          <KanbanBoard />
+        </Suspense>
+      )}
 
       {activeTab === "chat" && (
         <>

@@ -29,6 +29,21 @@ export function getReceiverSocketId(userId) {
 
 const userSocketMap = {}; // {userId: socketId}
 
+// Tracks who is currently on a call (voice or video), so a second incoming
+// call can be rejected as "busy" instead of ringing forever, and so the
+// remaining participant can be notified if their peer disconnects mid-call.
+const activeCalls = new Map(); // userId -> { peerId, callId, event: "call" | "voice:call" }
+
+function markCallActive(userId, peerId, callId, event) {
+  activeCalls.set(userId, { peerId, callId, event });
+  activeCalls.set(peerId, { peerId: userId, callId, event });
+}
+
+function clearActiveCall(userId, peerId) {
+  activeCalls.delete(userId);
+  activeCalls.delete(peerId);
+}
+
 // Socket Authentication Middleware
 io.use(async (socket, next) => {
   try {
@@ -203,6 +218,15 @@ io.on("connection", async (socket) => {
         return;
       }
 
+      if (activeCalls.has(sender._id.toString())) {
+        socket.emit("call:error", { message: "You are already on a call." });
+        return;
+      }
+      if (activeCalls.has(data.userToCall)) {
+        socket.emit("call:error", { message: "The other user is busy on another call." });
+        return;
+      }
+
       // Create Call History Entry
       const newCall = new CallHistory({
         callType: "VIDEO",
@@ -249,6 +273,8 @@ io.on("connection", async (socket) => {
       });
     }
 
+    markCallActive(userId, data.to, data.callId, "call");
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("call:accepted", { signal: data.signal, callId: data.callId });
     }
@@ -291,6 +317,8 @@ io.on("connection", async (socket) => {
       }
     }
 
+    clearActiveCall(userId, data.to);
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("call:ended", { reason: "Call ended." });
     }
@@ -323,6 +351,15 @@ io.on("connection", async (socket) => {
       const receiver = await User.findById(data.userToCall);
       if (!receiver || receiver.plan !== "PRO") {
         socket.emit("voice:call:error", { message: "The other user is not eligible (needs PRO)." });
+        return;
+      }
+
+      if (activeCalls.has(sender._id.toString())) {
+        socket.emit("voice:call:error", { message: "You are already on a call." });
+        return;
+      }
+      if (activeCalls.has(data.userToCall)) {
+        socket.emit("voice:call:error", { message: "The other user is busy on another call." });
         return;
       }
 
@@ -369,6 +406,8 @@ io.on("connection", async (socket) => {
       });
     }
 
+    markCallActive(userId, data.to, data.callId, "voice:call");
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("voice:call:accepted", { signal: data.signal, callId: data.callId });
     }
@@ -409,6 +448,8 @@ io.on("connection", async (socket) => {
       }
     }
 
+    clearActiveCall(userId, data.to);
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("voice:call:ended", { reason: "Call ended." });
     }
@@ -423,9 +464,36 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("disconnect", async () => {
-    console.log("A user disconnected", socket.id);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+    // If this user was mid-call, let their peer know instead of leaving
+    // them connected to a dead stream indefinitely.
+    const call = activeCalls.get(userId);
+    if (call) {
+      const peerSocketId = getReceiverSocketId(call.peerId);
+      if (peerSocketId) {
+        io.to(peerSocketId).emit(`${call.event}:ended`, { reason: "Peer disconnected." });
+      }
+      if (call.callId) {
+        try {
+          const callDoc = await CallHistory.findById(call.callId);
+          if (callDoc && callDoc.status !== "ENDED") {
+            const endedAt = new Date();
+            callDoc.status = "ENDED";
+            callDoc.endedAt = endedAt;
+            callDoc.duration = callDoc.startedAt
+              ? Math.round((endedAt - new Date(callDoc.startedAt)) / 1000)
+              : 0;
+            callDoc.endedBy = userId;
+            await callDoc.save();
+          }
+        } catch (error) {
+          console.error("Error closing call on disconnect:", error);
+        }
+      }
+      clearActiveCall(userId, call.peerId);
+    }
 
     // Update lastSeen
     try {

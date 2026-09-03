@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SettingsLayout from "../components/SettingsLayout";
 import { Crown, Zap, Video, Phone, Shield, BarChart, AlertTriangle } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { differenceInSeconds, format } from "date-fns";
 import { axiosInstance } from "../lib/axios";
+import { loadRazorpayScript } from "../lib/util";
 import toast from "react-hot-toast";
 
 const ProPage = () => {
@@ -13,8 +14,17 @@ const ProPage = () => {
     const [loading, setLoading] = useState(false);
 
     const isPro = authUser?.isPro;
-    const expiresAt = authUser?.proExpiresAt ? new Date(authUser.proExpiresAt) : null;
-    const startedAt = authUser?.proStartedAt ? new Date(authUser.proStartedAt) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const expiresAt = useMemo(
+        () => (authUser?.proExpiresAt ? new Date(authUser.proExpiresAt) : null),
+        [authUser?.proExpiresAt]
+    );
+    const startedAt = useMemo(
+        () =>
+            authUser?.proStartedAt
+                ? new Date(authUser.proStartedAt)
+                : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        [authUser?.proStartedAt]
+    );
 
     const isExpired = expiresAt && new Date() > expiresAt;
 
@@ -57,6 +67,13 @@ const ProPage = () => {
         setLoading(true);
 
         try {
+            const scriptLoaded = await loadRazorpayScript();
+            if (!scriptLoaded) {
+                toast.error("Razorpay SDK failed to load. Are you online?");
+                setLoading(false);
+                return;
+            }
+
             // 1. Create Order
             const { data: orderData } = await axiosInstance.post("/payment/create-order");
 

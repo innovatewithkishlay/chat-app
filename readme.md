@@ -33,7 +33,7 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 | Frontend | React 18 (Vite), Zustand, Tailwind CSS + DaisyUI, GSAP |
 | Backend | Node.js, Express, Mongoose |
 | Real-time | Socket.io (chat, presence, typing, WebRTC signaling) |
-| Data | MongoDB, Redis (caching / ephemeral state) |
+| Data | MongoDB, Redis (status feed caching, login rate limiting) |
 | Media | Cloudinary |
 | Payments | Razorpay, with server-side signature verification |
 
@@ -45,6 +45,8 @@ A few decisions that shaped the backend, documented in more detail in [`docs/cha
 - **Room-scoped productivity events.** Kanban/notes/polls broadcast to a Socket.io room keyed by the conversation (or group) id. Clients join that room when they open the relevant panel and leave it when they switch chats, so updates only reach people actually looking at that conversation.
 - **Authorization checks live in the controllers.** Every productivity and reminder endpoint verifies the requester is a participant/member of the underlying conversation or group before reading or mutating anything — this was tightened up during a security pass (see below).
 - **Payment verification is server-side only.** The client never sets subscription state directly; `/api/payment/verify-payment` recomputes the Razorpay HMAC signature and checks the payment id hasn't already been applied before granting Pro.
+- **Calls track "busy" state server-side.** The signaling layer keeps an in-memory map of who's currently on a call so a second incoming call is rejected as busy instead of ringing forever, and a peer's socket disconnecting mid-call ends the session on the other side rather than leaving it hanging.
+- **Route-level code splitting.** Everything past the login/signup screen (chat UI, the productivity suite, WebRTC call components) is lazy-loaded, so an unauthenticated visitor's first paint doesn't wait on code they haven't reached yet.
 
 ## Getting started
 
@@ -81,6 +83,7 @@ The frontend runs on `http://localhost:5173` by default and expects the backend 
 - No automated test suite yet — changes are currently verified manually and with `npm run lint`.
 - WebRTC calls use public STUN servers only; there's no TURN fallback, so calls between peers on restrictive NATs may fail to connect.
 - The single background `setInterval` in `index.js` handles both reminders and scheduled messages; it's fine for a single-instance deployment but would need to move to a proper job queue (e.g. BullMQ) to run safely across multiple server instances.
+- The hosted demo runs on a free Render web service, which spins down after a period of inactivity — the first request after idle time pays a cold-start cost (both the API waking up and MongoDB/Redis reconnecting) before the page renders. This is a hosting-tier characteristic, not an application bug; an always-on instance (or a separate static host for the frontend) removes it.
 
 ## License
 

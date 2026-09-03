@@ -14,6 +14,8 @@ const ICE_SERVERS = {
 };
 
 let beforeUnloadHandler = null;
+let ringTimeoutId = null;
+const RING_TIMEOUT_MS = 45000;
 
 export const useVoiceCallStore = create((set, get) => ({
     // STRICT STATE MACHINE: "IDLE" | "OUTGOING" | "INCOMING" | "CONNECTED" | "ENDED"
@@ -59,9 +61,11 @@ export const useVoiceCallStore = create((set, get) => ({
             };
 
             peer.oniceconnectionstatechange = () => {
-                console.log("ICE State:", peer.iceConnectionState);
-                if (peer.iceConnectionState === "disconnected" || peer.iceConnectionState === "failed") {
-                    toast.error("Connection lost. Poor network.");
+                if (peer.iceConnectionState === "disconnected") {
+                    toast.error("Connection unstable. Poor network.");
+                } else if (peer.iceConnectionState === "failed") {
+                    toast.error("Call connection lost.");
+                    get().endCall();
                 }
             };
 
@@ -75,6 +79,14 @@ export const useVoiceCallStore = create((set, get) => ({
                 name: authUser.fullname,
             });
 
+            get().clearRingTimeout();
+            ringTimeoutId = setTimeout(() => {
+                if (get().callStatus === "OUTGOING") {
+                    toast.error("No answer.");
+                    get().endCall();
+                }
+            }, RING_TIMEOUT_MS);
+
         } catch (error) {
             console.error("Error starting voice call:", error);
             toast.error("Failed to access microphone: " + error.message);
@@ -84,7 +96,7 @@ export const useVoiceCallStore = create((set, get) => ({
 
     acceptCall: async () => {
         const { socket } = useAuthStore.getState();
-        const { incomingCallData, iceCandidateQueue } = get();
+        const { incomingCallData } = get();
         if (!socket || !incomingCallData) {
             console.error("Cannot accept call: Missing socket or incomingCallData");
             return;
@@ -113,16 +125,29 @@ export const useVoiceCallStore = create((set, get) => ({
                 set({ remoteStream: event.streams[0] });
             };
 
+            peer.oniceconnectionstatechange = () => {
+                if (peer.iceConnectionState === "disconnected") {
+                    toast.error("Connection unstable. Poor network.");
+                } else if (peer.iceConnectionState === "failed") {
+                    toast.error("Call connection lost.");
+                    get().endCall();
+                }
+            };
+
             await peer.setRemoteDescription(new RTCSessionDescription(incomingCallData.signal));
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
 
             socket.emit("voice:call:accept", { signal: answer, to: incomingCallData.from, callId: incomingCallData.callId });
 
-            iceCandidateQueue.forEach(candidate => {
-                peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
+            set((state) => {
+                state.iceCandidateQueue.forEach((candidate) => {
+                    peer.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) =>
+                        console.error("Error adding queued ICE candidate", e)
+                    );
+                });
+                return { iceCandidateQueue: [] };
             });
-            set({ iceCandidateQueue: [] });
 
         } catch (error) {
             console.error("Error accepting voice call:", error);
@@ -169,7 +194,15 @@ export const useVoiceCallStore = create((set, get) => ({
         });
     },
 
+    clearRingTimeout: () => {
+        if (ringTimeoutId) {
+            clearTimeout(ringTimeoutId);
+            ringTimeoutId = null;
+        }
+    },
+
     resetState: () => {
+        get().clearRingTimeout();
         const { localStream, peerConnection } = get();
 
         if (localStream) {
@@ -224,16 +257,20 @@ export const useVoiceCallStore = create((set, get) => ({
         });
 
         socket.on("voice:call:accepted", async (data) => {
-            const { peerConnection, callStatus, iceCandidateQueue } = get();
+            const { peerConnection, callStatus } = get();
             if (callStatus === "OUTGOING" && peerConnection) {
+                get().clearRingTimeout();
                 set({ callStatus: "CONNECTED", activeCallId: data.callId }); // Ensure we have callId
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
 
-                // Process Queue
-                iceCandidateQueue.forEach(candidate => {
-                    peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding queued ICE candidate", e));
+                set((state) => {
+                    state.iceCandidateQueue.forEach((candidate) => {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) =>
+                            console.error("Error adding queued ICE candidate", e)
+                        );
+                    });
+                    return { iceCandidateQueue: [] };
                 });
-                set({ iceCandidateQueue: [] });
             }
         });
 

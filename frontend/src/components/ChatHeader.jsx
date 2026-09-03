@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Video, Lock, ArrowLeft, Phone, FileText, MessageSquare, MoreVertical } from "lucide-react";
+import { X, Video, Lock, ArrowLeft, Phone, FileText, MessageSquare, MoreVertical, KanbanSquare, BarChart2 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
@@ -254,6 +254,18 @@ const ChatHeader = () => {
           className={`h-full flex items-center gap-2 text-xs font-medium border-b-2 transition-colors ${activeTab === "notes" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content/70"}`}
         >
           <FileText size={14} /> Notes
+        </button>
+        <button
+          onClick={() => setActiveTab("kanban")}
+          className={`h-full flex items-center gap-2 text-xs font-medium border-b-2 transition-colors ${activeTab === "kanban" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content/70"}`}
+        >
+          <KanbanSquare size={14} /> Board
+        </button>
+        <button
+          onClick={() => setActiveTab("polls")}
+          className={`h-full flex items-center gap-2 text-xs font-medium border-b-2 transition-colors ${activeTab === "polls" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content/70"}`}
+        >
+          <BarChart2 size={14} /> Polls
         </button>
       </div>
     </div>

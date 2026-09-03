@@ -3,21 +3,12 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { axiosInstance } from "../lib/axios";
+import { loadRazorpayScript } from "../lib/util";
 import toast from "react-hot-toast";
 
 const ProModal = ({ onClose }) => {
     const { authUser, checkAuth } = useAuthStore();
     const [loading, setLoading] = useState(false);
-
-    const loadRazorpayScript = () => {
-        return new Promise((resolve) => {
-            const script = document.createElement("script");
-            script.src = "https://checkout.razorpay.com/v1/checkout.js";
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.body.appendChild(script);
-        });
-    };
 
     const handlePayment = async () => {
         setLoading(true);
