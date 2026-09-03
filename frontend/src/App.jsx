@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -13,6 +13,7 @@ import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import { useThemeStore } from "./store/useThemeStore";
 import { useChatStore } from "./store/useChattingStore";
+import { useProductivityStore } from "./store/useProductivityStore";
 import { useVideoCallStore } from "./store/useVideoCallStore";
 import { useVoiceCallStore } from "./store/useVoiceCallStore";
 import VideoCall from "./components/VideoCall";
@@ -34,11 +35,13 @@ const App = () => {
       useVoiceCallStore.getState().initializeListeners();
       useChatStore.getState().subscribeToPush();
       useChatStore.getState().subscribeToMessages();
+      useProductivityStore.getState().subscribeToProductivityEvents();
     }
     return () => {
       useVideoCallStore.getState().cleanupListeners();
       useVoiceCallStore.getState().cleanupListeners();
       useChatStore.getState().unsubscribeFromMessages();
+      useProductivityStore.getState().unsubscribeFromProductivityEvents();
     };
   }, [authUser]);
 

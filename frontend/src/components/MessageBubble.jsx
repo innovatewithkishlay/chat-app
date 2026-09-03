@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { formatMessageTime } from "../lib/util";
 import MessageStatus from "./MessageStatus";
 import { Smile, Edit2, Trash2, Reply } from "lucide-react";

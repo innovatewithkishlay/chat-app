@@ -13,6 +13,8 @@ const ICE_SERVERS = {
     iceCandidatePoolSize: 10,
 };
 
+let beforeUnloadHandler = null;
+
 export const useVoiceCallStore = create((set, get) => ({
     // STRICT STATE MACHINE: "IDLE" | "OUTGOING" | "INCOMING" | "CONNECTED" | "ENDED"
     callStatus: "IDLE",
@@ -28,7 +30,7 @@ export const useVoiceCallStore = create((set, get) => ({
 
     // --- Actions ---
 
-    startCall: async (userToCall, userName) => {
+    startCall: async (userToCall) => {
         const { socket, authUser } = useAuthStore.getState();
         if (!socket) return;
 
@@ -265,24 +267,28 @@ export const useVoiceCallStore = create((set, get) => ({
         });
 
         // Handle Tab Close
-        window.addEventListener("beforeunload", () => {
-            get().endCall();
-        });
+        if (beforeUnloadHandler) {
+            window.removeEventListener("beforeunload", beforeUnloadHandler);
+        }
+        beforeUnloadHandler = () => get().endCall();
+        window.addEventListener("beforeunload", beforeUnloadHandler);
     },
 
     cleanupListeners: () => {
         const { socket } = useAuthStore.getState();
-        if (!socket) return;
-        socket.off("voice:call:incoming");
-        socket.off("voice:call:accepted");
-        socket.off("voice:call:rejected");
-        socket.off("voice:call:ended");
-        socket.off("voice:call:signal");
-        socket.off("voice:call:error");
-        socket.off("voice:call:created");
+        if (socket) {
+            socket.off("voice:call:incoming");
+            socket.off("voice:call:accepted");
+            socket.off("voice:call:rejected");
+            socket.off("voice:call:ended");
+            socket.off("voice:call:signal");
+            socket.off("voice:call:error");
+            socket.off("voice:call:created");
+        }
 
-        // Remove beforeunload listener (though browser handles it, good practice)
-        // Note: We can't easily remove anonymous function, but since this is cleanup, it's fine.
-        // Ideally we'd name the function, but for now this ensures the socket listeners are off.
+        if (beforeUnloadHandler) {
+            window.removeEventListener("beforeunload", beforeUnloadHandler);
+            beforeUnloadHandler = null;
+        }
     }
 }));

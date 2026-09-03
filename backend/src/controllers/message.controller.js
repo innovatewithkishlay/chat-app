@@ -72,9 +72,16 @@ export const deleteChat = async (req, res) => {
     const { id: conversationId } = req.params;
     const userId = req.user._id;
 
-    await Conversation.findByIdAndUpdate(conversationId, {
-      $addToSet: { hiddenFor: userId }
-    });
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+    if (!conversation.participants.some((p) => p.toString() === userId.toString())) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    conversation.hiddenFor.addToSet(userId);
+    await conversation.save();
 
     const socketId = getReceiverSocketId(userId);
     if (socketId) {

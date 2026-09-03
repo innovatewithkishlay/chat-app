@@ -14,8 +14,6 @@ const MessageInput = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false); // For Plus button
 
-  const [isRecording, setIsRecording] = useState(false);
-
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiPickerRef = useRef(null);

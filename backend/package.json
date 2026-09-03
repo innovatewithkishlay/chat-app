@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "cross-env PORT=5001 nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "generate:vapid-keys": "node scripts/generate-vapid-keys.js"
   },
   "keywords": [
     "chat"

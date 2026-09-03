@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { Save, Loader2, ArrowLeft } from "lucide-react";
 

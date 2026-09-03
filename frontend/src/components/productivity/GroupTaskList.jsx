@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { useChatStore } from "../../store/useChattingStore";
 import { CheckCircle2, Circle, Clock, Plus } from "lucide-react";

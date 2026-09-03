@@ -1,6 +1,6 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { Calendar, User, Tag } from "lucide-react";
+import { Calendar, User } from "lucide-react";
 
 const TaskCard = memo(({ task, index, onClick }) => {
     return (
@@ -58,5 +58,6 @@ const TaskCard = memo(({ task, index, onClick }) => {
         </Draggable>
     );
 });
+TaskCard.displayName = "TaskCard";
 
 export default TaskCard;

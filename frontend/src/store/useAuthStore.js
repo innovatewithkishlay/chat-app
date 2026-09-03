@@ -85,23 +85,6 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
-    activatePro: async () => {
-        try {
-            const res = await axiosInstance.post("/users/activate-pro-temp");
-            set({ authUser: res.data });
-            toast.success("Upgraded to PRO successfully!");
-
-            // Reconnect socket to update user data (plan: PRO) in backend socket instance
-            get().disconnectSocket();
-            get().connectSocket();
-
-            return true;
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to upgrade");
-            return false;
-        }
-    },
-
     fetchBlockedUsers: async () => {
         try {
             const res = await axiosInstance.get("/users/blocked");

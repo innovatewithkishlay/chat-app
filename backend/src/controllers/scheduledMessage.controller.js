@@ -88,30 +88,24 @@ export const processScheduledMessages = async () => {
 
         for (const msg of dueMessages) {
             try {
-                // Create actual message
+                const conversation = await Conversation.findById(msg.conversationId);
+                if (!conversation) {
+                    msg.status = "failed";
+                    msg.error = "Conversation no longer exists";
+                    await msg.save();
+                    continue;
+                }
+
+                const receiverId = conversation.participants.find(
+                    (p) => p.toString() !== msg.senderId.toString()
+                );
+
                 const newMessage = new Message({
                     senderId: msg.senderId,
-                    recieverId: null, // Assuming group or handled by conversation logic
+                    recieverId: receiverId,
                     text: msg.content,
-                    status: "sent"
+                    status: "sent",
                 });
-
-                // We need to determine if it's a group or 1-1 to set receiverId/groupId correctly
-                // For simplicity, we'll fetch conversation
-                const conversation = await Conversation.findById(msg.conversationId);
-                if (conversation) {
-                    // If 1-1, find other participant
-                    if (conversation.participants.length === 2) {
-                        const receiverId = conversation.participants.find(p => p.toString() !== msg.senderId.toString());
-                        newMessage.recieverId = receiverId;
-                    }
-                    // If group, we might need a groupId field in Message if schema supports it, 
-                    // or just rely on conversationId if Message schema was updated.
-                    // Looking at Message schema: it has groupId.
-                    // We need to know if conversation is a group. 
-                    // Existing schema doesn't strictly differentiate except by participant count or logic.
-                    // Let's assume for now we just save it and emit to conversation room.
-                }
 
                 await newMessage.save();
 

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useAuthStore } from "../store/useAuthStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
 import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff } from "lucide-react";
 import Avatar from "./Avatar";

@@ -1,16 +1,11 @@
-import { useState } from "react";
 import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
-import { Plus, Moon, Lock } from "lucide-react";
-import StatusViewer from "./StatusViewer";
+import { Plus, Moon } from "lucide-react";
 import Avatar from "../Avatar";
-import toast from "react-hot-toast";
 
 const StatusList = () => {
-    const { statuses, myStatus, createStatus, openStatus, openCreateStatus } = useStatusStore(); // added openStatus
+    const { statuses, myStatus, openStatus, openCreateStatus } = useStatusStore();
     const { authUser } = useAuthStore();
-
-    const [createModalOpen, setCreateModalOpen] = useState(false); // remove eventually? kept for now to avoid breaking too much logic if used elsewhere, but variable is unused if we remove the JSX.
 
     const handleViewStatus = (userStatusDoc) => {
         openStatus(userStatusDoc); // Use global action

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useAuthStore } from "../store/useAuthStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import { Phone, PhoneOff, Mic, MicOff } from "lucide-react";
 import Avatar from "./Avatar";
@@ -14,8 +13,7 @@ const VoiceCall = () => {
         rejectCall,
         endCall,
         toggleMic,
-        isMicOn,
-        activeCallUserId
+        isMicOn
     } = useVoiceCallStore();
 
     const localAudioRef = useRef(null);

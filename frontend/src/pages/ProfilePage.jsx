@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User, Calendar, ShieldCheck, Edit2 } from "lucide-react";
+import { Camera, User, ShieldCheck, Edit2 } from "lucide-react";
 import SettingsLayout from "../components/SettingsLayout";
 import Avatar from "../components/Avatar";
 

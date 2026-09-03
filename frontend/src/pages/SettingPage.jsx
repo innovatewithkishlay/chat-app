@@ -256,7 +256,7 @@ const SettingPage = () => {
                       } else {
                         throw new Error('Failed to send');
                       }
-                    } catch (error) {
+                    } catch {
                       const btn = form.querySelector('button[type="submit"]');
                       btn.innerText = 'Failed. Try again.';
                       btn.classList.add('btn-error', 'text-white');

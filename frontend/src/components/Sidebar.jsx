@@ -4,7 +4,7 @@ import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useStatusStore } from "../store/useStatusStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, User, Smile, Trash2, CircleDashed, Crown, Settings, Phone, Star } from "lucide-react";
+import { Users, Search, X, UserPlus, Inbox, Plus, MessageSquare, Smile, Trash2, CircleDashed, Crown, Settings, Phone } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import MoodSelector from "./MoodSelector";
 import CallHistory from "./CallHistory";
@@ -32,16 +32,14 @@ const Sidebar = () => {
     getSentRequests,
     friends,
     getFriends,
-    removeFriend,
     groups,
     getGroups,
-    sentRequests,
     deleteChat,
     clearChat
   } = useChatStore();
 
   const { onlineUsers, authUser } = useAuthStore();
-  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const [showOnlineOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [isSearching, setIsSearching] = useState(false);

@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 
 const HealthIndicator = () => {
-    const { messages, selectedUser } = useChatStore();
+    const { messages } = useChatStore();
     const { authUser } = useAuthStore();
 
     const health = useMemo(() => {

@@ -304,19 +304,6 @@ export const useChatStore = create((set, get) => ({
       }
     });
 
-    socket.on("messagesDelivered", ({ receiverId }) => {
-      const { selectedUser } = get();
-      if (selectedUser && selectedUser._id === receiverId) {
-        set((state) => {
-          const updatedMessages = state.messages.map((m) => ({
-            ...m,
-            status: m.status === "sent" ? "delivered" : m.status,
-          }));
-          return { messages: updatedMessages };
-        });
-      }
-    });
-
     socket.on("messageStatusUpdate", ({ messageId, status, groupId }) => {
       const { selectedUser } = get();
       if (selectedUser && selectedUser._id === groupId) {
@@ -829,6 +816,14 @@ export const useChatStore = create((set, get) => ({
   setShowUserInfo: (show) => set({ showUserInfo: show }),
 
   setSelectedUser: async (selectedUser) => {
+    const previousUser = get().selectedUser;
+    if (previousUser?.members) {
+      get().leaveGroupRoom(previousUser._id);
+    }
+    if (selectedUser?.members) {
+      get().joinGroupRoom(selectedUser._id);
+    }
+
     set({ selectedUser, typingUsers: [], showGroupInfo: false, showUserInfo: false, replyToMessage: null }); // Clear typing users and info modals when switching chats
     if (selectedUser && selectedUser.email) {
       try {
@@ -984,6 +979,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("reminderTriggered");
     socket.off("chat:cleared");
     socket.off("conversation:deleted");
+    socket.off("poll:updated");
     socket.off("connect");
   },
 

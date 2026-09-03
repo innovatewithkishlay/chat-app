@@ -1,19 +1,17 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageBubble from "./MessageBubble";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
+import Avatar from "./Avatar";
 import { useAuthStore } from "../store/useAuthStore";
-import { formatMessageTime } from "../lib/util";
-import { Trash2, Edit2, Smile } from "lucide-react";
 import gsap from "gsap";
 import { useProductivityStore } from "../store/useProductivityStore";
 
 import NotesContainer from "./productivity/NotesContainer";
 import PollsList from "./productivity/PollsList";
 import TimelineScrubber from "./TimelineScrubber";
-import MessageStatus from "./MessageStatus";
 
 import GroupSettingsModal from "./GroupSettingsModal";
 import UserInfoModal from "./UserInfoModal";
@@ -26,13 +24,11 @@ const ChatContainer = ({ onOpenMemory }) => {
     getMessages,
     getGroupMessages,
     isMessagesLoading,
-    subscribeToMessages,
-    unsubscribeFromMessages,
     selectedUser,
     deleteMessages,
     editMessage,
     reactToMessage,
-    currentTypingUsers,
+    typingUsers,
     showGroupInfo,
     setShowGroupInfo,
     showUserInfo,
@@ -40,6 +36,12 @@ const ChatContainer = ({ onOpenMemory }) => {
   } = useChatStore();
 
   const isGroup = !!selectedUser?.members;
+  const currentTypingUsers = useMemo(() => {
+    if (!selectedUser) return [];
+    return typingUsers.filter((u) =>
+      isGroup ? u.groupId === selectedUser._id : u.senderId === selectedUser._id && !u.groupId
+    );
+  }, [typingUsers, selectedUser, isGroup]);
   const { authUser } = useAuthStore();
   const { activeTab, votePoll } = useProductivityStore();
 
@@ -53,16 +55,13 @@ const ChatContainer = ({ onOpenMemory }) => {
   const [messageToDelete, setMessageToDelete] = useState(null);
 
   useEffect(() => {
-    if (selectedUser) {
-      if (isGroup) {
-        getGroupMessages(selectedUser._id);
-      } else {
-        getMessages(selectedUser._id);
-      }
-      subscribeToMessages();
+    if (!selectedUser) return;
+    if (isGroup) {
+      getGroupMessages(selectedUser._id);
+    } else {
+      getMessages(selectedUser._id);
     }
-    return () => unsubscribeFromMessages();
-  }, [selectedUser?._id, isGroup, getMessages, getGroupMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser?._id, isGroup, getMessages, getGroupMessages]);
 
   useLayoutEffect(() => {
     if (messages.length > 0 && selectedUser?._id !== prevChatId.current) {

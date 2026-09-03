@@ -1,5 +1,6 @@
 import Reminder from "../models/reminder.model.js";
 import Message from "../models/message.model.js";
+import Group from "../models/group.model.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 export const createReminder = async (req, res) => {
@@ -9,6 +10,18 @@ export const createReminder = async (req, res) => {
 
         const message = await Message.findById(messageId);
         if (!message) return res.status(404).json({ message: "Message not found" });
+
+        const isDirectParticipant =
+            message.senderId.toString() === userId.toString() ||
+            message.recieverId?.toString() === userId.toString();
+
+        const isGroupMember = message.groupId
+            ? await Group.exists({ _id: message.groupId, members: userId })
+            : false;
+
+        if (!isDirectParticipant && !isGroupMember) {
+            return res.status(403).json({ message: "Not authorized to set a reminder on this message" });
+        }
 
         const reminder = new Reminder({
             userId,

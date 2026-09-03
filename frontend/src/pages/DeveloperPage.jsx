@@ -1,6 +1,5 @@
-import React from "react";
 import SettingsLayout from "../components/SettingsLayout";
-import { User, Code, Mail, Linkedin, Globe, Cpu, Layers, Database } from "lucide-react";
+import { Code, Mail, Linkedin, Globe, Cpu, Layers, Database } from "lucide-react";
 
 const DeveloperPage = () => {
     return (

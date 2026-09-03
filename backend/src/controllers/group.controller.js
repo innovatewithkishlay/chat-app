@@ -475,7 +475,7 @@ export const dismissAsAdmin = async (req, res) => {
         }
 
         // Prevent self-demotion if last admin (optional check, but good for safety)
-        if (memberId === userId && group.admins.length === 1) {
+        if (memberId === userId.toString() && group.admins.length === 1) {
             return res.status(400).json({ message: "You cannot dismiss yourself as the only admin" });
         }
 

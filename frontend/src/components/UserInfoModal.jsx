@@ -5,7 +5,6 @@ import {
     Calendar,
     Phone,
     Info,
-    Camera,
     ShieldAlert
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";

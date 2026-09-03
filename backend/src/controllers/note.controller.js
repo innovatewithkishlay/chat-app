@@ -4,34 +4,20 @@ import Group from "../models/group.model.js";
 import { io } from "../lib/socket.js";
 
 const checkPermission = async (userId, conversationId) => {
-    console.log(`[checkPermission] Checking for User: ${userId}, Entity: ${conversationId}`);
-
-    // 1. Try finding conversation
     const conversation = await Conversation.findById(conversationId);
     if (conversation) {
-        console.log(`[checkPermission] Found Conversation. Participants:`, conversation.participants);
         const isParticipant = conversation.participants.some(p => p.toString() === userId.toString());
-        if (!isParticipant) {
-            console.error(`[checkPermission] User ${userId} is NOT a participant in Conversation ${conversationId}`);
-            throw new Error("Not authorized in this conversation");
-        }
+        if (!isParticipant) throw new Error("Not authorized in this conversation");
         return conversation;
     }
 
-    // 2. Try finding group
     const group = await Group.findById(conversationId);
     if (group) {
-        console.log(`[checkPermission] Found Group. Members:`, group.members);
         const isMember = group.members.some(m => m.toString() === userId.toString());
-        if (!isMember) {
-            console.error(`[checkPermission] User ${userId} is NOT a member of Group ${conversationId}`);
-            throw new Error("Not authorized in this group");
-        }
+        if (!isMember) throw new Error("Not authorized in this group");
         return group;
     }
 
-    // 3. Neither found
-    console.error(`[checkPermission] Entity NOT FOUND: ${conversationId}`);
     throw new Error("Conversation or Group not found");
 };
 
@@ -54,13 +40,8 @@ export const createNote = async (req, res) => {
     try {
         const { conversationId, title, content } = req.body;
 
-        // 1. Check if user is authenticated
-        if (!req.user || !req.user._id) {
-            return res.status(401).json({ message: "Unauthorized: User not found" });
-        }
         const userId = req.user._id;
 
-        // 2. Validate required fields
         if (!conversationId) {
             return res.status(400).json({ message: "conversationId is required" });
         }
@@ -68,12 +49,10 @@ export const createNote = async (req, res) => {
             return res.status(400).json({ message: "Title is required" });
         }
 
-        // 3. Check permissions
         try {
             await checkPermission(userId, conversationId);
         } catch (permError) {
-            console.error("Permission Check Failed:", permError.message);
-            return res.status(403).json({ message: permError.message || "Not authorized to create note in this conversation" });
+            return res.status(403).json({ message: permError.message });
         }
 
         const newNote = new Note({
@@ -84,38 +63,14 @@ export const createNote = async (req, res) => {
             versions: [{ content: content || "", updatedBy: userId }]
         });
 
-        console.log("[createNote] Attempting to save note:", {
-            conversationId,
-            title,
-            createdBy: userId
-        });
+        await newNote.save();
 
-        try {
-            await newNote.save();
-            console.log("[createNote] Note saved successfully:", newNote._id);
-        } catch (dbError) {
-            console.error("[createNote] DB Save Error:", dbError);
-            throw dbError; // Re-throw to main catch
-        }
-
-        if (global.io) {
-            global.io.to(conversationId.toString()).emit("note:created", newNote);
-        } else if (io) {
-            io.to(conversationId.toString()).emit("note:created", newNote);
-        } else {
-            console.warn("[createNote] Socket.io instance not found, skipping emit");
-        }
+        io.to(conversationId.toString()).emit("note:created", newNote);
 
         res.status(201).json(newNote);
     } catch (error) {
-        console.error("CREATE NOTE ERROR:", error);
-        console.error("Stack:", error.stack);
-        res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message,
-            stack: process.env.NODE_ENV === "development" ? error.stack : undefined
-        });
+        console.error("Error in createNote:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 };
 

@@ -1,4 +1,3 @@
-import React from "react";
 import SettingsLayout from "../components/SettingsLayout";
 import { ShieldAlert, Unlock } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
@@ -29,7 +28,7 @@ const PrivacyPage = () => {
 
                             {!blockedUsers || blockedUsers.length === 0 ? (
                                 <div className="text-center py-6 border border-dashed border-base-300 rounded-xl bg-base-200/50">
-                                    <p className="text-sm text-base-content/50">You haven't blocked any users.</p>
+                                    <p className="text-sm text-base-content/50">You haven&apos;t blocked any users.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">

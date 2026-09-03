@@ -6,7 +6,6 @@ import { useVideoCallStore } from "../store/useVideoCallStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import { useProductivityStore } from "../store/useProductivityStore";
 import ProModal from "./ProModal";
-import CreateGroupModal from "./CreateGroupModal"; // Assuming this is the 'Group Info' modal basically
 import ConfirmModal from "./ConfirmModal";
 import Avatar from "./Avatar";
 import toast from "react-hot-toast";

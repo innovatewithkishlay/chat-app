@@ -7,6 +7,54 @@ export const useProductivityStore = create((set, get) => ({
     activeTab: "chat", // chat, kanban, notes
     setActiveTab: (tab) => set({ activeTab: tab }),
 
+    // The conversation/group room the productivity socket events are
+    // currently scoped to (kanban/notes/polls all broadcast per-conversation).
+    currentConversationId: null,
+
+    joinConversationRoom: (conversationId) => {
+        const { currentConversationId } = get();
+        if (!conversationId || currentConversationId === conversationId) return;
+
+        const socket = useAuthStore.getState().socket;
+        if (socket) {
+            if (currentConversationId) socket.emit("leaveConversation", currentConversationId);
+            socket.emit("joinConversation", conversationId);
+        }
+        set({ currentConversationId: conversationId });
+    },
+
+    subscribeToProductivityEvents: () => {
+        get().unsubscribeFromProductivityEvents();
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        socket.on("kanban:taskCreated", get().handleTaskCreated);
+        socket.on("kanban:taskUpdated", get().handleTaskUpdated);
+        socket.on("kanban:taskMoved", get().handleTaskMoved);
+        socket.on("kanban:taskDeleted", get().handleTaskDeleted);
+        socket.on("note:created", get().handleNoteCreated);
+        socket.on("note:updated", get().handleNoteUpdated);
+        socket.on("note:deleted", get().handleNoteDeleted);
+        socket.on("poll:created", get().handlePollCreated);
+        socket.on("poll:updated", get().handlePollUpdated);
+    },
+
+    unsubscribeFromProductivityEvents: () => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+        [
+            "kanban:taskCreated",
+            "kanban:taskUpdated",
+            "kanban:taskMoved",
+            "kanban:taskDeleted",
+            "note:created",
+            "note:updated",
+            "note:deleted",
+            "poll:created",
+            "poll:updated",
+        ].forEach((event) => socket.off(event));
+    },
+
     // Kanban State
     board: null,
     tasks: [],
@@ -27,6 +75,7 @@ export const useProductivityStore = create((set, get) => ({
 
     // --- Kanban Actions ---
     fetchBoard: async (conversationId) => {
+        get().joinConversationRoom(conversationId);
         set({ isBoardLoading: true });
         try {
             const res = await axiosInstance.get(`/kanban/${conversationId}`);
@@ -145,6 +194,7 @@ export const useProductivityStore = create((set, get) => ({
 
     // --- Notes Actions ---
     fetchNotes: async (conversationId) => {
+        get().joinConversationRoom(conversationId);
         set({ isNotesLoading: true });
         try {
             const res = await axiosInstance.get(`/notes/${conversationId}`);
@@ -220,6 +270,7 @@ export const useProductivityStore = create((set, get) => ({
 
     // --- Polls Actions ---
     fetchPolls: async (conversationId) => {
+        get().joinConversationRoom(conversationId);
         set({ isPollsLoading: true });
         try {
             const res = await axiosInstance.get(`/polls/${conversationId}`);

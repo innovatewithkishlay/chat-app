@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import SettingsLayout from "../components/SettingsLayout";
-import { Crown, Zap, Video, Phone, Shield, BarChart, CheckCircle, AlertTriangle } from "lucide-react";
+import { Crown, Zap, Video, Phone, Shield, BarChart, AlertTriangle } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { differenceInSeconds, format } from "date-fns";
 import { axiosInstance } from "../lib/axios";

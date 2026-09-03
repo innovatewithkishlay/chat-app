@@ -1,4 +1,4 @@
-import { X, Crown, Video, Phone, Zap, Star } from "lucide-react";
+import { X, Crown, Video, Phone, Zap } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";

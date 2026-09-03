@@ -1,8 +1,7 @@
-import React, { useEffect, memo } from "react";
+import { useEffect, memo } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { useChatStore } from "../../store/useChattingStore";
 import { Plus, FileText, Trash2, Clock } from "lucide-react";
-import { NotesSkeleton } from "../skeletons/ProductivitySkeletons";
 
 const NoteItem = memo(({ note, isActive, onClick, onDelete }) => (
     <div
@@ -37,6 +36,7 @@ const NoteItem = memo(({ note, isActive, onClick, onDelete }) => (
         </button>
     </div>
 ));
+NoteItem.displayName = "NoteItem";
 
 const NotesList = () => {
     const selectedUser = useChatStore((state) => state.selectedUser);
