@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import Conversation from "../models/conversation.model.js";
+import Group from "../models/group.model.js";
 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
@@ -11,12 +12,14 @@ export const clearChat = async (req, res) => {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
 
-    // Clear messages: 
-    // 1. Between me and user (1-1)
-    // 2. OR messages in the group (if idToClear is a group)
-    // Note: If idToClear is a user, it won't match groupId (unless coincidence, extremely rare with ObjectId).
-    // If idToClear is a group, it won't match senderId/recieverId logic usually.
-    // So this single query handles both.
+    const group = await Group.findById(userToChatId).select("members");
+    if (group && !group.members.some((m) => m.toString() === myId.toString())) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Clears messages either between me and userToChatId (1-1), or in the
+    // group identified by userToChatId - a single query handles both since
+    // a user id will never coincide with a group id.
     await Message.updateMany(
       {
         $or: [
@@ -91,6 +94,50 @@ export const deleteChat = async (req, res) => {
     res.status(200).json({ message: "Chat deleted successfully" });
   } catch (error) {
     console.error("Error in deleteChat: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Escapes regex metacharacters so a search term is treated as a literal
+// string rather than a user-controlled regular expression.
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export const searchMessages = async (req, res) => {
+  try {
+    const { id: chatId } = req.params;
+    const { q } = req.query;
+    const myId = req.user._id;
+
+    if (!q || !q.trim()) {
+      return res.status(200).json([]);
+    }
+
+    // If chatId is a group, the searcher must be a member - otherwise the
+    // groupId clause below would let anyone search any group's messages.
+    const group = await Group.findById(chatId).select("members");
+    if (group && !group.members.some((m) => m.toString() === myId.toString())) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const messages = await Message.find({
+      $or: [
+        { senderId: myId, recieverId: chatId },
+        { senderId: chatId, recieverId: myId },
+        { groupId: chatId },
+      ],
+      deletedFor: { $ne: myId },
+      isDeleted: { $ne: true },
+      text: { $regex: escapeRegex(q.trim()), $options: "i" },
+    })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select("_id text senderId createdAt type");
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error("Error in searchMessages: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

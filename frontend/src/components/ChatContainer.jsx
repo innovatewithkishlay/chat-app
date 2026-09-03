@@ -15,6 +15,7 @@ import GroupSettingsModal from "./GroupSettingsModal";
 import UserInfoModal from "./UserInfoModal";
 import DeleteMessagesModal from "./DeleteMessagesModal";
 import NoChatSelected from "./NoChatSelected";
+import MessageSearch from "./MessageSearch";
 
 const NotesContainer = lazy(() => import("./productivity/NotesContainer"));
 const PollsList = lazy(() => import("./productivity/PollsList"));
@@ -35,6 +36,7 @@ const ChatContainer = ({ onOpenMemory }) => {
     setShowGroupInfo,
     showUserInfo,
     setShowUserInfo,
+    showMessageSearch,
   } = useChatStore();
 
   const isGroup = !!selectedUser?.members;
@@ -222,6 +224,10 @@ const ChatContainer = ({ onOpenMemory }) => {
 
       {activeTab === "chat" && (
         <>
+          {showMessageSearch && (
+            <MessageSearch chatId={selectedUser._id} onJumpToMessage={handleScrollToMessage} />
+          )}
+
           {/* Scrollable Messages Area */}
           <div
             className="flex-1 overflow-y-auto w-full relative custom-scrollbar px-4 py-4"

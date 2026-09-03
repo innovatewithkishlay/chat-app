@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Video, Lock, ArrowLeft, Phone, FileText, MessageSquare, MoreVertical, KanbanSquare, BarChart2 } from "lucide-react";
+import { X, Video, Lock, ArrowLeft, Phone, FileText, MessageSquare, MoreVertical, KanbanSquare, BarChart2, Search } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
@@ -22,6 +22,7 @@ const ChatHeader = () => {
     clearChat,
     deleteChat,
     typingUsers,
+    toggleMessageSearch,
   } = useChatStore();
   const { onlineUsers = [], authUser } = useAuthStore();
   const { activeTab, setActiveTab } = useProductivityStore();
@@ -192,6 +193,14 @@ const ChatHeader = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleMessageSearch}
+            className="p-2 rounded-full text-base-content/40 hover:text-primary hover:bg-base-200 transition-colors"
+            title="Search in chat"
+          >
+            <Search size={20} />
+          </button>
+
           {!isGroup && (
             <>
               <button

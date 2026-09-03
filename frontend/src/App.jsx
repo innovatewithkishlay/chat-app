@@ -2,6 +2,8 @@ import { Suspense, lazy, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useAuthStore } from "./store/useAuthStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
@@ -92,6 +94,14 @@ const App = () => {
             <Route
               path="/signup"
               element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
+            />
+            <Route
+              path="/forgot-password"
+              element={!authUser ? <ForgotPasswordPage /> : <Navigate to={"/"} />}
+            />
+            <Route
+              path="/reset-password/:token"
+              element={!authUser ? <ResetPasswordPage /> : <Navigate to={"/"} />}
             />
             <Route path="/settings" element={<SettingPage />} />
             <Route path="/settings/privacy" element={authUser ? <PrivacyPage /> : <Navigate to={"/login"} />} />

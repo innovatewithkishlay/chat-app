@@ -38,6 +38,29 @@ export const useChatStore = create((set, get) => ({
   setReplyToMessage: (message) => set({ replyToMessage: message }),
   clearReplyToMessage: () => set({ replyToMessage: null }),
 
+  showMessageSearch: false,
+  chatSearchResults: [],
+  isChatSearchLoading: false,
+  toggleMessageSearch: () =>
+    set((state) => ({ showMessageSearch: !state.showMessageSearch, chatSearchResults: [] })),
+  closeMessageSearch: () => set({ showMessageSearch: false, chatSearchResults: [] }),
+
+  searchMessagesInChat: async (chatId, query) => {
+    if (!query || !query.trim()) {
+      set({ chatSearchResults: [] });
+      return;
+    }
+    set({ isChatSearchLoading: true });
+    try {
+      const res = await axiosInstance.get(`/messages/search/${chatId}`, { params: { q: query } });
+      set({ chatSearchResults: res.data });
+    } catch (error) {
+      console.error("Error searching messages:", error);
+    } finally {
+      set({ isChatSearchLoading: false });
+    }
+  },
+
   deleteMessages: async (messageId, deleteType = "me") => {
     try {
       await axiosInstance.delete(`/messages/${messageId}?type=${deleteType}`);
@@ -824,7 +847,15 @@ export const useChatStore = create((set, get) => ({
       get().joinGroupRoom(selectedUser._id);
     }
 
-    set({ selectedUser, typingUsers: [], showGroupInfo: false, showUserInfo: false, replyToMessage: null }); // Clear typing users and info modals when switching chats
+    set({
+      selectedUser,
+      typingUsers: [],
+      showGroupInfo: false,
+      showUserInfo: false,
+      replyToMessage: null,
+      showMessageSearch: false,
+      chatSearchResults: [],
+    }); // Clear typing users, info modals, and search state when switching chats
     if (selectedUser && selectedUser.email) {
       try {
         await axiosInstance.put(`/messages/mark-seen/${selectedUser._id}`);

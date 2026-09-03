@@ -1,12 +1,18 @@
+import crypto from "crypto";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import { isValidEmailDomain } from "../lib/utils/domainValidator.js";
 import { redisClient } from "../lib/redis.js";
+import { sendPasswordResetEmail } from "../lib/email.js";
 
 const LOGIN_ATTEMPT_LIMIT = 5;
 const LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60;
+
+const RESET_REQUEST_LIMIT = 3;
+const RESET_REQUEST_WINDOW_SECONDS = 60 * 60;
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 async function registerFailedLoginAttempt(email) {
   const attemptsKey = `login_attempts:${email.toLowerCase()}`;
@@ -115,6 +121,81 @@ export const login = async (req, res) => {
   } catch (err) {
     console.error("Error in login controller:", err.message);
     res.status(500).json({ message: "Internal error" });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    const rateLimitKey = `password_reset_requests:${email.toLowerCase()}`;
+    const requestCount = await redisClient.incr(rateLimitKey);
+    if (requestCount === 1) {
+      await redisClient.expire(rateLimitKey, RESET_REQUEST_WINDOW_SECONDS);
+    }
+
+    // Always respond the same way whether or not the email is registered,
+    // and whether or not the rate limit was hit, so this endpoint can't be
+    // used to enumerate which emails have accounts.
+    const genericResponse = {
+      message: "If that email is registered, a password reset link has been sent.",
+    };
+
+    if (requestCount > RESET_REQUEST_LIMIT) {
+      return res.status(200).json(genericResponse);
+    }
+
+    const user = await User.findOne({ email });
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      user.resetPasswordTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+      user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+      await user.save();
+
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+      const resetUrl = `${clientUrl}/reset-password/${rawToken}`;
+      await sendPasswordResetEmail(user.email, resetUrl);
+    }
+
+    res.status(200).json(genericResponse);
+  } catch (err) {
+    console.error("Error in forgotPassword controller:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password || password.length < 6) {
+      return res.status(400).json({
+        message: "A valid reset link and a password of at least 6 characters are required.",
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpires: { $gt: new Date() },
+    }).select("+resetPasswordTokenHash +resetPasswordExpires");
+
+    if (!user) {
+      return res.status(400).json({ message: "This reset link is invalid or has expired." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    user.resetPasswordTokenHash = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Password updated. You can now log in." });
+  } catch (err) {
+    console.error("Error in resetPassword controller:", err.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 

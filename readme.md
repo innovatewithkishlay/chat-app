@@ -8,6 +8,7 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 - 1-1 and group chat with image sharing, replies, edits, reactions, and delete-for-me / delete-for-everyone
 - Delivery pipeline with sending → sent → delivered → read states, driven by Socket.io
 - Typing indicators, online presence, and optimistic UI on send
+- In-chat message search, scoped to the open conversation or group
 - User blocking and per-conversation "memory" notes (pinned context tied to a message)
 
 **Productivity, scoped to a conversation**
@@ -21,6 +22,9 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 - Groups with admin roles, promote/dismiss, and add/remove members
 - Friend requests and a talk-request flow for starting new conversations
 
+**Account**
+- Email/password auth with rate-limited login and a full forgot/reset password flow (emailed reset link, 30-minute expiry, single use)
+
 **Pro tier** (Razorpay subscription)
 - 1-1 voice and video calling over WebRTC, signaled through Socket.io
 - 24-hour disappearing statuses with a viewer list
@@ -33,9 +37,10 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 | Frontend | React 18 (Vite), Zustand, Tailwind CSS + DaisyUI, GSAP |
 | Backend | Node.js, Express, Mongoose |
 | Real-time | Socket.io (chat, presence, typing, WebRTC signaling) |
-| Data | MongoDB, Redis (status feed caching, login rate limiting) |
+| Data | MongoDB, Redis (status feed caching, login/reset-request rate limiting) |
 | Media | Cloudinary |
 | Payments | Razorpay, with server-side signature verification |
+| Email | Nodemailer (password reset), any SMTP provider |
 
 ## Architecture notes
 
@@ -47,6 +52,8 @@ A few decisions that shaped the backend, documented in more detail in [`docs/cha
 - **Payment verification is server-side only.** The client never sets subscription state directly; `/api/payment/verify-payment` recomputes the Razorpay HMAC signature and checks the payment id hasn't already been applied before granting Pro.
 - **Calls track "busy" state server-side.** The signaling layer keeps an in-memory map of who's currently on a call so a second incoming call is rejected as busy instead of ringing forever, and a peer's socket disconnecting mid-call ends the session on the other side rather than leaving it hanging.
 - **Route-level code splitting.** Everything past the login/signup screen (chat UI, the productivity suite, WebRTC call components) is lazy-loaded, so an unauthenticated visitor's first paint doesn't wait on code they haven't reached yet.
+- **ICE servers come from the backend, not a hardcoded frontend list.** `GET /api/video-call/ice-servers` builds the list from env config, so a TURN provider can be added without a frontend deploy — see `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` below.
+- **Password reset tokens are never stored in plaintext.** `forgotPassword` generates a random token, emails the raw value, and stores only its SHA-256 hash with a 30-minute expiry; `resetPassword` re-hashes the submitted token to look it up. The endpoint also responds identically whether or not the email is registered, so it can't be used to enumerate accounts.
 
 ## Getting started
 
@@ -81,7 +88,8 @@ The frontend runs on `http://localhost:5173` by default and expects the backend 
 ## Known limitations
 
 - No automated test suite yet — changes are currently verified manually and with `npm run lint`.
-- WebRTC calls use public STUN servers only; there's no TURN fallback, so calls between peers on restrictive NATs may fail to connect.
+- No TURN server is configured out of the box, so calls between peers on restrictive/symmetric NATs may fail to connect until `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` are set (see `.env.example`).
+- Password reset emails require SMTP credentials; without them the reset link is logged to the server console instead, which is fine for local development but not for a real deployment.
 - The single background `setInterval` in `index.js` handles both reminders and scheduled messages; it's fine for a single-instance deployment but would need to move to a proper job queue (e.g. BullMQ) to run safely across multiple server instances.
 - The hosted demo runs on a free Render web service, which spins down after a period of inactivity — the first request after idle time pays a cold-start cost (both the API waking up and MongoDB/Redis reconnecting) before the page renders. This is a hosting-tier characteristic, not an application bug; an always-on instance (or a separate static host for the frontend) removes it.
 

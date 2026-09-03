@@ -1,17 +1,9 @@
 import { create } from "zustand";
 import { useAuthStore } from "./useAuthStore";
+import { getIceServers } from "../lib/iceServers";
 import toast from "react-hot-toast";
 
-// WebRTC Configuration
-const ICE_SERVERS = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:global.stun.twilio.com:3478" },
-        { urls: "stun:stun.stunprotocol.org:3478" },
-        { urls: "stun:stun.framasoft.org:3478" },
-    ],
-    iceCandidatePoolSize: 10,
-};
+const ICE_CANDIDATE_POOL_SIZE = 10;
 
 let beforeUnloadHandler = null;
 let ringTimeoutId = null;
@@ -44,10 +36,13 @@ export const useVideoCallStore = create((set, get) => ({
         set({ callStatus: "OUTGOING", activeCallUserId: userToCall });
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const [stream, iceServers] = await Promise.all([
+                navigator.mediaDevices.getUserMedia({ video: true, audio: true }),
+                getIceServers(),
+            ]);
             set({ localStream: stream });
 
-            const peer = new RTCPeerConnection(ICE_SERVERS);
+            const peer = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: ICE_CANDIDATE_POOL_SIZE });
             set({ peerConnection: peer });
 
             stream.getTracks().forEach((track) => peer.addTrack(track, stream));
@@ -109,10 +104,13 @@ export const useVideoCallStore = create((set, get) => ({
         set({ callStatus: "CONNECTED", activeCallUserId: incomingCallData.from, activeCallId: incomingCallData.callId });
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const [stream, iceServers] = await Promise.all([
+                navigator.mediaDevices.getUserMedia({ video: true, audio: true }),
+                getIceServers(),
+            ]);
             set({ localStream: stream });
 
-            const peer = new RTCPeerConnection(ICE_SERVERS);
+            const peer = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: ICE_CANDIDATE_POOL_SIZE });
             set({ peerConnection: peer });
 
             stream.getTracks().forEach((track) => peer.addTrack(track, stream));
