@@ -458,6 +458,20 @@ export const useChatStore = create((set, get) => ({
     socket.on("connect", () => {
       get().getConversations();
       get().getGroups();
+
+      // A reconnect (network blip, phone waking from a locked screen, etc.)
+      // means any messages sent while the socket was down were missed live.
+      // Re-pull whichever chat is actually open so it doesn't sit stale
+      // until the user manually leaves and reopens it.
+      const { selectedUser } = get();
+      if (selectedUser) {
+        const isGroup = !!selectedUser.members;
+        if (isGroup) {
+          get().getGroupMessages(selectedUser._id);
+        } else {
+          get().getMessages(selectedUser._id);
+        }
+      }
     });
   },
 

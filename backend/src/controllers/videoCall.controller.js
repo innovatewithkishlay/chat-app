@@ -2,8 +2,14 @@ import User from "../models/user.model.js";
 import { canUseVideoCall } from "../lib/utils.js";
 import { getIceServers } from "../lib/iceServers.js";
 
-export const getIceServerConfig = (req, res) => {
-    res.status(200).json({ iceServers: getIceServers() });
+export const getIceServerConfig = async (req, res) => {
+    try {
+        const iceServers = await getIceServers();
+        res.status(200).json({ iceServers });
+    } catch (error) {
+        console.error("Error in getIceServerConfig:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
 };
 
 export const checkEligibility = async (req, res) => {
