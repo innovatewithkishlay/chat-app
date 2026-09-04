@@ -464,6 +464,15 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("disconnect", async () => {
+    // On a flaky connection (mobile especially), the client can reconnect
+    // with a brand-new socket before the server notices the old one is
+    // gone. If that's already happened, userSocketMap[userId] now points
+    // at the NEW socket - this disconnect event is stale and must not
+    // tear any of that down, or the user gets incorrectly marked offline,
+    // stops receiving live messages, and a live call gets killed out from
+    // under them.
+    if (userSocketMap[userId] !== socket.id) return;
+
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
