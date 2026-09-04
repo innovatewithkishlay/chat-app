@@ -2,12 +2,15 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { DragDropContext } from "@hello-pangea/dnd";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { useChatStore } from "../../store/useChattingStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import KanbanColumn from "./KanbanColumn";
+import TaskDetailModal from "./TaskDetailModal";
 import { KanbanSkeleton } from "../skeletons/ProductivitySkeletons";
 
 
 const KanbanBoard = () => {
     const selectedUser = useChatStore((state) => state.selectedUser);
+    const authUser = useAuthStore((state) => state.authUser);
 
     // Granular selectors to prevent unnecessary re-renders
     const board = useProductivityStore((state) => state.board);
@@ -16,22 +19,29 @@ const KanbanBoard = () => {
     const fetchBoard = useProductivityStore((state) => state.fetchBoard);
     const moveTask = useProductivityStore((state) => state.moveTask);
     const addTask = useProductivityStore((state) => state.addTask);
+    const updateTask = useProductivityStore((state) => state.updateTask);
+    const deleteTask = useProductivityStore((state) => state.deleteTask);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newTaskColumn, setNewTaskColumn] = useState("todo");
     const [newTaskTitle, setNewTaskTitle] = useState("");
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
 
     const conversations = useChatStore((state) => state.conversations);
+
+    const isGroup = selectedUser?.groupMembers !== undefined || selectedUser?.admins !== undefined;
+
+    // Everyone who can be assigned a task in the current chat.
+    const members = useMemo(() => {
+        if (!selectedUser) return [];
+        if (isGroup) return selectedUser.members || [];
+        return [authUser, selectedUser].filter(Boolean);
+    }, [selectedUser, isGroup, authUser]);
 
     useEffect(() => {
         if (!selectedUser) return;
 
         let conversationId = selectedUser._id;
-
-        // If it's a 1-on-1 chat (not a group), we need to find the conversation ID
-        // Groups usually have their own ID as the conversation ID (or we treat them as such)
-        // But for 1-on-1, selectedUser._id is the USER ID, not the CONVERSATION ID.
-        const isGroup = selectedUser.groupMembers !== undefined || selectedUser.admins !== undefined;
 
         if (!isGroup) {
             const conversation = conversations.find(c =>
@@ -40,26 +50,17 @@ const KanbanBoard = () => {
             if (conversation) {
                 conversationId = conversation._id;
             } else {
-                // No conversation exists yet (e.g. new chat), so no board can exist.
                 return;
             }
         }
 
         fetchBoard(conversationId);
-    }, [selectedUser, conversations, fetchBoard]);
+    }, [selectedUser, isGroup, conversations, fetchBoard]);
 
     const onDragEnd = useCallback((result) => {
         const { destination, source, draggableId } = result;
-
         if (!destination) return;
-
-        if (
-            destination.droppableId === source.droppableId &&
-            destination.index === source.index
-        ) {
-            return;
-        }
-
+        if (destination.droppableId === source.droppableId && destination.index === source.index) return;
         moveTask(draggableId, destination.droppableId, destination.index);
     }, [moveTask]);
 
@@ -84,7 +85,6 @@ const KanbanBoard = () => {
         setIsModalOpen(false);
     };
 
-    // Memoize tasks per column to prevent re-rendering all columns when one task changes
     const columnsWithTasks = useMemo(() => {
         if (!board || !board.columns) return [];
         return board.columns.map(column => ({
@@ -92,6 +92,16 @@ const KanbanBoard = () => {
             tasks: tasks.filter(t => t.columnId === column.id).sort((a, b) => a.order - b.order)
         }));
     }, [board, tasks]);
+
+    const selectedTask = useMemo(
+        () => tasks.find((t) => t._id === selectedTaskId) || null,
+        [tasks, selectedTaskId]
+    );
+
+    const handleDeleteTask = async (taskId) => {
+        await deleteTask(taskId);
+        setSelectedTaskId(null);
+    };
 
     if (isBoardLoading && !board) {
         return <KanbanSkeleton />;
@@ -109,7 +119,7 @@ const KanbanBoard = () => {
                             column={column}
                             tasks={column.tasks}
                             onAddTask={handleAddTask}
-                            onTaskClick={(task) => console.log("Edit task", task)}
+                            onTaskClick={(task) => setSelectedTaskId(task._id)}
                         />
                     ))}
                 </DragDropContext>
@@ -144,6 +154,16 @@ const KanbanBoard = () => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {selectedTask && (
+                <TaskDetailModal
+                    task={selectedTask}
+                    members={members}
+                    onClose={() => setSelectedTaskId(null)}
+                    onSave={updateTask}
+                    onDelete={handleDeleteTask}
+                />
             )}
         </div>
     );

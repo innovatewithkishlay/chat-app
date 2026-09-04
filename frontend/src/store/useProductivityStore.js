@@ -300,7 +300,20 @@ export const useProductivityStore = create((set, get) => ({
             }));
         } catch (error) {
             console.error("Error voting:", error);
-            toast.error("Failed to vote");
+            toast.error(error.response?.data?.message || "Failed to vote");
+        }
+    },
+
+    closePoll: async (pollId) => {
+        try {
+            const res = await axiosInstance.put(`/polls/${pollId}/close`);
+            set((state) => ({
+                polls: state.polls.map(p => p._id === pollId ? res.data : p)
+            }));
+            toast.success("Poll closed");
+        } catch (error) {
+            console.error("Error closing poll:", error);
+            toast.error(error.response?.data?.message || "Failed to close poll");
         }
     },
 

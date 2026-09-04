@@ -2,15 +2,28 @@ import Board from "../models/board.model.js";
 import TaskCard from "../models/taskCard.model.js";
 import { io, getReceiverSocketId } from "../lib/socket.js";
 import Conversation from "../models/conversation.model.js";
+import Group from "../models/group.model.js";
 
-// Helper to check if user is in conversation
+// A board's conversationId can point to either a 1-1 Conversation or a
+// Group - this only ever checked Conversation, so every Kanban request for
+// a group chat 404'd on "Conversation not found" before it got anywhere
+// near an authorization check.
 const checkPermission = async (userId, conversationId) => {
     const conversation = await Conversation.findById(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (conversation) {
+        const isParticipant = conversation.participants.some(p => p.toString() === userId.toString());
+        if (!isParticipant) throw new Error("Not authorized");
+        return conversation;
+    }
 
-    const isParticipant = conversation.participants.some(p => p.toString() === userId.toString());
-    if (!isParticipant) throw new Error("Not authorized");
-    return conversation;
+    const group = await Group.findById(conversationId);
+    if (group) {
+        const isMember = group.members.some(m => m.toString() === userId.toString());
+        if (!isMember) throw new Error("Not authorized");
+        return group;
+    }
+
+    throw new Error("Conversation or group not found");
 };
 
 export const getBoard = async (req, res) => {
@@ -33,7 +46,9 @@ export const getBoard = async (req, res) => {
         }
 
         // Fetch tasks
-        const tasks = await TaskCard.find({ boardId: board._id }).sort({ order: 1 });
+        const tasks = await TaskCard.find({ boardId: board._id })
+            .sort({ order: 1 })
+            .populate("assignedTo", "fullname username profilePic");
 
         res.status(200).json({ board, tasks });
     } catch (error) {
@@ -69,6 +84,7 @@ export const createTask = async (req, res) => {
         });
 
         await newTask.save();
+        await newTask.populate("assignedTo", "fullname username profilePic");
 
         // Real-time update
         io.to(board.conversationId.toString()).emit("kanban:taskCreated", newTask);
@@ -92,7 +108,8 @@ export const updateTask = async (req, res) => {
         const board = await Board.findById(task.boardId);
         await checkPermission(userId, board.conversationId);
 
-        const updatedTask = await TaskCard.findByIdAndUpdate(taskId, updates, { new: true });
+        const updatedTask = await TaskCard.findByIdAndUpdate(taskId, updates, { new: true })
+            .populate("assignedTo", "fullname username profilePic");
 
         io.to(board.conversationId.toString()).emit("kanban:taskUpdated", updatedTask);
 

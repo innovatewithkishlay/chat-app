@@ -3,7 +3,8 @@ import { protectRoute } from "../middlewares/auth.middleware.js";
 import {
     getPolls,
     createPoll,
-    votePoll
+    votePoll,
+    closePoll
 } from "../controllers/poll.controller.js";
 
 const router = express.Router();
@@ -11,5 +12,6 @@ const router = express.Router();
 router.get("/:conversationId", protectRoute, getPolls);
 router.post("/", protectRoute, createPoll);
 router.post("/:pollId/vote", protectRoute, votePoll);
+router.put("/:pollId/close", protectRoute, closePoll);
 
 export default router;
