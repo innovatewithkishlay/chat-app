@@ -203,10 +203,14 @@ io.on("connection", async (socket) => {
     // data: { userToCall, signalData, from, name }
     try {
       const receiverSocketId = getReceiverSocketId(data.userToCall);
-      const sender = socket.user;
+      // socket.user was fetched once when this socket first connected and
+      // never refreshed - if someone upgrades to Pro mid-session, their
+      // socket keeps thinking they're on Free until they reconnect. Check
+      // the database fresh instead of trusting the cached copy.
+      const sender = await User.findById(userId);
 
       // Eligibility Check (Sender)
-      if (sender.plan !== "PRO") {
+      if (!sender || sender.plan !== "PRO") {
         socket.emit("call:error", { message: "You must be PRO to make a video call." });
         return;
       }
@@ -339,10 +343,13 @@ io.on("connection", async (socket) => {
   socket.on("voice:call:initiate", async (data) => {
     try {
       const receiverSocketId = getReceiverSocketId(data.userToCall);
-      const sender = socket.user;
+      // See call:initiate above - re-check the database instead of the
+      // socket's cached user, which goes stale the moment someone upgrades
+      // to Pro without reconnecting.
+      const sender = await User.findById(userId);
 
       // Eligibility Check (Sender)
-      if (sender.plan !== "PRO") {
+      if (!sender || sender.plan !== "PRO") {
         socket.emit("voice:call:error", { message: "You must be PRO to make a voice call." });
         return;
       }
