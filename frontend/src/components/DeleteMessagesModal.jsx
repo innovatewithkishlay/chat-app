@@ -1,4 +1,3 @@
-import React from "react";
 import Modal from "./Modal";
 
 const DeleteMessagesModal = ({ isOpen, onClose, onDeleteForMe, onDeleteForEveryone, canDeleteForEveryone, count }) => {

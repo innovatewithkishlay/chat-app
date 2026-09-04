@@ -1,7 +1,5 @@
-import { useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChattingStore.js";
 import { useStatusStore } from "../store/useStatusStore.js";
-import { useAuthStore } from "../store/useAuthStore";
 
 import Sidebar from "../components/Sidebar";
 import NoChatSelected from "../components/NoChatSelected";
@@ -12,7 +10,6 @@ import StatusCreationPanel from "../components/status/StatusCreationPanel.jsx";
 const HomePage = () => {
   const { selectedUser } = useChatStore();
   const { activeStatus, activeStatusCreation, closeStatus, closeCreateStatus } = useStatusStore();
-  const { authUser } = useAuthStore();
 
   return (
     <div className="h-full w-full flex bg-base-200 overflow-hidden font-sans text-base-content">

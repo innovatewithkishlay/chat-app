@@ -3,7 +3,8 @@ import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001" : (import.meta.env.VITE_API_BASE_URL || "/");
+const isDev = import.meta.env.MODE === "development";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || (isDev ? "http://localhost:5001" : "/");
 
 export const useAuthStore = create((set, get) => ({
     authUser: null,
@@ -23,7 +24,7 @@ export const useAuthStore = create((set, get) => ({
             get().fetchBlockedUsers();
             get().connectSocket();
         } catch (error) {
-            console.log("Error in checkAuth:", error);
+            console.error("Error in checkAuth:", error);
             set({ authUser: null, blockedUsers: [] });
         } finally {
             set({ isCheckingAuth: false });
@@ -71,6 +72,36 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
+    isRequestingReset: false,
+    forgotPassword: async (email) => {
+        set({ isRequestingReset: true });
+        try {
+            const res = await axiosInstance.post("/auth/forgot-password", { email });
+            toast.success(res.data.message);
+            return true;
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Something went wrong. Try again.");
+            return false;
+        } finally {
+            set({ isRequestingReset: false });
+        }
+    },
+
+    isResettingPassword: false,
+    resetPassword: async (token, password) => {
+        set({ isResettingPassword: true });
+        try {
+            const res = await axiosInstance.post("/auth/reset-password", { token, password });
+            toast.success(res.data.message);
+            return true;
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Something went wrong. Try again.");
+            return false;
+        } finally {
+            set({ isResettingPassword: false });
+        }
+    },
+
     updateProfile: async (data) => {
         set({ isUpdatingProfile: true });
         try {
@@ -82,23 +113,6 @@ export const useAuthStore = create((set, get) => ({
             toast.error(error.response.data.message);
         } finally {
             set({ isUpdatingProfile: false });
-        }
-    },
-
-    activatePro: async () => {
-        try {
-            const res = await axiosInstance.post("/users/activate-pro-temp");
-            set({ authUser: res.data });
-            toast.success("Upgraded to PRO successfully!");
-
-            // Reconnect socket to update user data (plan: PRO) in backend socket instance
-            get().disconnectSocket();
-            get().connectSocket();
-
-            return true;
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to upgrade");
-            return false;
         }
     },
 

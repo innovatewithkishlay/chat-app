@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react";
-import { useAuthStore } from "../store/useAuthStore";
+import { useEffect, useRef, useState } from "react";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
-import { Phone, PhoneOff, Mic, MicOff } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2 } from "lucide-react";
 import Avatar from "./Avatar";
 
 const VoiceCall = () => {
@@ -15,11 +14,16 @@ const VoiceCall = () => {
         endCall,
         toggleMic,
         isMicOn,
-        activeCallUserId
+        endReason,
+        callDuration
     } = useVoiceCallStore();
 
     const localAudioRef = useRef(null);
     const remoteAudioRef = useRef(null);
+    // See VideoCall.jsx - mobile browsers can silently block autoplay of the
+    // remote audio stream, so the call connects but the other person can't
+    // be heard. Detect it and offer a one-tap unlock.
+    const [playbackBlocked, setPlaybackBlocked] = useState(false);
 
     useEffect(() => {
         if (localStream && localAudioRef.current) {
@@ -30,10 +34,27 @@ const VoiceCall = () => {
     useEffect(() => {
         if (remoteStream && remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current
+                .play()
+                .then(() => setPlaybackBlocked(false))
+                .catch(() => setPlaybackBlocked(true));
         }
     }, [remoteStream]);
 
+    const unlockPlayback = () => {
+        remoteAudioRef.current
+            ?.play()
+            .then(() => setPlaybackBlocked(false))
+            .catch(() => {});
+    };
+
     if (callStatus === "IDLE") return null;
+
+    const formatDuration = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, "0")}`;
+    };
 
     return (
         <div className="fixed inset-0 bg-black/80 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-sm">
@@ -62,13 +83,26 @@ const VoiceCall = () => {
                             {callStatus === "OUTGOING" && "Calling..."}
                             {callStatus === "INCOMING" && "Incoming Voice Call..."}
                             {callStatus === "CONNECTED" && "Connected"}
+                            {callStatus === "ENDED" && (endReason || "Call ended")}
                         </p>
+                        {callStatus === "ENDED" && typeof callDuration === "number" && (
+                            <p className="text-zinc-500 text-sm mt-1">{formatDuration(callDuration)}</p>
+                        )}
                     </div>
                 </div>
 
                 {/* Audio Elements (Hidden) */}
                 <audio ref={localAudioRef} autoPlay muted />
                 <audio ref={remoteAudioRef} autoPlay />
+
+                {callStatus === "CONNECTED" && playbackBlocked && (
+                    <button
+                        onClick={unlockPlayback}
+                        className="flex items-center gap-2 text-xs font-medium text-white bg-primary/80 hover:bg-primary px-3 py-1.5 rounded-full -mt-4"
+                    >
+                        <Volume2 size={14} /> Tap to enable audio
+                    </button>
+                )}
 
                 {/* Controls */}
                 <div className="flex items-center gap-6 mt-4">
@@ -97,7 +131,7 @@ const VoiceCall = () => {
                                 </button>
                             )}
 
-                            <button onClick={endCall} className="btn btn-circle btn-error btn-lg text-white shadow-lg hover:scale-110 transition-transform">
+                            <button onClick={() => endCall()} className="btn btn-circle btn-error btn-lg text-white shadow-lg hover:scale-110 transition-transform">
                                 <PhoneOff size={32} />
                             </button>
                         </>

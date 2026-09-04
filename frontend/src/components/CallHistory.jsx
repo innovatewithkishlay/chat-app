@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useCallHistoryStore } from "../store/useCallHistoryStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Phone, Video, ArrowDownLeft, ArrowUpRight, Clock, XCircle, CheckCircle } from "lucide-react";
+import { Phone, Video, ArrowDownLeft, ArrowUpRight, Clock } from "lucide-react";
 import Avatar from "./Avatar";
 
 const CallHistory = () => {

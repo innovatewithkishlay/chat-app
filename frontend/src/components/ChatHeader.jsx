@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { X, Video, Lock, ArrowLeft, Phone, FileText, MessageSquare, MoreVertical } from "lucide-react";
+import { X, Video, Lock, ArrowLeft, Phone, FileText, MessageSquare, MoreVertical, KanbanSquare, BarChart2, Search } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChattingStore";
 import { useVideoCallStore } from "../store/useVideoCallStore";
 import { useVoiceCallStore } from "../store/useVoiceCallStore";
 import { useProductivityStore } from "../store/useProductivityStore";
 import ProModal from "./ProModal";
-import CreateGroupModal from "./CreateGroupModal"; // Assuming this is the 'Group Info' modal basically
 import ConfirmModal from "./ConfirmModal";
 import Avatar from "./Avatar";
 import toast from "react-hot-toast";
+import { formatDistanceToNow } from "date-fns";
 
 const ChatHeader = () => {
   const {
@@ -23,6 +23,7 @@ const ChatHeader = () => {
     clearChat,
     deleteChat,
     typingUsers,
+    toggleMessageSearch,
   } = useChatStore();
   const { onlineUsers = [], authUser } = useAuthStore();
   const { activeTab, setActiveTab } = useProductivityStore();
@@ -181,7 +182,10 @@ const ChatHeader = () => {
                       ? `${selectedUser.members.length} members`
                       : (onlineUsers.includes(selectedUser._id)
                         ? "Online"
-                        : "Offline"
+                        : (selectedUser.lastSeen
+                          ? `last seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
+                          : "Offline"
+                        )
                       )
                     }
                   </span>
@@ -193,6 +197,14 @@ const ChatHeader = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleMessageSearch}
+            className="p-2 rounded-full text-base-content/40 hover:text-primary hover:bg-base-200 transition-colors"
+            title="Search in chat"
+          >
+            <Search size={20} />
+          </button>
+
           {!isGroup && (
             <>
               <button
@@ -255,6 +267,18 @@ const ChatHeader = () => {
           className={`h-full flex items-center gap-2 text-xs font-medium border-b-2 transition-colors ${activeTab === "notes" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content/70"}`}
         >
           <FileText size={14} /> Notes
+        </button>
+        <button
+          onClick={() => setActiveTab("kanban")}
+          className={`h-full flex items-center gap-2 text-xs font-medium border-b-2 transition-colors ${activeTab === "kanban" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content/70"}`}
+        >
+          <KanbanSquare size={14} /> Board
+        </button>
+        <button
+          onClick={() => setActiveTab("polls")}
+          className={`h-full flex items-center gap-2 text-xs font-medium border-b-2 transition-colors ${activeTab === "polls" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content/70"}`}
+        >
+          <BarChart2 size={14} /> Polls
         </button>
       </div>
     </div>

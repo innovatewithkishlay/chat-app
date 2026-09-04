@@ -11,6 +11,13 @@ const redisOptions = {
         return delay;
     },
     maxRetriesPerRequest: 3, // Fail fast if Redis is down
+    connectTimeout: 5000,
+    // Without this, a command issued while disconnected sits in an internal
+    // queue waiting for reconnection instead of failing immediately - which
+    // meant every request touching Redis (login, rate limits) would hang for
+    // a long time during an outage instead of degrading gracefully like
+    // safeRedis() below is meant to guarantee.
+    enableOfflineQueue: false,
 };
 
 if (process.env.REDIS_URL && process.env.REDIS_URL.startsWith("rediss://")) {

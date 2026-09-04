@@ -10,15 +10,15 @@ import CallHistory from "../models/callHistory.model.js";
 const app = express();
 const server = http.createServer(app);
 
+export const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://chatify-hgj2.onrender.com",
-      "https://touki.onrender.com",
-      process.env.CLIENT_URL,
-    ].filter(Boolean),
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -28,6 +28,21 @@ export function getReceiverSocketId(userId) {
 }
 
 const userSocketMap = {}; // {userId: socketId}
+
+// Tracks who is currently on a call (voice or video), so a second incoming
+// call can be rejected as "busy" instead of ringing forever, and so the
+// remaining participant can be notified if their peer disconnects mid-call.
+const activeCalls = new Map(); // userId -> { peerId, callId, event: "call" | "voice:call" }
+
+function markCallActive(userId, peerId, callId, event) {
+  activeCalls.set(userId, { peerId, callId, event });
+  activeCalls.set(peerId, { peerId: userId, callId, event });
+}
+
+function clearActiveCall(userId, peerId) {
+  activeCalls.delete(userId);
+  activeCalls.delete(peerId);
+}
 
 // Socket Authentication Middleware
 io.use(async (socket, next) => {
@@ -97,6 +112,17 @@ io.on("connection", async (socket) => {
 
   socket.on("leaveGroup", (groupId) => {
     socket.leave(groupId);
+  });
+
+  // Productivity features (notes/polls/kanban/scheduled messages) broadcast
+  // to a room named by conversationId, which also covers 1-1 chats — those
+  // need an explicit join since they aren't covered by joinGroup.
+  socket.on("joinConversation", (conversationId) => {
+    socket.join(conversationId);
+  });
+
+  socket.on("leaveConversation", (conversationId) => {
+    socket.leave(conversationId);
   });
 
   socket.on("typing", (data) => {
@@ -174,16 +200,13 @@ io.on("connection", async (socket) => {
 
   // 1. Initiate Call
   socket.on("call:initiate", async (data) => {
-    console.log("SOCKET: call:initiate received", data);
     // data: { userToCall, signalData, from, name }
     try {
       const receiverSocketId = getReceiverSocketId(data.userToCall);
       const sender = socket.user;
-      console.log("SOCKET: Sender:", sender._id, "Receiver ID:", data.userToCall, "Receiver Socket:", receiverSocketId);
 
       // Eligibility Check (Sender)
       if (sender.plan !== "PRO") {
-        console.log("SOCKET: Sender not PRO");
         socket.emit("call:error", { message: "You must be PRO to make a video call." });
         return;
       }
@@ -191,8 +214,16 @@ io.on("connection", async (socket) => {
       // Eligibility Check (Receiver)
       const receiver = await User.findById(data.userToCall);
       if (!receiver || receiver.plan !== "PRO") {
-        console.log("SOCKET: Receiver not PRO or not found");
         socket.emit("call:error", { message: "The other user is not eligible (needs PRO)." });
+        return;
+      }
+
+      if (activeCalls.has(sender._id.toString())) {
+        socket.emit("call:error", { message: "You are already on a call." });
+        return;
+      }
+      if (activeCalls.has(data.userToCall)) {
+        socket.emit("call:error", { message: "The other user is busy on another call." });
         return;
       }
 
@@ -210,8 +241,6 @@ io.on("connection", async (socket) => {
       socket.emit("call:created", { callId: newCall._id });
 
       if (receiverSocketId) {
-        // Emit INCOMING to receiver
-        console.log("SOCKET: Emitting call:incoming to", receiverSocketId);
         io.to(receiverSocketId).emit("call:incoming", {
           signal: data.signalData,
           from: data.from,
@@ -219,7 +248,6 @@ io.on("connection", async (socket) => {
           callId: newCall._id,
         });
       } else {
-        console.log("SOCKET: Receiver offline");
         socket.emit("call:error", { message: "User is offline." });
 
         // Mark as MISSED immediately if offline
@@ -244,6 +272,8 @@ io.on("connection", async (socket) => {
         startedAt: new Date(),
       });
     }
+
+    markCallActive(userId, data.to, data.callId, "call");
 
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("call:accepted", { signal: data.signal, callId: data.callId });
@@ -287,6 +317,8 @@ io.on("connection", async (socket) => {
       }
     }
 
+    clearActiveCall(userId, data.to);
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("call:ended", { reason: "Call ended." });
     }
@@ -305,7 +337,6 @@ io.on("connection", async (socket) => {
 
   // 1. Initiate Voice Call
   socket.on("voice:call:initiate", async (data) => {
-    console.log("SOCKET: voice:call:initiate received", data);
     try {
       const receiverSocketId = getReceiverSocketId(data.userToCall);
       const sender = socket.user;
@@ -320,6 +351,15 @@ io.on("connection", async (socket) => {
       const receiver = await User.findById(data.userToCall);
       if (!receiver || receiver.plan !== "PRO") {
         socket.emit("voice:call:error", { message: "The other user is not eligible (needs PRO)." });
+        return;
+      }
+
+      if (activeCalls.has(sender._id.toString())) {
+        socket.emit("voice:call:error", { message: "You are already on a call." });
+        return;
+      }
+      if (activeCalls.has(data.userToCall)) {
+        socket.emit("voice:call:error", { message: "The other user is busy on another call." });
         return;
       }
 
@@ -366,6 +406,8 @@ io.on("connection", async (socket) => {
       });
     }
 
+    markCallActive(userId, data.to, data.callId, "voice:call");
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("voice:call:accepted", { signal: data.signal, callId: data.callId });
     }
@@ -406,6 +448,8 @@ io.on("connection", async (socket) => {
       }
     }
 
+    clearActiveCall(userId, data.to);
+
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("voice:call:ended", { reason: "Call ended." });
     }
@@ -420,9 +464,36 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("disconnect", async () => {
-    console.log("A user disconnected", socket.id);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+    // If this user was mid-call, let their peer know instead of leaving
+    // them connected to a dead stream indefinitely.
+    const call = activeCalls.get(userId);
+    if (call) {
+      const peerSocketId = getReceiverSocketId(call.peerId);
+      if (peerSocketId) {
+        io.to(peerSocketId).emit(`${call.event}:ended`, { reason: "Peer disconnected." });
+      }
+      if (call.callId) {
+        try {
+          const callDoc = await CallHistory.findById(call.callId);
+          if (callDoc && callDoc.status !== "ENDED") {
+            const endedAt = new Date();
+            callDoc.status = "ENDED";
+            callDoc.endedAt = endedAt;
+            callDoc.duration = callDoc.startedAt
+              ? Math.round((endedAt - new Date(callDoc.startedAt)) / 1000)
+              : 0;
+            callDoc.endedBy = userId;
+            await callDoc.save();
+          }
+        } catch (error) {
+          console.error("Error closing call on disconnect:", error);
+        }
+      }
+      clearActiveCall(userId, call.peerId);
+    }
 
     // Update lastSeen
     try {

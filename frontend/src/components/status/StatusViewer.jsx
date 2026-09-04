@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { X, ChevronLeft, Eye } from "lucide-react";
 import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import StatusViewersSheet from "./StatusViewersSheet";

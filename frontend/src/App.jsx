@@ -1,22 +1,37 @@
-import React, { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
-import SettingPage from "./pages/SettingPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import ProfilePage from "./pages/ProfilePage";
-import ProPage from "./pages/ProPage";
-import DeveloperPage from "./pages/DeveloperPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useAuthStore } from "./store/useAuthStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import { useThemeStore } from "./store/useThemeStore";
 import { useChatStore } from "./store/useChattingStore";
+import { useProductivityStore } from "./store/useProductivityStore";
 import { useVideoCallStore } from "./store/useVideoCallStore";
 import { useVoiceCallStore } from "./store/useVoiceCallStore";
-import VideoCall from "./components/VideoCall";
-import VoiceCall from "./components/VoiceCall";
+
+// Code-split everything that isn't needed for the initial login/signup
+// screen - these pull in the chat UI, WebRTC call components, and the
+// productivity suite, which made up the bulk of the original single-bundle
+// build.
+const HomePage = lazy(() => import("./pages/HomePage"));
+const SettingPage = lazy(() => import("./pages/SettingPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ProPage = lazy(() => import("./pages/ProPage"));
+const DeveloperPage = lazy(() => import("./pages/DeveloperPage"));
+const StarredMessagesPage = lazy(() => import("./pages/StarredMessagesPage"));
+const VideoCall = lazy(() => import("./components/VideoCall"));
+const VoiceCall = lazy(() => import("./components/VoiceCall"));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-full w-full py-20">
+    <Loader className="size-8 animate-spin opacity-60" />
+  </div>
+);
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
@@ -29,18 +44,20 @@ const App = () => {
   }, [checkAuth]);
 
   useEffect(() => {
-    if (authUser) {
+    if (authUser?._id) {
       useVideoCallStore.getState().initializeListeners();
       useVoiceCallStore.getState().initializeListeners();
       useChatStore.getState().subscribeToPush();
       useChatStore.getState().subscribeToMessages();
+      useProductivityStore.getState().subscribeToProductivityEvents();
     }
     return () => {
       useVideoCallStore.getState().cleanupListeners();
       useVoiceCallStore.getState().cleanupListeners();
       useChatStore.getState().unsubscribeFromMessages();
+      useProductivityStore.getState().unsubscribeFromProductivityEvents();
     };
-  }, [authUser]);
+  }, [authUser?._id]);
 
   useEffect(() => {
     const setAppHeight = () => {
@@ -65,32 +82,45 @@ const App = () => {
   return (
     <div data-theme={theme} className="chat-page w-full flex flex-col bg-base-100 overflow-hidden">
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <Routes>
-          <Route
-            path="/"
-            element={authUser ? <HomePage /> : <Navigate to={"/login"} />}
-          />
-          <Route
-            path="/login"
-            element={!authUser ? <LoginPage /> : <Navigate to={"/"} />}
-          />
-          <Route
-            path="/signup"
-            element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
-          />
-          <Route path="/settings" element={<SettingPage />} />
-          <Route path="/settings/privacy" element={authUser ? <PrivacyPage /> : <Navigate to={"/login"} />} />
-          <Route path="/settings/pro" element={<ProPage />} />
-          <Route path="/settings/developer" element={<DeveloperPage />} />
-          <Route
-            path="/profile"
-            element={authUser ? <ProfilePage /> : <Navigate to={"/login"} />}
-          />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route
+              path="/"
+              element={authUser ? <HomePage /> : <Navigate to={"/login"} />}
+            />
+            <Route
+              path="/login"
+              element={!authUser ? <LoginPage /> : <Navigate to={"/"} />}
+            />
+            <Route
+              path="/signup"
+              element={!authUser ? <SignupPage /> : <Navigate to={"/"} />}
+            />
+            <Route
+              path="/forgot-password"
+              element={!authUser ? <ForgotPasswordPage /> : <Navigate to={"/"} />}
+            />
+            <Route
+              path="/reset-password/:token"
+              element={!authUser ? <ResetPasswordPage /> : <Navigate to={"/"} />}
+            />
+            <Route path="/settings" element={<SettingPage />} />
+            <Route path="/settings/privacy" element={authUser ? <PrivacyPage /> : <Navigate to={"/login"} />} />
+            <Route path="/settings/starred" element={authUser ? <StarredMessagesPage /> : <Navigate to={"/login"} />} />
+            <Route path="/settings/pro" element={<ProPage />} />
+            <Route path="/settings/developer" element={<DeveloperPage />} />
+            <Route
+              path="/profile"
+              element={authUser ? <ProfilePage /> : <Navigate to={"/login"} />}
+            />
+          </Routes>
+        </Suspense>
       </div>
       <Toaster />
-      {authUser && callStatus !== "IDLE" && <VideoCall />}
-      {authUser && voiceCallStatus !== "IDLE" && <VoiceCall />}
+      <Suspense fallback={null}>
+        {authUser && callStatus !== "IDLE" && <VideoCall />}
+        {authUser && voiceCallStatus !== "IDLE" && <VoiceCall />}
+      </Suspense>
     </div>
   );
 };

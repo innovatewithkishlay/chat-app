@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./TaskCard";
 import { Plus } from "lucide-react";
@@ -46,5 +46,6 @@ const KanbanColumn = memo(({ column, tasks, onAddTask, onTaskClick }) => {
         </div>
     );
 });
+KanbanColumn.displayName = "KanbanColumn";
 
 export default KanbanColumn;

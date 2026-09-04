@@ -60,6 +60,10 @@ export const verifyPayment = async (req, res) => {
             // Payment is successful
             const user = await User.findById(userId);
 
+            if (user.razorpayPaymentId === razorpay_payment_id) {
+                return res.status(400).json({ success: false, message: "Payment already processed" });
+            }
+
             const now = new Date();
             const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
 

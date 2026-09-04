@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChattingStore";
-import { X, Plus, Trash2, Edit2 } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
 import gsap from "gsap";
 
 const ChatMemory = ({ conversationId, isOpen, onClose }) => {

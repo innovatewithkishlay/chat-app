@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from "react";
+import { useEffect, useState, memo } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { useChatStore } from "../../store/useChattingStore";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -54,6 +54,7 @@ const PollItem = memo(({ poll, currentUserId, onVote }) => {
         </div>
     );
 });
+PollItem.displayName = "PollItem";
 
 const PollsList = () => {
     const selectedUser = useChatStore((state) => state.selectedUser);

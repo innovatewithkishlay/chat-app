@@ -1,4 +1,3 @@
-import React from "react";
 import NotesList from "./NotesList";
 import NoteEditor from "./NoteEditor";
 import { useProductivityStore } from "../../store/useProductivityStore";

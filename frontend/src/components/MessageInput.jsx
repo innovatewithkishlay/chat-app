@@ -1,11 +1,12 @@
-import { useRef, useState, useEffect } from "react";
+import { Suspense, lazy, useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X, Mic, Smile, Clock, Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import EmojiPicker from "emoji-picker-react";
 import gsap from "gsap";
-import ScheduledMessagesModal from "./productivity/ScheduledMessagesModal";
+
+const ScheduledMessagesModal = lazy(() => import("./productivity/ScheduledMessagesModal"));
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
 const MessageInput = () => {
   const [text, setText] = useState("");
@@ -13,8 +14,6 @@ const MessageInput = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false); // For Plus button
-
-  const [isRecording, setIsRecording] = useState(false);
 
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
@@ -194,11 +193,17 @@ const MessageInput = () => {
       <div className="p-2 lg:px-4 lg:py-2 min-h-[60px] flex items-end gap-2 relative">
         {showEmojiPicker && (
           <div ref={emojiPickerRef} className="absolute bottom-[70px] left-4 z-20">
-            <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} theme="auto" />
+            <Suspense fallback={null}>
+              <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} theme="auto" />
+            </Suspense>
           </div>
         )}
 
-        {showScheduleModal && <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />}
+        {showScheduleModal && (
+          <Suspense fallback={null}>
+            <ScheduledMessagesModal onClose={() => setShowScheduleModal(false)} />
+          </Suspense>
+        )}
 
         {/* Attach Menu */}
         {showAttachMenu && (

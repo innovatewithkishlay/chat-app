@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Clock, User } from "lucide-react";
+import { X, Clock } from "lucide-react";
 import { useStatusStore } from "../../store/useStatusStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";

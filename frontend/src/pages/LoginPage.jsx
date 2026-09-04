@@ -58,8 +58,11 @@ const LoginPage = () => {
             </div>
 
             <div className="form-control">
-              <label className="label">
+              <label className="label flex items-center justify-between">
                 <span className="label-text font-medium">Password</span>
+                <Link to="/forgot-password" className="label-text-alt link link-primary">
+                  Forgot password?
+                </Link>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

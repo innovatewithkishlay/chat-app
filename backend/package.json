@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "cross-env PORT=5001 nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "generate:vapid-keys": "node scripts/generate-vapid-keys.js"
   },
   "keywords": [
     "chat"
@@ -24,6 +25,7 @@
     "ioredis": "^5.9.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
+    "nodemailer": "^9.1.1",
     "razorpay": "^2.9.6",
     "socket.io": "^4.8.1",
     "web-push": "^3.6.7"

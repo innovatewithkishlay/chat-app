@@ -1,5 +1,10 @@
 import User from "../models/user.model.js";
 import { canUseVideoCall } from "../lib/utils.js";
+import { getIceServers } from "../lib/iceServers.js";
+
+export const getIceServerConfig = (req, res) => {
+    res.status(200).json({ iceServers: getIceServers() });
+};
 
 export const checkEligibility = async (req, res) => {
     try {

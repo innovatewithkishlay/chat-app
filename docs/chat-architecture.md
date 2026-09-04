@@ -1,4 +1,4 @@
-# 🏗️ Chat Architecture & Real-Time Flow
+# Chat Architecture & Real-Time Flow
 
 ## 1. High-Level Architecture
 
@@ -23,7 +23,7 @@ The sidebar is no longer a passive list. It subscribes to `conversationUpdated` 
 
 ## 2. Data Flows
 
-### 📤 Send Message Flow
+### Send Message Flow
 1. **User** types and hits send.
 2. **Backend**:
    - Saves `Message`.
@@ -36,14 +36,14 @@ The sidebar is no longer a passive list. It subscribes to `conversationUpdated` 
    - If chat open: Adds message, marks as seen immediately.
    - If chat closed: Updates sidebar (top), increments unread badge.
 
-### 📥 Receive Message Flow
+### Receive Message Flow
 1. **Socket** receives `conversationUpdated`.
 2. **Store**:
    - Removes old conversation entry.
    - Adds new conversation entry at `index 0`.
    - Updates unread badge (if not current chat).
 
-### 🔄 Offline → Reconnect Flow
+### Offline → Reconnect Flow
 1. **User** is offline. Messages accumulate in DB.
 2. **User** comes online (or refreshes).
 3. **Socket** connects (`socket.on("connect")`).
@@ -72,8 +72,9 @@ The sidebar is no longer a passive list. It subscribes to `conversationUpdated` 
 
 ---
 
-## 5. Why this works like WhatsApp
-1. **Recency Sorting**: Most active chats are always at the top.
-2. **Persistent Unread**: Unread counts survive refreshes.
-3. **Live Feedback**: "Seen" status updates instantly for the sender.
-4. **Zero Refresh**: The entire flow (send -> receive -> sort -> read) happens without a single page reload.
+## 5. Summary
+
+1. **Recency sorting**: most active chats are always at the top.
+2. **Persistent unread state**: unread counts survive refreshes.
+3. **Live feedback**: "seen" status updates instantly for the sender.
+4. **No manual refresh**: the entire flow (send → receive → sort → read) happens over sockets.

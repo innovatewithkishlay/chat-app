@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import {
-    ArrowLeft,
     UserPlus,
     Edit2,
     Check,
@@ -10,7 +9,6 @@ import {
     ShieldCheck,
     Camera,
     MoreVertical,
-    Users,
     X
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -39,21 +37,22 @@ const GroupSettingsModal = ({ onClose }) => {
 
     const fileInputRef = useRef(null);
 
+    // =============================
+    // Sync State
+    // =============================
+    useEffect(() => {
+        if (!selectedUser) return;
+        setName(selectedUser.name || "");
+        setDescription(selectedUser.description || "");
+        setImagePreview(selectedUser.avatar || "");
+    }, [selectedUser]);
+
     if (!selectedUser) return null;
 
     const isAdmin =
         selectedUser.admins?.some(
             (admin) => admin._id === authUser?._id
         ) || false;
-
-    // =============================
-    // Sync State
-    // =============================
-    useEffect(() => {
-        setName(selectedUser.name || "");
-        setDescription(selectedUser.description || "");
-        setImagePreview(selectedUser.avatar || "");
-    }, [selectedUser]);
 
     // =============================
     // Handlers
