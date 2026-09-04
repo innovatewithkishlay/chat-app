@@ -1,36 +1,63 @@
-# Toukii — Real-Time Chat & Team Productivity Platform
+# Toukii
 
-A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group chat sit alongside per-conversation Kanban boards, shared notes, polls, and scheduled messages, so a team doesn't have to bounce between a chat app and a separate task tool.
+A real-time chat app built on the MERN stack, with Socket.io handling everything live — messages, typing, presence, WebRTC signaling for calls. The pitch is simple: most teams end up juggling a chat app for conversation and a separate tool for tasks. Toukii puts a lightweight Kanban board, shared notes, and polls directly inside each conversation, scoped to that chat, so the context never leaves the thread.
+
+Live demo: https://touki.onrender.com (runs on Render's free tier — see [Known limitations](#known-limitations) for what that means for first-load time).
 
 ## Features
 
-**Messaging**
-- 1-1 and group chat with image sharing, replies, edits, reactions, and delete-for-me / delete-for-everyone
-- Delivery pipeline with sending → sent → delivered → read states, driven by Socket.io
-- Typing indicators, online presence, and optimistic UI on send
-- In-chat message search, scoped to the open conversation or group
-- Star any message and browse everything you've starred across every chat in one place
-- "Last seen" timestamp when a contact is offline, not just an Online/Offline flag
-- User blocking and per-conversation "memory" notes (pinned context tied to a message)
+### Messaging
+- 1-1 and group chat, with image sharing, swipe-to-reply, and double-click-to-reply
+- Edit sent messages (15-minute window) and delete for yourself or for everyone
+- Emoji reactions
+- Four-stage delivery ticks — sending, sent, delivered, read — updated live over sockets
+- Typing indicators and online presence, with a "last seen" timestamp once someone goes offline
+- Search inside a conversation, with results highlighted and click-to-jump
+- Star any message and pull up everything you've starred across every chat in one place
+- A timeline scrubber for jumping to a date in a long conversation
+- Per-conversation "memory" — pin a note against a specific message for later context
+- Block/unblock users
+- Mood status (e.g. "Focused", "Busy") shown next to your name, with an optional auto-expiry
 
-**Productivity, scoped to a conversation**
-- Kanban boards with drag-and-drop tasks (`@hello-pangea/dnd`)
-- Collaborative notes with version history
-- Polls with live vote counts
-- Scheduled messages, delivered by a background job
-- Reminders on individual messages
+### Groups
+- Create groups, manage admins (promote/dismiss), add or remove members
+- Edit group name, description, and avatar
+- System messages for group events (member added, admin change, etc.)
+- Leave a group cleanly, or have an admin remove you
 
-**Groups & social graph**
-- Groups with admin roles, promote/dismiss, and add/remove members
-- Friend requests and a talk-request flow for starting new conversations
+### Friends
+- Send/accept/reject talk requests to start a new conversation
+- Search users by username
 
-**Account**
-- Email/password auth with rate-limited login and a full forgot/reset password flow (emailed reset link, 30-minute expiry, single use)
+### Productivity, scoped to whichever chat you're in
+- Kanban board with drag-and-drop tasks (built on `@hello-pangea/dnd`), auto-created per conversation
+- Shared notes with version history
+- Polls with live vote percentages
+- Schedule a message to send later — a background job delivers it
+- Set a reminder on any individual message
 
-**Pro tier** (Razorpay subscription)
-- 1-1 voice and video calling over WebRTC, signaled through Socket.io — busy detection, a 45s no-answer timeout, and a brief "call ended" recap screen (with duration) instead of the call just vanishing
-- 24-hour disappearing statuses with a viewer list
+### Calls (Pro)
+- 1-1 voice and video calling over WebRTC, signaled through Socket.io
+- Busy detection — a second incoming call is rejected instead of ringing into nothing
+- 45-second no-answer timeout instead of "Calling..." forever
+- A brief "call ended" recap screen with duration, instead of the call view just disappearing
+- Handles the mobile autoplay block some browsers apply to the remote stream — you get a one-tap "enable audio" prompt instead of silence with no explanation
+- TURN relay support via env config, for callers behind restrictive NATs (off by default, since it needs a TURN provider — see `.env.example`)
+- Call history log
+
+### Status (Pro)
+- 24-hour disappearing text/image/video statuses
+- Viewer list, with a short engagement timer before a view counts
+
+### Account
+- Email/password auth (signup restricted to a small allowlist of email domains)
+- Login is rate-limited — 5 failed attempts locks it for 15 minutes
+- Forgot/reset password: emailed link, 30-minute expiry, single use, and the endpoint responds the same way whether or not the email is registered so it can't be used to check who has an account
 - Web Push notifications for offline users
+
+### Pro subscription
+- Razorpay checkout, with the payment signature re-verified server-side and checked against replay before granting access
+- Daily image/video upload caps that scale by plan
 
 ## Tech stack
 
@@ -41,23 +68,20 @@ A MERN + Socket.io chat application that goes beyond messaging: 1-1 and group ch
 | Real-time | Socket.io (chat, presence, typing, WebRTC signaling) |
 | Data | MongoDB, Redis (status feed caching, login/reset-request rate limiting) |
 | Media | Cloudinary |
-| Payments | Razorpay, with server-side signature verification |
-| Email | Nodemailer over Gmail SMTP (password reset) |
+| Payments | Razorpay |
+| Email | Nodemailer over Gmail SMTP |
 
-## Architecture notes
+## A few implementation details worth knowing
 
-A few decisions that shaped the backend, documented in more detail in [`docs/chat-architecture.md`](docs/chat-architecture.md):
+The sidebar isn't driven by a plain user list — it's built on a `Conversation` document that tracks participants, the last message, and a per-user unread count, which is what lets it re-sort by recency and update in place as sockets fire. Kanban/notes/poll updates work the same way: each one broadcasts to a Socket.io room keyed by the conversation (or group) id, and clients join that room only while they have the relevant panel open, so updates don't get pushed to people who aren't looking at that conversation.
 
-- **Conversations, not user lists.** The sidebar is driven by a `Conversation` document (participants, last message, per-user unread count) rather than a static contact list, so it can be sorted by recency and updated in place over sockets.
-- **Room-scoped productivity events.** Kanban/notes/polls broadcast to a Socket.io room keyed by the conversation (or group) id. Clients join that room when they open the relevant panel and leave it when they switch chats, so updates only reach people actually looking at that conversation.
-- **Authorization checks live in the controllers.** Every productivity and reminder endpoint verifies the requester is a participant/member of the underlying conversation or group before reading or mutating anything — this was tightened up during a security pass (see below).
-- **Payment verification is server-side only.** The client never sets subscription state directly; `/api/payment/verify-payment` recomputes the Razorpay HMAC signature and checks the payment id hasn't already been applied before granting Pro.
-- **Calls track "busy" state server-side.** The signaling layer keeps an in-memory map of who's currently on a call so a second incoming call is rejected as busy instead of ringing forever, and a peer's socket disconnecting mid-call ends the session on the other side rather than leaving it hanging.
-- **Route-level code splitting.** Everything past the login/signup screen (chat UI, the productivity suite, WebRTC call components) is lazy-loaded, so an unauthenticated visitor's first paint doesn't wait on code they haven't reached yet.
-- **ICE servers come from the backend, not a hardcoded frontend list.** `GET /api/video-call/ice-servers` builds the list from env config, so a TURN provider can be added without a frontend deploy — see `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` below.
-- **Password reset tokens are never stored in plaintext.** `forgotPassword` generates a random token, emails the raw value, and stores only its SHA-256 hash with a 30-minute expiry; `resetPassword` re-hashes the submitted token to look it up. The endpoint also responds identically whether or not the email is registered, so it can't be used to enumerate accounts.
-- **Redis is configured to fail fast, not hang.** By default ioredis queues commands while disconnected and waits for reconnection, which meant a Redis outage silently turned every login/rate-limit check into a multi-second (sometimes much longer) hang instead of degrading gracefully. `enableOfflineQueue: false` plus a bounded `connectTimeout` make a Redis-touching request fail in milliseconds instead, so the app stays responsive if Redis is unreachable.
-- **A remote autoplay block doesn't fail silently.** Mobile browsers (Safari especially) often block autoplay of the remote call stream if it's not tightly coupled to a user gesture — the call connects but the other person is silent with no visible error. The call UI explicitly calls `.play()`, catches the rejection, and shows a one-tap "enable audio" prompt instead of leaving the user wondering why they can't hear anything.
+Every productivity and reminder endpoint checks that the requester is actually a participant of the conversation or group before it'll read or touch anything — that wasn't always true, and got tightened up during a security pass over the whole controller layer. The Razorpay flow got the same scrutiny: the client never sets subscription state directly, and `/api/payment/verify-payment` recomputes the HMAC signature itself and checks the payment id hasn't already been applied, so a captured request can't be replayed to keep extending Pro for free.
+
+On the call side, the signaling layer keeps an in-memory map of who's currently on a call, which is how a second incoming call gets rejected as busy instead of just ringing forever with nobody able to explain why. If a peer's socket drops mid-call, the other side gets told the call ended rather than being left staring at a frozen stream. ICE servers are served from the backend (`GET /api/video-call/ice-servers`) instead of being hardcoded on the frontend, so a TURN provider can be wired in through env vars alone, no redeploy needed.
+
+Password reset tokens are never stored as plaintext — `forgotPassword` generates a random token, emails the raw value, and only keeps its SHA-256 hash server-side with a 30-minute expiry; `resetPassword` re-hashes whatever's submitted to look it up. Redis is configured with `enableOfflineQueue: false` and a bounded connect timeout, which matters more than it sounds like: without it, a Redis outage doesn't just disable rate limiting, it makes every login request queue silently and hang for a long time instead of failing fast. And the whole app past the login screen — the chat UI, the WebRTC call components, the productivity suite — is code-split, so an unauthenticated visitor's first paint doesn't wait on JavaScript they haven't reached yet.
+
+More detail on the sidebar/conversation design specifically is in [`docs/chat-architecture.md`](docs/chat-architecture.md).
 
 ## Getting started
 
@@ -92,10 +116,10 @@ The frontend runs on `http://localhost:5173` by default and calls the backend at
 ## Known limitations
 
 - No automated test suite yet — changes are currently verified manually and with `npm run lint`.
-- No TURN server is configured out of the box, so calls between peers on restrictive/symmetric NATs may fail to connect until `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` are set (see `.env.example`).
+- No TURN server is configured out of the box, so calls between peers on restrictive/symmetric NATs may fail to connect until `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` are set.
 - Password reset emails require `GMAIL_USER`/`GMAIL_APP_PASSWORD` (a Gmail App Password, not the account password); without them the reset link is logged to the server console instead, which is fine for local development but not for a real deployment. Gmail SMTP also caps daily send volume, which is fine at demo scale but not for production traffic.
-- The single background `setInterval` in `index.js` handles both reminders and scheduled messages; it's fine for a single-instance deployment but would need to move to a proper job queue (e.g. BullMQ) to run safely across multiple server instances.
-- The hosted demo runs on a free Render web service, which spins down after a period of inactivity — the first request after idle time pays a cold-start cost (both the API waking up and MongoDB/Redis reconnecting) before the page renders. This is a hosting-tier characteristic, not an application bug; an always-on instance (or a separate static host for the frontend) removes it.
+- The single background `setInterval` in `index.js` handles both reminders and scheduled messages; fine for a single-instance deployment, but would need to move to a proper job queue (e.g. BullMQ) to run safely across multiple server instances.
+- The hosted demo runs on a free Render web service, which spins down after a period of inactivity — the first request after idle time pays a cold-start cost (the API waking up, then MongoDB/Redis reconnecting) before the page renders. That's a hosting-tier characteristic, not an application bug; an always-on instance (or hosting the frontend separately as a static site) removes it.
 
 ## License
 
