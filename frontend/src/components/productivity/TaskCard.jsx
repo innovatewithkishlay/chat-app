@@ -1,8 +1,11 @@
 import { memo } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { Calendar, User } from "lucide-react";
+import { Calendar } from "lucide-react";
+import Avatar from "../Avatar";
 
 const TaskCard = memo(({ task, index, onClick }) => {
+    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date().setHours(0, 0, 0, 0);
+
     return (
         <Draggable draggableId={task._id} index={index}>
             {(provided, snapshot) => (
@@ -35,19 +38,19 @@ const TaskCard = memo(({ task, index, onClick }) => {
 
                     <h4 className="font-medium text-sm mb-1 break-all whitespace-normal">{task.title}</h4>
 
-                    <div className="flex items-center justify-between mt-3 text-xs opacity-60">
+                    <div className="flex items-center justify-between mt-3 text-xs">
                         {task.dueDate && (
-                            <div className="flex items-center gap-1">
+                            <div className={`flex items-center gap-1 ${isOverdue ? "text-error font-medium" : "opacity-60"}`}>
                                 <Calendar size={12} />
                                 <span>{new Date(task.dueDate).toLocaleDateString()}</span>
                             </div>
                         )}
 
                         {task.assignedTo && task.assignedTo.length > 0 && (
-                            <div className="flex -space-x-1">
-                                {task.assignedTo.slice(0, 3).map((userId, i) => (
-                                    <div key={i} className="size-5 rounded-full bg-primary/20 border border-base-100 flex items-center justify-center text-[8px]">
-                                        <User size={10} />
+                            <div className="flex -space-x-1.5 ml-auto">
+                                {task.assignedTo.slice(0, 3).map((member) => (
+                                    <div key={member._id || member} className="ring-2 ring-base-100 rounded-full">
+                                        <Avatar user={typeof member === "object" ? member : { fullname: "?" }} size="size-5" />
                                     </div>
                                 ))}
                             </div>

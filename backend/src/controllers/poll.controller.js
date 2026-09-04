@@ -137,6 +137,10 @@ export const votePoll = async (req, res) => {
         const poll = await Poll.findById(pollId);
         if (!poll) return res.status(404).json({ message: "Poll not found" });
 
+        if (poll.isClosed) {
+            return res.status(400).json({ message: "This poll is closed" });
+        }
+
         // Use groupId or conversationId to check permission
         // We can reuse checkPermission but need to pass the correct ID
         // Or just manual check since we have the Poll object
@@ -185,6 +189,40 @@ export const votePoll = async (req, res) => {
         res.status(200).json(poll);
     } catch (error) {
         console.error("Error in votePoll:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const closePoll = async (req, res) => {
+    try {
+        const { pollId } = req.params;
+        const userId = req.user._id;
+
+        const poll = await Poll.findById(pollId);
+        if (!poll) return res.status(404).json({ message: "Poll not found" });
+
+        if (poll.createdBy.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Only the poll creator can close it" });
+        }
+
+        poll.isClosed = true;
+        await poll.save();
+
+        if (poll.groupId) {
+            const group = await Group.findById(poll.groupId);
+            if (group) {
+                group.members.forEach(memberId => {
+                    const socketId = getReceiverSocketId(memberId);
+                    if (socketId) io.to(socketId).emit("poll:updated", poll);
+                });
+            }
+        } else if (poll.conversationId) {
+            io.to(poll.conversationId.toString()).emit("poll:updated", poll);
+        }
+
+        res.status(200).json(poll);
+    } catch (error) {
+        console.error("Error in closePoll:", error.message);
         res.status(500).json({ message: "Internal Server Error" });
     }
 };

@@ -34,7 +34,7 @@ const ProModal = ({ onClose }) => {
                 key: orderData.keyId,
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "Chatify Pro",
+                name: "Toukii Pro",
                 description: "Unlock Premium Features",
                 image: "/logo.png",
                 order_id: orderData.orderId,

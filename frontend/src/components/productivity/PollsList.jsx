@@ -2,16 +2,33 @@ import { useEffect, useState, memo } from "react";
 import { useProductivityStore } from "../../store/useProductivityStore";
 import { useChatStore } from "../../store/useChattingStore";
 import { useAuthStore } from "../../store/useAuthStore";
-import { Plus, BarChart2, CheckCircle } from "lucide-react";
+import { Plus, BarChart2, CheckCircle, Lock } from "lucide-react";
 import { PollsSkeleton } from "../skeletons/ProductivitySkeletons";
 
-const PollItem = memo(({ poll, currentUserId, onVote }) => {
+const PollItem = memo(({ poll, currentUserId, onVote, onClose }) => {
     const totalVotes = poll.options.reduce((acc, opt) => acc + opt.voteCount, 0);
+    const isCreator = poll.createdBy === currentUserId;
 
     return (
-        <div className="card bg-base-200 shadow-sm border border-base-300">
+        <div className={`card bg-base-200 shadow-sm border ${poll.isClosed ? "border-base-300/50 opacity-80" : "border-base-300"}`}>
             <div className="card-body p-5">
-                <h3 className="font-bold text-lg mb-4">{poll.question}</h3>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                    <h3 className="font-bold text-lg">{poll.question}</h3>
+                    {poll.isClosed ? (
+                        <span className="flex items-center gap-1 text-xs font-medium text-base-content/50 bg-base-300/50 px-2 py-1 rounded-full shrink-0">
+                            <Lock size={12} /> Closed
+                        </span>
+                    ) : (
+                        isCreator && (
+                            <button
+                                onClick={() => onClose(poll._id)}
+                                className="text-xs font-medium text-base-content/50 hover:text-error px-2 py-1 rounded-full transition-colors shrink-0"
+                            >
+                                Close poll
+                            </button>
+                        )
+                    )}
+                </div>
 
                 <div className="space-y-3">
                     {poll.options.map((option, idx) => {
@@ -21,9 +38,10 @@ const PollItem = memo(({ poll, currentUserId, onVote }) => {
                         return (
                             <div
                                 key={idx}
-                                onClick={() => onVote(poll._id, idx)}
+                                onClick={() => !poll.isClosed && onVote(poll._id, idx)}
                                 className={`
-            relative p-3 rounded-lg cursor-pointer border transition-all overflow-hidden
+            relative p-3 rounded-lg border transition-all overflow-hidden
+            ${poll.isClosed ? "cursor-default" : "cursor-pointer"}
             ${isVoted ? "border-primary bg-primary/5" : "border-base-300 hover:bg-base-300/50"}
           `}
                             >
@@ -64,6 +82,7 @@ const PollsList = () => {
     const fetchPolls = useProductivityStore((state) => state.fetchPolls);
     const createPoll = useProductivityStore((state) => state.createPoll);
     const votePoll = useProductivityStore((state) => state.votePoll);
+    const closePoll = useProductivityStore((state) => state.closePoll);
     const isPollsLoading = useProductivityStore((state) => state.isPollsLoading);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -125,6 +144,7 @@ const PollsList = () => {
                             poll={poll}
                             currentUserId={authUser._id}
                             onVote={votePoll}
+                            onClose={closePoll}
                         />
                     ))}
 

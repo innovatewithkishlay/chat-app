@@ -119,13 +119,20 @@ const MessageBubble = ({
                     </div>
 
                     <div className={`p-4 rounded-2xl shadow-sm border ${isMyMessage ? "bg-base-100 border-primary/20" : "bg-base-100 border-base-300"} `}>
-                        <div className="font-bold text-base-content mb-2">{poll.question}</div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="font-bold text-base-content">{poll.question}</div>
+                            {poll.isClosed && (
+                                <span className="text-[10px] font-medium text-base-content/40 bg-base-200 px-1.5 py-0.5 rounded-full shrink-0">
+                                    Closed
+                                </span>
+                            )}
+                        </div>
                         <div className="space-y-2">
                             {poll.options.map((option, idx) => {
                                 const percentage = totalVotes === 0 ? 0 : Math.round((option.voteCount / totalVotes) * 100);
                                 const isVoted = poll.votes.some(v => v.userId === authUser._id && v.optionIndex === idx);
                                 return (
-                                    <div key={idx} onClick={() => !isVoted && votePoll(poll._id, idx)} className={`relative p-2 rounded-lg border cursor-pointer overflow-hidden ${isVoted ? "border-primary/30 bg-primary/5" : "border-base-300 hover:bg-base-200"}`}>
+                                    <div key={idx} onClick={() => !isVoted && !poll.isClosed && votePoll(poll._id, idx)} className={`relative p-2 rounded-lg border overflow-hidden ${poll.isClosed ? "cursor-default" : "cursor-pointer"} ${isVoted ? "border-primary/30 bg-primary/5" : "border-base-300 hover:bg-base-200"}`}>
                                         <div className="absolute inset-0 bg-primary/10 transition-all duration-500" style={{ width: `${percentage}%` }} />
                                         <div className="relative z-10 flex justify-between text-sm font-medium text-base-content/70">
                                             <span>{option.text} {isVoted && "✓"}</span>
