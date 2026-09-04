@@ -42,7 +42,7 @@ Live demo: https://touki.onrender.com (runs on Render's free tier — see [Known
 - 45-second no-answer timeout instead of "Calling..." forever
 - A brief "call ended" recap screen with duration, instead of the call view just disappearing
 - Handles the mobile autoplay block some browsers apply to the remote stream — you get a one-tap "enable audio" prompt instead of silence with no explanation
-- TURN relay support via env config, for callers behind restrictive NATs (off by default, since it needs a TURN provider — see `.env.example`)
+- TURN relay support for callers behind restrictive/symmetric NATs (the common case for two phones on different mobile carriers), via Metered.ca or any static TURN provider — see `.env.example`
 - Call history log
 
 ### Status (Pro)
@@ -77,7 +77,9 @@ The sidebar isn't driven by a plain user list — it's built on a `Conversation`
 
 Every productivity and reminder endpoint checks that the requester is actually a participant of the conversation or group before it'll read or touch anything — that wasn't always true, and got tightened up during a security pass over the whole controller layer. The Razorpay flow got the same scrutiny: the client never sets subscription state directly, and `/api/payment/verify-payment` recomputes the HMAC signature itself and checks the payment id hasn't already been applied, so a captured request can't be replayed to keep extending Pro for free.
 
-On the call side, the signaling layer keeps an in-memory map of who's currently on a call, which is how a second incoming call gets rejected as busy instead of just ringing forever with nobody able to explain why. If a peer's socket drops mid-call, the other side gets told the call ended rather than being left staring at a frozen stream. ICE servers are served from the backend (`GET /api/video-call/ice-servers`) instead of being hardcoded on the frontend, so a TURN provider can be wired in through env vars alone, no redeploy needed.
+On the call side, the signaling layer keeps an in-memory map of who's currently on a call, which is how a second incoming call gets rejected as busy instead of just ringing forever with nobody able to explain why. If a peer's socket drops mid-call, the other side gets told the call ended rather than being left staring at a frozen stream. ICE servers are served from the backend (`GET /api/video-call/ice-servers`) instead of being hardcoded on the frontend, so a TURN provider can be wired in through env vars alone, no redeploy needed — `getIceServers()` fetches Metered.ca's short-lived TURN credentials on demand (cached for an hour) when `METERED_DOMAIN`/`METERED_API_KEY` are set, or falls back to a static TURN provider, or STUN-only if neither is configured.
+
+Also worth calling out: the socket layer tracks each connected user by socket id, and on a flaky connection (any phone locking its screen or switching networks) the client reconnects with a new socket well before the server notices the old one died. The disconnect handler for that stale socket only tears down state if it's still the one on record for that user — otherwise a late stale disconnect would wipe out a connection that had already been correctly replaced, silently cutting the user off from live messages and presence updates until they manually reopened a chat.
 
 Password reset tokens are never stored as plaintext — `forgotPassword` generates a random token, emails the raw value, and only keeps its SHA-256 hash server-side with a 30-minute expiry; `resetPassword` re-hashes whatever's submitted to look it up. Redis is configured with `enableOfflineQueue: false` and a bounded connect timeout, which matters more than it sounds like: without it, a Redis outage doesn't just disable rate limiting, it makes every login request queue silently and hang for a long time instead of failing fast. And the whole app past the login screen — the chat UI, the WebRTC call components, the productivity suite — is code-split, so an unauthenticated visitor's first paint doesn't wait on JavaScript they haven't reached yet.
 
@@ -116,7 +118,7 @@ The frontend runs on `http://localhost:5173` by default and calls the backend at
 ## Known limitations
 
 - No automated test suite yet — changes are currently verified manually and with `npm run lint`.
-- No TURN server is configured out of the box, so calls between peers on restrictive/symmetric NATs may fail to connect until `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL` are set.
+- No TURN server is configured out of the box, so calls between peers on restrictive/symmetric NATs may fail to connect until `METERED_DOMAIN`/`METERED_API_KEY` (or a static `TURN_URLS`/`TURN_USERNAME`/`TURN_CREDENTIAL`) are set.
 - Password reset emails require `GMAIL_USER`/`GMAIL_APP_PASSWORD` (a Gmail App Password, not the account password); without them the reset link is logged to the server console instead, which is fine for local development but not for a real deployment. Gmail SMTP also caps daily send volume, which is fine at demo scale but not for production traffic.
 - The single background `setInterval` in `index.js` handles both reminders and scheduled messages; fine for a single-instance deployment, but would need to move to a proper job queue (e.g. BullMQ) to run safely across multiple server instances.
 - The hosted demo runs on a free Render web service, which spins down after a period of inactivity — the first request after idle time pays a cold-start cost (the API waking up, then MongoDB/Redis reconnecting) before the page renders. That's a hosting-tier characteristic, not an application bug; an always-on instance (or hosting the frontend separately as a static site) removes it.
