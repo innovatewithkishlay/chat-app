@@ -10,6 +10,10 @@ export default {
           "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
         "splash-bar": {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(300%)" },
@@ -23,6 +27,7 @@ export default {
         "rise-in": "rise-in 0.35s ease-out both",
         "typing-dot": "typing-dot 1.2s ease-in-out infinite",
         "splash-bar": "splash-bar 1.1s ease-in-out infinite",
+        float: "float 6s ease-in-out infinite",
       },
     },
   },
