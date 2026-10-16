@@ -49,8 +49,6 @@ const LoginPage = () => {
     <AuthLayout
       heading="Welcome back"
       description="Sign in to pick up your conversations right where you left them."
-      showcaseTitle={<>Talk it through.<br /><em className="text-[#C2410C]">Then get it done.</em></>}
-      showcaseSubtitle="Message friends in real time, plan together with shared boards and notes, and hop on a call without switching apps."
       footer={
         <>
           New to Touki?{" "}

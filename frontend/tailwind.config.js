@@ -5,9 +5,6 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
-      fontFamily: {
-        serif: ['"Instrument Serif"', "Georgia", "Cambria", '"Times New Roman"', "serif"],
-      },
       keyframes: {
         "rise-in": {
           "0%": { opacity: "0", transform: "translateY(6px)" },
