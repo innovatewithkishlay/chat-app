@@ -81,8 +81,8 @@ const ProPage = () => {
                 key: orderData.keyId,
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "Toukii Pro",
-                description: "Upgrade to Toukii Pro Plan",
+                name: "Touki Pro",
+                description: "Upgrade to Touki Pro Plan",
                 order_id: orderData.orderId,
                 handler: async function (response) {
                     try {
@@ -125,7 +125,7 @@ const ProPage = () => {
                 {/* Intro Text */}
                 <div className="mb-2">
                     <h2 className="text-2xl font-bold text-base-content mb-1">Pro Plan</h2>
-                    <p className="text-sm text-base-content/60">Unlock the full potential of Toukii</p>
+                    <p className="text-sm text-base-content/60">Unlock the full potential of Touki</p>
                 </div>
 
                 {isPro && !isExpired ? (

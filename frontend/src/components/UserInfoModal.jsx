@@ -76,7 +76,7 @@ const UserInfoModal = ({ user, onClose }) => {
                             </span>
                         </div>
                         <p className="text-base leading-relaxed opacity-90 whitespace-pre-wrap break-words">
-                            {user.about || <span className="italic opacity-50">Hey there! I am using Toukii.</span>}
+                            {user.about || <span className="italic opacity-50">Hey there! I am using Touki.</span>}
                         </p>
                     </div>
 

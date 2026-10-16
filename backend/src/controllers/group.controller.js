@@ -66,7 +66,26 @@ export const getGroups = async (req, res) => {
         const groups = await Group.find({ members: userId })
             .populate("members", "fullname username profilePic")
             .populate("admins", "fullname username profilePic")
-            .sort({ updatedAt: -1 });
+            .sort({ updatedAt: -1 })
+            .lean();
+
+        // Attach each group's latest message (one aggregation for all groups)
+        // so the sidebar can show a preview and order chats by activity.
+        const latest = await Message.aggregate([
+            { $match: { groupId: { $in: groups.map((g) => g._id) }, deletedFor: { $ne: userId } } },
+            { $sort: { createdAt: -1 } },
+            { $group: { _id: "$groupId", doc: { $first: "$$ROOT" } } },
+            {
+                $project: {
+                    "doc._id": 1, "doc.text": 1, "doc.image": 1, "doc.type": 1, "doc.createdAt": 1,
+                    "doc.senderId": 1, "doc.isDeleted": 1, "doc.deletedForEveryone": 1,
+                },
+            },
+        ]);
+        const latestByGroup = new Map(latest.map((l) => [l._id.toString(), l.doc]));
+        for (const group of groups) {
+            group.lastMessage = latestByGroup.get(group._id.toString()) || null;
+        }
 
         res.status(200).json(groups);
     } catch (error) {

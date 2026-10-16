@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import gsap from "gsap";
 
 const TimelineScrubber = ({ messages, onScrollToMessage }) => {
     const [hoverDate, setHoverDate] = useState(null);
@@ -26,17 +25,15 @@ const TimelineScrubber = ({ messages, onScrollToMessage }) => {
             setHoverDate(date);
 
             // Move tooltip
-            gsap.to(tooltipRef.current, {
-                y: y,
-                opacity: 1,
-                duration: 0.1,
-                overwrite: true
-            });
+            if (tooltipRef.current) {
+                tooltipRef.current.style.transform = `translateY(${y}px)`;
+                tooltipRef.current.style.opacity = "1";
+            }
         }
     };
 
     const handleMouseLeave = () => {
-        gsap.to(tooltipRef.current, { opacity: 0, duration: 0.2 });
+        if (tooltipRef.current) tooltipRef.current.style.opacity = "0";
     };
 
     const handleClick = (e) => {
@@ -66,7 +63,7 @@ const TimelineScrubber = ({ messages, onScrollToMessage }) => {
                 {/* Tooltip */}
                 <div
                     ref={tooltipRef}
-                    className="absolute left-[-100px] top-0 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 pointer-events-none whitespace-nowrap"
+                    className="absolute left-[-100px] top-0 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 pointer-events-none whitespace-nowrap transition-[opacity,transform] duration-100"
                 >
                     {hoverDate}
                 </div>

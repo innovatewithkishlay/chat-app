@@ -8,22 +8,35 @@ const getInitials = (name) => {
     return name.substring(0, 2).toUpperCase();
 };
 
+// Muted, fixed initials colours (independent of the theme's accent colours,
+// which can be loud on some themes).
+const AVATAR_COLORS = [
+    "bg-slate-200 text-slate-700",
+    "bg-blue-100 text-blue-700",
+    "bg-emerald-100 text-emerald-700",
+    "bg-amber-100 text-amber-800",
+    "bg-rose-100 text-rose-700",
+    "bg-indigo-100 text-indigo-700",
+    "bg-teal-100 text-teal-700",
+    "bg-orange-100 text-orange-700",
+];
+
 const getColorClass = (name) => {
-    if (!name) return "bg-primary/20 text-primary";
-    const colors = [
-        "bg-primary/20 text-primary",
-        "bg-secondary/20 text-secondary",
-        "bg-accent/20 text-accent",
-        "bg-info/20 text-info",
-        "bg-success/20 text-success",
-        "bg-warning/20 text-warning",
-        "bg-error/20 text-error",
-    ];
+    if (!name) return AVATAR_COLORS[0];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
-    return colors[Math.abs(hash) % colors.length];
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
+// Scale initials with the avatar so large profile avatars don't show tiny text.
+const getInitialsTextClass = (size) => {
+    const n = Number((size.match(/size-(\d+)/) || [])[1] || 10);
+    if (n >= 20) return "text-3xl";
+    if (n >= 14) return "text-xl";
+    if (n >= 11) return "text-sm";
+    return "text-xs";
 };
 
 const Avatar = ({ user, size = "size-10", rounded = "rounded-full", showOnline = false, onlineUsers = [] }) => {
@@ -41,8 +54,8 @@ const Avatar = ({ user, size = "size-10", rounded = "rounded-full", showOnline =
                     className={`${size} ${rounded} object-cover bg-base-200 border border-base-300`}
                 />
             ) : (
-                <div className={`${size} ${rounded} ${colorClass} flex flex-col items-center justify-center border border-base-300`}>
-                    <span className="font-semibold text-sm leading-none">{getInitials(user.fullname || user.name)}</span>
+                <div className={`${size} ${rounded} ${colorClass} flex flex-col items-center justify-center`}>
+                    <span className={`font-semibold leading-none tracking-wide ${getInitialsTextClass(size)}`}>{getInitials(user.fullname || user.name)}</span>
                 </div>
             )}
 

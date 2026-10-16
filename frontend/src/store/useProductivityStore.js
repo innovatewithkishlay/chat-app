@@ -59,6 +59,13 @@ export const useProductivityStore = create((set, get) => ({
     board: null,
     tasks: [],
     isBoardLoading: false,
+    // Which conversation the loaded board/notes/polls belong to, so switching
+    // chats never shows (or edits) the previous chat's data.
+    boardConversationId: null,
+    notesConversationId: null,
+    pollsConversationId: null,
+
+    resetBoard: () => set({ board: null, tasks: [], boardConversationId: null }),
 
     // Notes State
     notes: [],
@@ -76,9 +83,13 @@ export const useProductivityStore = create((set, get) => ({
     // --- Kanban Actions ---
     fetchBoard: async (conversationId) => {
         get().joinConversationRoom(conversationId);
+        if (get().boardConversationId !== conversationId) {
+            set({ board: null, tasks: [], boardConversationId: conversationId });
+        }
         set({ isBoardLoading: true });
         try {
             const res = await axiosInstance.get(`/kanban/${conversationId}`);
+            if (get().boardConversationId !== conversationId) return;
             set({ board: res.data.board, tasks: res.data.tasks });
         } catch (error) {
             if (error.response && error.response.status === 404) {
@@ -195,13 +206,19 @@ export const useProductivityStore = create((set, get) => ({
     // --- Notes Actions ---
     fetchNotes: async (conversationId) => {
         get().joinConversationRoom(conversationId);
+        if (get().notesConversationId !== conversationId) {
+            set({ notes: [], activeNote: null, notesConversationId: conversationId });
+        }
         set({ isNotesLoading: true });
         try {
             const res = await axiosInstance.get(`/notes/${conversationId}`);
-            set({ notes: res.data });
-            if (res.data.length > 0 && !get().activeNote) {
-                set({ activeNote: res.data[0] });
-            }
+            // Ignore a slow response for a chat the user already left.
+            if (get().notesConversationId !== conversationId) return;
+            const currentId = get().activeNote?._id;
+            set({
+                notes: res.data,
+                activeNote: res.data.find((n) => n._id === currentId) || res.data[0] || null,
+            });
         } catch (error) {
             console.error("Error fetching notes:", error);
         } finally {
@@ -271,9 +288,13 @@ export const useProductivityStore = create((set, get) => ({
     // --- Polls Actions ---
     fetchPolls: async (conversationId) => {
         get().joinConversationRoom(conversationId);
+        if (get().pollsConversationId !== conversationId) {
+            set({ polls: [], pollsConversationId: conversationId });
+        }
         set({ isPollsLoading: true });
         try {
             const res = await axiosInstance.get(`/polls/${conversationId}`);
+            if (get().pollsConversationId !== conversationId) return;
             set({ polls: res.data });
         } catch (error) {
             console.error("Error fetching polls:", error);

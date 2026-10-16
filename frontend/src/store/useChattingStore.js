@@ -173,7 +173,7 @@ export const useChatStore = create((set, get) => ({
         const groupIndex = newGroups.findIndex(g => g._id === groupIdValue);
         if (groupIndex > -1) {
           const group = newGroups.splice(groupIndex, 1)[0];
-          newGroups.unshift(group);
+          newGroups.unshift({ ...group, lastMessage: newMessage, updatedAt: newMessage.createdAt });
         }
         return { groups: newGroups };
       });
@@ -629,8 +629,8 @@ export const useChatStore = create((set, get) => ({
       const convIndex = newConvs.findIndex(c => c.participants.some(p => p._id === selectedUser._id));
       if (convIndex > -1) {
         const conv = newConvs.splice(convIndex, 1)[0];
-        conv.lastMessage = optimisticMessage;
-        newConvs.unshift(conv);
+        // Copy rather than mutate, so components holding the old object re-render.
+        newConvs.unshift({ ...conv, lastMessage: optimisticMessage, updatedAt: optimisticMessage.createdAt });
       }
       return { messages: [...state.messages, optimisticMessage], conversations: newConvs };
     });
@@ -720,7 +720,7 @@ export const useChatStore = create((set, get) => ({
       const groupIndex = newGroups.findIndex(g => g._id === groupId);
       if (groupIndex > -1) {
         const group = newGroups.splice(groupIndex, 1)[0];
-        newGroups.unshift(group);
+        newGroups.unshift({ ...group, lastMessage: optimisticMessage, updatedAt: optimisticMessage.createdAt });
       }
       return { messages: [...state.messages, optimisticMessage], groups: newGroups };
     });
