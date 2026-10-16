@@ -1,35 +1,38 @@
-import { Users } from "lucide-react";
-
 const SidebarSkeleton = () => {
-  // Create 8 skeleton items
   const skeletonContacts = Array(8).fill(null);
 
   return (
-    <aside
-      className="h-full w-20 lg:w-72 border-r border-base-300 
-    flex flex-col transition-all duration-200"
-    >
+    <aside className="h-full w-full flex flex-col bg-base-100" aria-busy="true" aria-label="Loading conversations">
       {/* Header */}
-      <div className="border-b border-base-300 w-full p-5">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-base-300">
+        <div className="flex items-center gap-3">
+          <div className="skeleton size-9 rounded-full" />
+          <div className="skeleton h-4 w-20" />
+        </div>
         <div className="flex items-center gap-2">
-          <Users className="w-6 h-6" />
-          <span className="font-medium hidden lg:block">Contacts</span>
+          <div className="skeleton size-7 rounded-full" />
+          <div className="skeleton size-7 rounded-full" />
         </div>
       </div>
 
-      {/* Skeleton Contacts */}
-      <div className="overflow-y-auto w-full py-3">
-        {skeletonContacts.map((_, idx) => (
-          <div key={idx} className="w-full p-3 flex items-center gap-3">
-            {/* Avatar skeleton */}
-            <div className="relative mx-auto lg:mx-0">
-              <div className="skeleton size-12 rounded-full" />
-            </div>
+      {/* Search + tabs */}
+      <div className="px-4 pt-3 pb-2 space-y-3">
+        <div className="skeleton h-9 w-full rounded-[10px]" />
+        <div className="flex gap-2">
+          {[48, 56, 64, 52].map((w, i) => (
+            <div key={i} className="skeleton h-6 rounded-full" style={{ width: w }} />
+          ))}
+        </div>
+      </div>
 
-            {/* User info skeleton - only visible on larger screens */}
-            <div className="hidden lg:block text-left min-w-0 flex-1">
-              <div className="skeleton h-4 w-32 mb-2" />
-              <div className="skeleton h-3 w-16" />
+      {/* Contacts */}
+      <div className="flex-1 overflow-hidden px-2 py-1">
+        {skeletonContacts.map((_, idx) => (
+          <div key={idx} className="w-full p-2 flex items-center gap-3">
+            <div className="skeleton size-11 rounded-full shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="skeleton h-3.5" style={{ width: `${55 + ((idx * 17) % 35)}%` }} />
+              <div className="skeleton h-3" style={{ width: `${30 + ((idx * 23) % 40)}%` }} />
             </div>
           </div>
         ))}

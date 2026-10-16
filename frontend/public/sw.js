@@ -1,10 +1,14 @@
 self.addEventListener("push", function (event) {
-    const data = event.data.json();
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch {
+        data = { body: event.data ? event.data.text() : "" };
+    }
     const title = data.title || "New Message";
     const options = {
         body: data.body || "You have a new message.",
-        icon: data.icon || "/vite.svg",
-        badge: "/vite.svg",
+        icon: data.icon || "/logo.png",
         data: {
             url: data.url || "/",
         },
