@@ -36,8 +36,6 @@ const ResetPasswordPage = () => {
     <AuthLayout
       heading="Set a new password"
       description="Choose a strong password you haven't used here before."
-      showcaseTitle="Almost there."
-      showcaseSubtitle="Once your password is updated you can sign in and carry on chatting."
       footer={
         <Link to="/login" className="inline-flex items-center gap-1.5 font-medium text-zinc-900 underline-offset-4 hover:underline">
           <ArrowLeft className="size-4" /> Back to sign in

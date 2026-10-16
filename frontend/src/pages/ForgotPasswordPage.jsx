@@ -39,8 +39,6 @@ const ForgotPasswordPage = () => {
             link is on its way. It expires in 30 minutes.
           </>
         }
-        showcaseTitle="Back in a moment."
-        showcaseSubtitle="Open the link in the email to choose a new password. Don't forget to check your spam folder."
         footer={backToLogin}
       >
         <div className="space-y-4">
@@ -64,8 +62,6 @@ const ForgotPasswordPage = () => {
     <AuthLayout
       heading="Forgot your password?"
       description="No worries. Enter the email you signed up with and we'll send you a reset link."
-      showcaseTitle="It happens to everyone."
-      showcaseSubtitle="We'll get you back into your conversations in no time."
       footer={backToLogin}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
