@@ -64,7 +64,7 @@ export default function SignupPage() {
     <AuthLayout
       heading="Create your account"
       description="It's free and takes less than a minute."
-      showcaseTitle="Bring your people, and your plans, together."
+      showcaseTitle={<>Bring your people<br /><em className="text-[#C2410C]">and your plans</em> together.</>}
       showcaseSubtitle="Chat one-on-one or in groups, keep a shared board for every conversation, and never lose track of what was decided."
       footer={
         <>
