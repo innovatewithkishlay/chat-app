@@ -1,131 +1,103 @@
 import { useState } from "react";
-import { useAuthStore } from "../store/useAuthStore";
-import { AuthImagePattern } from "../components/AuthImagePattern";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
+import AuthLayout from "../components/auth/AuthLayout";
+import {
+  AuthInput,
+  PasswordInput,
+  ServerWakeNotice,
+  SubmitButton,
+} from "../components/auth/AuthFields";
+import { validateEmail } from "../lib/authValidation";
+
+const validate = ({ email, password }) => {
+  const errors = {};
+  // Domain isn't checked here: if an older account exists on another
+  // domain, let the server be the judge rather than locking it out.
+  const emailError = validateEmail(email, { checkDomain: false });
+  if (emailError) errors.email = emailError;
+  if (!password) errors.password = "Password is required";
+  return errors;
+};
 
 const LoginPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-  const { login, isLoggingIn } = useAuthStore();
-  const handleSubmit = async (e) => {
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const login = useAuthStore((s) => s.login);
+  const isLoggingIn = useAuthStore((s) => s.isLoggingIn);
+
+  const update = (field) => (e) => {
+    const next = { ...formData, [field]: e.target.value };
+    setFormData(next);
+    // Re-validate live only after the first submit attempt, so users aren't
+    // shouted at while they're still typing.
+    if (submitted) setErrors(validate(next));
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    login(formData);
+    setSubmitted(true);
+    const nextErrors = validate(formData);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    login({ email: formData.email.trim(), password: formData.password });
   };
 
   return (
-    <div className="h-screen grid lg:grid-cols-2">
-      {/* Left Side - Form */}
-      <div className="flex flex-col justify-center items-center p-6 sm:p-12">
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="flex flex-col items-center gap-2 group">
-              <div
-                className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20
-              transition-colors"
-              >
-                <MessageSquare className="w-6 h-6 text-primary" />
-              </div>
-              <h1 className="text-2xl font-bold mt-2">Welcome Back</h1>
-              <p className="text-base-content/60">Sign in to your account</p>
-            </div>
-          </div>
+    <AuthLayout
+      heading="Welcome back"
+      description="Sign in to pick up your conversations right where you left them."
+      showcaseTitle="Your chats, boards and calls, all in one place."
+      showcaseSubtitle="Message friends in real time, plan together with shared boards and notes, and hop on a call without switching apps."
+      footer={
+        <>
+          New to Touki?{" "}
+          <Link to="/signup" className="font-medium text-zinc-900 underline-offset-4 hover:underline">
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <AuthInput
+          label="Email"
+          icon={Mail}
+          type="email"
+          name="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@gmail.com"
+          autoFocus
+          value={formData.email}
+          onChange={update("email")}
+          error={errors.email}
+        />
+        <PasswordInput
+          label="Password"
+          icon={Lock}
+          name="password"
+          autoComplete="current-password"
+          placeholder="Enter your password"
+          value={formData.password}
+          onChange={update("password")}
+          error={errors.password}
+          labelAction={
+            <Link to="/forgot-password" className="text-xs font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline">
+              Forgot password?
+            </Link>
+          }
+        />
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Email</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-base-content/40" />
-                </div>
-                <input
-                  type="email"
-                  className={`input input-bordered w-full pl-10`}
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                />
-              </div>
-            </div>
+        <ServerWakeNotice />
 
-            <div className="form-control">
-              <label className="label flex items-center justify-between">
-                <span className="label-text font-medium">Password</span>
-                <Link to="/forgot-password" className="label-text-alt link link-primary">
-                  Forgot password?
-                </Link>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-base-content/40" />
-                </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className={`input input-bordered w-full pl-10`}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-base-content/40" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-base-content/40" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary w-full"
-              disabled={isLoggingIn}
-            >
-              {isLoggingIn ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                "Login"
-              )}
-            </button>
-          </form>
-
-          <div className="text-center">
-            <p className="text-base-content/60">
-              Don&apos;t have an account?{" "}
-              <Link to="/signup" className="link link-primary">
-                Create account
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Image/Pattern */}
-      <AuthImagePattern
-        title={"Welcome back!"}
-        subtitle={
-          "Sign in to continue your conversations and catch up with your messages."
-        }
-      />
-    </div>
+        <SubmitButton loading={isLoggingIn} loadingText="Signing in…">
+          Sign in
+        </SubmitButton>
+      </form>
+    </AuthLayout>
   );
 };
+
 export default LoginPage;

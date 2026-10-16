@@ -1,31 +1,84 @@
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios.js";
+import { axiosInstance, getErrorMessage } from "../lib/axios.js";
 import toast from "react-hot-toast";
-import { io } from "socket.io-client";
 
 const isDev = import.meta.env.MODE === "development";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || (isDev ? "http://localhost:5001" : "/");
+
+// Remembers that this browser had a signed-in session last time. Without it
+// we can't know whether to wait for /auth/check (which can take 30s+ while a
+// Render instance cold-starts) or show the login screen immediately.
+const SESSION_HINT_KEY = "touki:has-session";
+const SLOW_REQUEST_MS = 3500;
+
+const readSessionHint = () => {
+    try {
+        return localStorage.getItem(SESSION_HINT_KEY) === "1";
+    } catch {
+        return false;
+    }
+};
+
+const writeSessionHint = (hasSession) => {
+    try {
+        if (hasSession) localStorage.setItem(SESSION_HINT_KEY, "1");
+        else localStorage.removeItem(SESSION_HINT_KEY);
+    } catch {
+        // Storage can be unavailable (private mode); the hint is only an optimisation.
+    }
+};
 
 export const useAuthStore = create((set, get) => ({
     authUser: null,
     isSigningUp: false,
     isLoggingIn: false,
     isUpdatingProfile: false,
-    isCheckingAuth: true,
+    // Only block the UI on the auth check when we expect a session. Visitors
+    // with no prior session see the login screen instantly while the check
+    // runs in the background.
+    isCheckingAuth: readSessionHint(),
+    // True while an auth request has been pending long enough that the
+    // server is probably waking up from sleep.
+    isServerWaking: false,
     onlineUsers: [],
     blockedUsers: [],
     socket: null,
 
+    // Runs an auth request and flags isServerWaking if it is slow, so the UI
+    // can explain the delay instead of looking frozen.
+    _withWakeNotice: async (request) => {
+        const timer = setTimeout(() => set({ isServerWaking: true }), SLOW_REQUEST_MS);
+        try {
+            return await request();
+        } finally {
+            clearTimeout(timer);
+            set({ isServerWaking: false });
+        }
+    },
+
+    _onAuthenticated: (user) => {
+        writeSessionHint(true);
+        set({ authUser: user });
+        get().fetchBlockedUsers();
+        get().connectSocket();
+    },
+
     checkAuth: async () => {
         try {
-            const res = await axiosInstance.get("/auth/check");
-
-            set({ authUser: res.data });
-            get().fetchBlockedUsers();
-            get().connectSocket();
+            // (If the user logs in manually while this is pending, the
+            // duplicate _onAuthenticated below is harmless: connectSocket
+            // is idempotent.)
+            const res = await get()._withWakeNotice(() => axiosInstance.get("/auth/check"));
+            get()._onAuthenticated(res.data);
         } catch (error) {
-            console.error("Error in checkAuth:", error);
-            set({ authUser: null, blockedUsers: [] });
+            // A 401 means the session is really gone; a network error just
+            // means we couldn't reach the server, so keep the hint for next time.
+            // Either way, don't clobber a login that completed while this
+            // check was in flight.
+            if (!get().authUser) {
+                if (error?.response?.status === 401) writeSessionHint(false);
+                set({ blockedUsers: [] });
+            }
         } finally {
             set({ isCheckingAuth: false });
         }
@@ -34,12 +87,13 @@ export const useAuthStore = create((set, get) => ({
     signup: async (data) => {
         set({ isSigningUp: true });
         try {
-            const res = await axiosInstance.post("/auth/signup", data);
-            set({ authUser: res.data });
+            const res = await get()._withWakeNotice(() => axiosInstance.post("/auth/signup", data));
+            get()._onAuthenticated(res.data);
             toast.success("Account created successfully");
-            get().connectSocket();
+            return true;
         } catch (error) {
-            toast.error(error.response.data.message);
+            toast.error(getErrorMessage(error));
+            return false;
         } finally {
             set({ isSigningUp: false });
         }
@@ -48,14 +102,13 @@ export const useAuthStore = create((set, get) => ({
     login: async (data) => {
         set({ isLoggingIn: true });
         try {
-            const res = await axiosInstance.post("/auth/login", data);
-            set({ authUser: res.data });
+            const res = await get()._withWakeNotice(() => axiosInstance.post("/auth/login", data));
+            get()._onAuthenticated(res.data);
             toast.success("Logged in successfully");
-
-            get().fetchBlockedUsers();
-            get().connectSocket();
+            return true;
         } catch (error) {
-            toast.error(error.response.data.message);
+            toast.error(getErrorMessage(error));
+            return false;
         } finally {
             set({ isLoggingIn: false });
         }
@@ -64,12 +117,15 @@ export const useAuthStore = create((set, get) => ({
     logout: async () => {
         try {
             await axiosInstance.post("/auth/logout");
-            set({ authUser: null, blockedUsers: [] });
-            toast.success("Logged out successfully");
-            get().disconnectSocket();
         } catch (error) {
-            toast.error(error.response.data.message);
+            // Still sign out locally - otherwise a network hiccup leaves the
+            // user stuck in a session they asked to leave.
+            console.error("Error in logout:", error);
         }
+        writeSessionHint(false);
+        get().disconnectSocket();
+        set({ authUser: null, blockedUsers: [], onlineUsers: [] });
+        toast.success("Logged out successfully");
     },
 
     isRequestingReset: false,
@@ -110,7 +166,7 @@ export const useAuthStore = create((set, get) => ({
             toast.success("Profile updated successfully");
         } catch (error) {
             console.log("error in update profile:", error);
-            toast.error(error.response.data.message);
+            toast.error(getErrorMessage(error));
         } finally {
             set({ isUpdatingProfile: false });
         }
@@ -145,25 +201,47 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
-    connectSocket: () => {
+    _socketPromise: null,
+    connectSocket: async () => {
         const { authUser } = get();
-        if (!authUser || get().socket?.connected) return;
+        // An existing socket handles its own reconnects, so never open a second one.
+        if (!authUser || get().socket || get()._socketPromise) return;
 
-        const socket = io(BASE_URL, {
-            query: {
-                userId: authUser._id,
-            },
-            withCredentials: true,
+        // socket.io-client is loaded on demand so the login/signup screens
+        // don't have to download it.
+        const promise = import("socket.io-client").then(({ io }) => {
+            const user = get().authUser;
+            // Logged out (or switched account) while the client was loading.
+            if (!user || user._id !== authUser._id) return;
+
+            const socket = io(BASE_URL, {
+                query: {
+                    userId: user._id,
+                },
+                withCredentials: true,
+            });
+
+            socket.on("getOnlineUsers", (userIds) => {
+                set({ onlineUsers: userIds });
+            });
+
+            set({ socket });
         });
-        socket.connect();
-
-        set({ socket: socket });
-
-        socket.on("getOnlineUsers", (userIds) => {
-            set({ onlineUsers: userIds });
-        });
+        set({ _socketPromise: promise });
+        try {
+            await promise;
+        } catch (error) {
+            console.error("Failed to load realtime client:", error);
+        } finally {
+            set({ _socketPromise: null });
+        }
     },
     disconnectSocket: () => {
-        if (get().socket?.connected) get().socket.disconnect();
+        const { socket } = get();
+        if (socket) {
+            socket.off("getOnlineUsers");
+            socket.disconnect();
+        }
+        set({ socket: null });
     },
 }));

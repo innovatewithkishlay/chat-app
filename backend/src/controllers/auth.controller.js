@@ -14,6 +14,19 @@ const RESET_REQUEST_LIMIT = 3;
 const RESET_REQUEST_WINDOW_SECONDS = 60 * 60;
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 
+// Same shape /auth/check returns (the full user minus secrets), so the client
+// has username, about, isPro etc. straight after login/signup instead of
+// only after the next page reload.
+function toPublicUser(user) {
+  const obj = user.toObject();
+  delete obj.password;
+  delete obj.resetPasswordTokenHash;
+  delete obj.resetPasswordExpires;
+  return obj;
+}
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 async function registerFailedLoginAttempt(email) {
   const attemptsKey = `login_attempts:${email.toLowerCase()}`;
   const attempts = await redisClient.incr(attemptsKey);
@@ -25,7 +38,7 @@ async function registerFailedLoginAttempt(email) {
 export const signup = async (req, res) => {
   const { fullname, email, password, username } = req.body;
   try {
-    if (!isValidEmailDomain(email) || password.length < 6) {
+    if (!isValidEmailDomain(email) || typeof password !== "string" || password.length < 6) {
       return res.status(400).json({
         message: !isValidEmailDomain(email)
           ? "Invalid email."
@@ -56,17 +69,9 @@ export const signup = async (req, res) => {
     });
 
     if (newUser) {
-      generateToken(newUser._id, res);
       await newUser.save();
-      res.status(201).json({
-        _id: newUser._id,
-        fullname: newUser.fullname,
-        email: newUser.email,
-        username: newUser.username,
-        profilePic: newUser.profilePic,
-        plan: newUser.plan,
-        about: "",
-      });
+      generateToken(newUser._id, res);
+      res.status(201).json(toPublicUser(newUser));
     } else {
       res
         .status(400)
@@ -97,7 +102,11 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    // Exact match first (uses the unique index); fall back to a
+    // case-insensitive match so "Name@Gmail.com" still finds the account.
+    const user =
+      (await User.findOne({ email })) ||
+      (await User.findOne({ email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } }));
     if (!user) {
       await registerFailedLoginAttempt(email);
       return res.status(400).json({ message: "Invalid credentials" });
@@ -111,13 +120,7 @@ export const login = async (req, res) => {
 
     await redisClient.del(attemptsKey);
     generateToken(user._id, res);
-    res.status(200).json({
-      _id: user._id,
-      fullname: user.fullname,
-      email: user.email,
-      profilePic: user.profilePic,
-      plan: user.plan,
-    });
+    res.status(200).json(toPublicUser(user));
   } catch (err) {
     console.error("Error in login controller:", err.message);
     res.status(500).json({ message: "Internal error" });
@@ -201,7 +204,9 @@ export const resetPassword = async (req, res) => {
 
 export const logout = (req, res) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0 });
+    // Must match the attributes the cookie was set with (SameSite=None;
+    // Secure), otherwise browsers can ignore the clear on cross-site setups.
+    res.cookie("jwt", "", { maxAge: 0, httpOnly: true, sameSite: "none", secure: true });
     res.status(200).json({ message: "successfully logged out" });
   } catch (error) {
     console.error("Error in logout controller:", error.message);

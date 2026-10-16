@@ -22,6 +22,7 @@ const Sidebar = () => {
     selectedUser,
     setSelectedUser,
     isConversationsLoading,
+    isSearchingUsers,
     searchUsers,
     searchResults,
     sendTalkRequest,
@@ -197,7 +198,7 @@ const Sidebar = () => {
     })
     : conversations;
 
-  if (isConversationsLoading) return <SidebarSkeleton />;
+  if (isConversationsLoading && conversations.length === 0) return <SidebarSkeleton />;
 
   return (
     <aside className="h-full w-full flex flex-col bg-base-100">
@@ -213,8 +214,8 @@ const Sidebar = () => {
             <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-base-100"></span>
           </Link>
           <h1 className="text-[16px] font-semibold text-base-content tracking-tight flex items-center gap-2">
-            Toukii
-            {authUser?.isPro && (
+            Touki
+            {(authUser?.isPro || authUser?.plan === "PRO") && (
               <Crown size={16} className="text-yellow-500 fill-yellow-500" />
             )}
           </h1>
@@ -348,7 +349,7 @@ const Sidebar = () => {
           </div>
         ) : isSearching ? (
           <div className="space-y-1 mt-1">
-            {searchResults.length === 0 ? <div className="text-center text-base-content/40 py-4 text-sm">No users found</div> : searchResults.map(user => (
+            {isSearchingUsers && searchResults.length === 0 ? <div className="text-center text-base-content/40 py-4 text-sm">Searching...</div> : searchResults.length === 0 ? <div className="text-center text-base-content/40 py-4 text-sm">No users found</div> : searchResults.map(user => (
               <div key={user._id} className="p-2 flex items-center gap-3 hover:bg-base-200 rounded-lg cursor-pointer">
                 <img src={user.profilePic || "/avatar.png"} className="size-10 rounded-full" />
                 <div className="flex-1">
