@@ -1,9 +1,9 @@
 import { Suspense, lazy, useRef, useState, useEffect } from "react";
+import { animate } from "../lib/util";
 import { useChatStore } from "../store/useChattingStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X, Mic, Smile, Clock, Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import gsap from "gsap";
 
 const ScheduledMessagesModal = lazy(() => import("./productivity/ScheduledMessagesModal"));
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
@@ -49,12 +49,12 @@ const MessageInput = () => {
     };
   }, [selectedUser, sendTypingStop]);
 
-  // GSAP Animation for Emoji Picker
   useEffect(() => {
     if (showEmojiPicker && emojiPickerRef.current) {
-      gsap.fromTo(emojiPickerRef.current,
-        { opacity: 0, y: 20, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "back.out(1.7)" }
+      animate(
+        emojiPickerRef.current,
+        [{ opacity: 0, transform: "translateY(12px) scale(0.97)" }, { opacity: 1, transform: "none" }],
+        { duration: 180, easing: "ease-out" }
       );
     }
   }, [showEmojiPicker]);

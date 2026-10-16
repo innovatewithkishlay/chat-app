@@ -21,6 +21,7 @@ const KanbanBoard = () => {
     const addTask = useProductivityStore((state) => state.addTask);
     const updateTask = useProductivityStore((state) => state.updateTask);
     const deleteTask = useProductivityStore((state) => state.deleteTask);
+    const resetBoard = useProductivityStore((state) => state.resetBoard);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newTaskColumn, setNewTaskColumn] = useState("todo");
@@ -50,12 +51,14 @@ const KanbanBoard = () => {
             if (conversation) {
                 conversationId = conversation._id;
             } else {
+                // No conversation yet, so there is no board to show.
+                resetBoard();
                 return;
             }
         }
 
         fetchBoard(conversationId);
-    }, [selectedUser, isGroup, conversations, fetchBoard]);
+    }, [selectedUser, isGroup, conversations, fetchBoard, resetBoard]);
 
     const onDragEnd = useCallback((result) => {
         const { destination, source, draggableId } = result;
@@ -107,10 +110,19 @@ const KanbanBoard = () => {
         return <KanbanSkeleton />;
     }
 
-    if (!board) return null;
+    if (!board) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-base-200">
+                <p className="text-sm font-medium text-base-content">No board yet</p>
+                <p className="mt-1 max-w-xs text-sm text-base-content/55">
+                    Send a message to start this conversation, then you can plan tasks together here.
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 bg-gradient-to-br from-base-100 to-base-200/50">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 bg-base-200">
             <div className="flex h-full gap-6 min-w-fit pb-4">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {columnsWithTasks.map((column) => (

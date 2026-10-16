@@ -9,7 +9,7 @@ import ProModal from "./ProModal";
 import ConfirmModal from "./ConfirmModal";
 import Avatar from "./Avatar";
 import toast from "react-hot-toast";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 
 const ChatHeader = () => {
   const {
@@ -154,36 +154,38 @@ const ChatHeader = () => {
       />
 
       {/* Main Header - 56px */}
-      <div className="h-[56px] px-4 flex items-center justify-between border-b border-base-300">
-        <div className="flex items-center gap-3">
+      <div className="h-[56px] px-4 flex items-center justify-between gap-2 border-b border-base-300">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Back Button (Mobile) */}
           <button onClick={() => setSelectedUser(null)} className="lg:hidden p-2 -ml-2 text-base-content/60 hover:bg-base-200 rounded-full">
             <ArrowLeft size={20} />
           </button>
 
           <div
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-3 cursor-pointer min-w-0"
             onClick={() => isGroup ? setShowGroupInfo(!showGroupInfo) : setShowUserInfo(!showUserInfo)}
           >
             <Avatar user={selectedUser} size="size-9" showOnline={!isGroup} onlineUsers={onlineUsers} />
 
-            <div className="leading-tight">
-              <h3 className="text-base font-semibold text-base-content flex items-center gap-1">
+            <div className="leading-tight min-w-0">
+              <h3 className="text-[15px] font-semibold text-base-content truncate">
                 {isGroup ? selectedUser.name : selectedUser.fullname}
               </h3>
-              <div className="text-xs text-base-content/60 h-4 flex items-center overflow-hidden">
+              <div className="text-xs text-base-content/55 h-4 flex items-center overflow-hidden whitespace-nowrap">
                 {isTyping ? (
                   <span className="text-primary font-medium flex items-center transition-all duration-300">
                     <span className="animate-pulse">Typing...</span>
                   </span>
                 ) : (
-                  <span className="transition-all duration-300">
+                  <span className={`truncate ${!isGroup && onlineUsers.includes(selectedUser._id) ? "text-success" : ""}`}>
                     {isGroup
                       ? `${selectedUser.members.length} members`
                       : (onlineUsers.includes(selectedUser._id)
                         ? "Online"
                         : (selectedUser.lastSeen
-                          ? `last seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
+                          ? (Date.now() - new Date(selectedUser.lastSeen) < 60_000
+                            ? "last seen just now"
+                            : `last seen ${formatDistanceToNowStrict(new Date(selectedUser.lastSeen), { addSuffix: true })}`)
                           : "Offline"
                         )
                       )
@@ -196,7 +198,7 @@ const ChatHeader = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={toggleMessageSearch}
             className="p-2 rounded-full text-base-content/40 hover:text-primary hover:bg-base-200 transition-colors"

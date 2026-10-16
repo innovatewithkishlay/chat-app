@@ -8,7 +8,7 @@ const DeveloperPage = () => {
                 {/* Intro */}
                 <div className="mb-8">
                     <h2 className="text-2xl font-bold text-base-content mb-2">Developer</h2>
-                    <p className="text-base-content/60">Meet the creator behind Toukii</p>
+                    <p className="text-base-content/60">Meet the creator behind Touki</p>
                 </div>
 
                 {/* Card 1: About Developer */}
@@ -29,7 +29,7 @@ const DeveloperPage = () => {
 
                             <p className="text-base-content/70 leading-relaxed max-w-lg">
                                 Passionate about building scalable, real-time applications and crafting intuitive user experiences.
-                                Toukii represents my exploration into modern web technologies and secure communication architectures.
+                                Touki represents my exploration into modern web technologies and secure communication architectures.
                             </p>
 
                             {/* Tech Stack Chips */}
@@ -43,13 +43,13 @@ const DeveloperPage = () => {
                     </div>
                 </div>
 
-                {/* Card 2: About Toukii */}
+                {/* Card 2: About Touki */}
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="bg-base-100 border border-base-300 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                         <div>
                             <h3 className="text-lg font-bold text-base-content mb-4 flex items-center gap-2">
                                 <Layers size={18} className="text-secondary" />
-                                About Toukii
+                                About Touki
                             </h3>
                             <ul className="space-y-3 text-sm text-base-content/70">
                                 <li className="flex justify-between">
@@ -67,7 +67,7 @@ const DeveloperPage = () => {
                             </ul>
                         </div>
                         <div className="mt-6 pt-6 border-t border-base-200 text-xs text-center text-base-content/50">
-                            © 2026 Toukii. All rights reserved.
+                            © 2026 Touki. All rights reserved.
                         </div>
                     </div>
 

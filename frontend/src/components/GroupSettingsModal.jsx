@@ -334,7 +334,7 @@ const GroupSettingsModal = ({ onClose }) => {
                                             <p className="text-xs opacity-60 truncate max-w-[120px]">
                                                 {isMemberAdmin
                                                     ? <span className="text-primary font-medium">Admin</span>
-                                                    : member.about || "Hey there! I am using Toukii."}
+                                                    : member.about || "Hey there! I am using Touki."}
                                             </p>
                                         </div>
                                     </div>

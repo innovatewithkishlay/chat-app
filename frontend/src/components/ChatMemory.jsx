@@ -1,21 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useChatStore } from "../store/useChattingStore";
 import { X, Plus, Trash2 } from "lucide-react";
-import gsap from "gsap";
 
 const ChatMemory = ({ conversationId, isOpen, onClose }) => {
     const { chatMemory, addMemory, removeMemory } = useChatStore();
     const [newMemory, setNewMemory] = useState("");
     const [isAdding, setIsAdding] = useState(false);
     const panelRef = useRef(null);
-
-    useEffect(() => {
-        if (isOpen) {
-            gsap.to(panelRef.current, { x: 0, duration: 0.5, ease: "power3.out" });
-        } else {
-            gsap.to(panelRef.current, { x: "100%", duration: 0.5, ease: "power3.in" });
-        }
-    }, [isOpen]);
 
     const handleAdd = async () => {
         if (!newMemory.trim()) return;
@@ -27,7 +18,7 @@ const ChatMemory = ({ conversationId, isOpen, onClose }) => {
     return (
         <div
             ref={panelRef}
-            className="fixed top-0 right-0 h-full w-80 bg-base-100 shadow-2xl z-50 transform translate-x-full border-l border-base-300"
+            className={`fixed top-0 right-0 h-full w-80 bg-base-100 shadow-2xl z-50 border-l border-base-300 transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         >
             <div className="p-4 border-b border-base-300 flex justify-between items-center bg-base-200/50 backdrop-blur-md">
                 <h3 className="font-bold text-lg flex items-center gap-2">
