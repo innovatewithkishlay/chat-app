@@ -63,10 +63,33 @@ app.use("/api/scheduled-messages", scheduledMessageRoutes);
 app.use("/api/payment", paymentRoutes);
 
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  const distPath = path.join(__dirname, "../frontend/dist");
+
+  // Vite fingerprints everything under /assets, so those files can be cached
+  // for a year; index.html (and the service worker) must always revalidate
+  // so a new deploy is picked up immediately.
+  app.use(
+    "/assets",
+    express.static(path.join(distPath, "assets"), {
+      immutable: true,
+      maxAge: "1y",
+      fallthrough: false,
+    })
+  );
+  app.use(
+    express.static(distPath, {
+      maxAge: "1d",
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".html") || filePath.endsWith("sw.js")) {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    })
+  );
 
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(distPath, "index.html"));
   });
 }
 
