@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
-import { axiosInstance } from "../lib/axios";
+import { axiosInstance, getErrorMessage } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 
 function urlBase64ToUint8Array(base64String) {
@@ -493,32 +493,38 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Friend removed");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
   getConversations: async () => {
-    set({ isConversationsLoading: true });
+    // Only show the skeleton on the very first load. Refetches (socket
+    // reconnects, tab focus) keep the current list on screen instead of
+    // blanking the whole sidebar.
+    if (get().conversations.length === 0) set({ isConversationsLoading: true });
     try {
       const res = await axiosInstance.get("/messages/conversations");
       set({ conversations: res.data });
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     } finally {
       set({ isConversationsLoading: false });
     }
   },
 
+  isSearchingUsers: false,
   searchUsers: async (query) => {
-    set({ isConversationsLoading: true });
+    // Uses its own flag: sharing isConversationsLoading swapped the whole
+    // sidebar (including the search input) for a skeleton mid-typing.
+    set({ isSearchingUsers: true });
     try {
-      const res = await axiosInstance.get(`/users/search?query=${query}`);
+      const res = await axiosInstance.get("/users/search", { params: { query } });
       set({ searchResults: res.data });
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
       set({ searchResults: [] });
     } finally {
-      set({ isConversationsLoading: false });
+      set({ isSearchingUsers: false });
     }
   },
 
@@ -530,7 +536,7 @@ export const useChatStore = create((set, get) => ({
         sentRequests: [...state.sentRequests, res.data]
       }));
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -566,7 +572,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Request accepted");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -578,7 +584,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Request rejected");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -595,7 +601,7 @@ export const useChatStore = create((set, get) => ({
         set({ chatMemory: [] });
       }
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -658,7 +664,7 @@ export const useChatStore = create((set, get) => ({
       toast.success("Group created successfully");
       return res.data;
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -687,7 +693,7 @@ export const useChatStore = create((set, get) => ({
       // If I didn't add it, I should.
       // For now, let's assume 1-1 memory works.
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -745,7 +751,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Left group");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -758,7 +764,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Group updated");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -771,7 +777,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Member added");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -784,7 +790,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Member removed");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -797,7 +803,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Promoted to Admin");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -810,7 +816,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Dismissed as Admin");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -819,7 +825,7 @@ export const useChatStore = create((set, get) => ({
       await axiosInstance.delete(`/messages/${messageId}`);
       toast.success("Message deleted");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -831,7 +837,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Message edited");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -971,7 +977,7 @@ export const useChatStore = create((set, get) => ({
     try {
       await axiosInstance.put("/users/mood", { status, duration });
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -980,7 +986,7 @@ export const useChatStore = create((set, get) => ({
       await axiosInstance.post("/reminders", { messageId, remindAt });
       toast.success("Reminder set!");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -1071,7 +1077,7 @@ export const useChatStore = create((set, get) => ({
       set({ messages: [] });
       toast.success("Chat cleared");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 
@@ -1085,7 +1091,7 @@ export const useChatStore = create((set, get) => ({
       }));
       toast.success("Chat deleted");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(getErrorMessage(error));
     }
   },
 }));
