@@ -125,10 +125,10 @@ const App = () => {
               path="/reset-password/:token"
               element={!authUser ? <ResetPasswordPage /> : <Navigate to={"/"} />}
             />
-            <Route path="/settings" element={<SettingPage />} />
+            <Route path="/settings" element={authUser ? <SettingPage /> : <Navigate to={"/login"} />} />
             <Route path="/settings/privacy" element={authUser ? <PrivacyPage /> : <Navigate to={"/login"} />} />
             <Route path="/settings/starred" element={authUser ? <StarredMessagesPage /> : <Navigate to={"/login"} />} />
-            <Route path="/settings/pro" element={<ProPage />} />
+            <Route path="/settings/pro" element={authUser ? <ProPage /> : <Navigate to={"/login"} />} />
             <Route path="/settings/developer" element={<DeveloperPage />} />
             <Route
               path="/profile"

@@ -212,7 +212,7 @@ const SettingPage = () => {
               <div className="md:w-1/3 space-y-4">
                 <h3 className="text-lg font-bold text-base-content">Report a Bug</h3>
                 <p className="text-sm text-base-content/60 leading-relaxed">
-                  Found something broken? Let us know! Your feedback helps us make Toukii better for everyone.
+                  Found something broken? Let us know! Your feedback helps us make Touki better for everyone.
                 </p>
                 <div className="flex items-center gap-3 text-sm text-base-content/60">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">

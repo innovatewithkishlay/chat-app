@@ -1,8 +1,7 @@
-import { memo, useEffect, useRef } from "react";
-import { formatMessageTime } from "../lib/util";
+import { memo, useEffect, useRef, useState } from "react";
+import { animate, formatMessageTime } from "../lib/util";
 import MessageStatus from "./MessageStatus";
 import { Smile, Edit2, Trash2, Reply, Star } from "lucide-react";
-import gsap from "gsap";
 import { useChatStore } from "../store/useChattingStore";
 import Avatar from "./Avatar";
 
@@ -28,9 +27,30 @@ const MessageBubble = ({
     const isStarred = message.starredBy?.includes(authUser._id);
     const swipeRef = useRef(null);
     const swiping = useRef(false);
+    const longPressTimer = useRef(null);
+    // Touch devices have no hover, so a long-press opens the action toolbar.
+    const [actionsOpen, setActionsOpen] = useState(false);
+
+    useEffect(() => {
+        if (!actionsOpen) return;
+        const close = (e) => {
+            if (!bubbleRef.current?.parentElement?.contains(e.target)) setActionsOpen(false);
+        };
+        document.addEventListener("pointerdown", close);
+        return () => document.removeEventListener("pointerdown", close);
+    }, [actionsOpen]);
+
+    useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
     const handleTouchStart = (e) => {
         swipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, active: true, isScrolling: false };
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = setTimeout(() => {
+            if (!swiping.current && !swipeRef.current?.isScrolling) {
+                setActionsOpen(true);
+                if (window.navigator?.vibrate) window.navigator.vibrate(20);
+            }
+        }, 450);
     };
 
     const handleTouchMove = (e) => {
@@ -40,6 +60,7 @@ const MessageBubble = ({
         const currentY = e.touches[0].clientY;
         const diffX = currentX - swipeRef.current.startX;
         const diffY = Math.abs(currentY - swipeRef.current.startY);
+        if (Math.abs(diffX) > 8 || diffY > 8) clearTimeout(longPressTimer.current);
 
         // If we determine the user is scrolling vertically, abort the swipe
         if (!swiping.current) {
@@ -63,6 +84,7 @@ const MessageBubble = ({
     };
 
     const handleTouchEnd = (e) => {
+        clearTimeout(longPressTimer.current);
         if (!swipeRef.current?.active && !swiping.current) return;
         swipeRef.current.active = false;
 
@@ -88,18 +110,18 @@ const MessageBubble = ({
 
     useEffect(() => {
         if (bubbleRef.current && message.status === "sending") {
-            gsap.fromTo(
+            animate(
                 bubbleRef.current,
-                { opacity: 0, y: 15, scale: 0.95 },
-                { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" }
+                [{ opacity: 0, transform: "translateY(10px) scale(0.97)" }, { opacity: 1, transform: "none" }],
+                { duration: 180, easing: "ease-out" }
             );
         }
     }, [message.status]);
 
     if (message.type === "system") {
         return (
-            <div className="flex justify-center my-4 animate-fade-in-up">
-                <span className="bg-base-300/60 text-base-content/60 text-xs px-3 py-1 rounded-full font-medium shadow-sm">
+            <div className="flex justify-center my-3">
+                <span className="bg-base-100 border border-base-300 text-base-content/60 text-xs px-3 py-1 rounded-full">
                     {message.text}
                 </span>
             </div>
@@ -114,11 +136,13 @@ const MessageBubble = ({
         return (
             <div className={`flex w-full ${isMyMessage ? "justify-end" : "justify-start"} animate-fade-in-up`}>
                 <div className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
-                    <div className="flex-shrink-0 self-end shadow-sm rounded-full">
-                        <Avatar user={isMyMessage ? authUser : (isGroup ? message.senderId : selectedUser)} size="size-8 lg:size-10" />
-                    </div>
+                    {isGroup && !isMyMessage && (
+                        <div className="flex-shrink-0 self-start">
+                            <Avatar user={message.senderId} size="size-8" />
+                        </div>
+                    )}
 
-                    <div className={`p-4 rounded-2xl shadow-sm border ${isMyMessage ? "bg-base-100 border-primary/20" : "bg-base-100 border-base-300"} `}>
+                    <div className="p-4 rounded-2xl border bg-base-100 border-base-300 min-w-[240px]">
                         <div className="flex items-center justify-between gap-2 mb-2">
                             <div className="font-bold text-base-content">{poll.question}</div>
                             {poll.isClosed && (
@@ -152,39 +176,49 @@ const MessageBubble = ({
     // Normal Message
     const replyData = message.replyTo;
 
+    const isDeleted = message.isDeleted || message.deletedForEveryone;
+    const showAvatarColumn = isGroup && !isMyMessage;
+    const hasReactions = message.reactions && message.reactions.length > 0;
+
     return (
         <div
             id={`msg-${message._id}`}
-            className={`flex w-full relative overflow-visible ${isMyMessage ? "justify-end" : "justify-start"} group/message`}
+            className={`flex w-full relative ${isMyMessage ? "justify-end" : "justify-start"} group/message ${hasReactions ? "mb-3" : ""}`}
         >
             <div
                 ref={bubbleRef}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onContextMenu={(e) => {
+                    // Long-press on mobile fires contextmenu; keep it for our toolbar.
+                    if (window.matchMedia("(hover: none)").matches) e.preventDefault();
+                }}
                 onDoubleClick={() => setReplyToMessage(message)}
-                className={`max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] flex gap-3 ${isMyMessage ? "flex-row-reverse" : "flex-row"} z-10 cursor-pointer lg:cursor-default`}
+                className={`relative max-w-[85%] sm:max-w-[70%] lg:max-w-[62%] flex gap-2 ${isMyMessage ? "flex-row-reverse" : "flex-row"} select-text`}
             >
 
-                {/* Avatar */}
-                <div className={`flex-shrink-0 self-end shadow-sm rounded-full ${isSequential ? "invisible w-8 lg:w-10 opacity-0" : ""}`}>
-                    <Avatar user={isMyMessage ? authUser : (isGroup ? message.senderId : selectedUser)} size="size-8 lg:size-10" />
-                </div>
+                {/* Avatar: groups only, once per run of messages from the same person */}
+                {showAvatarColumn && (
+                    <div className="flex-shrink-0 w-8 self-start">
+                        {!isSequential && <Avatar user={message.senderId} size="size-8" />}
+                    </div>
+                )}
 
-                <div className="flex flex-col min-w-0">
+                <div className="relative flex flex-col min-w-0">
                     {isGroup && !isMyMessage && !isSequential && (
-                        <span className="text-xs font-semibold text-base-content/60 mb-1 ml-1">
-                            {message.senderId.fullname}
+                        <span className="text-xs font-medium text-base-content/60 mb-1 ml-1">
+                            {message.senderId?.fullname}
                         </span>
                     )}
 
                     <div className={`
-            relative px-4 py-2 lg:py-3 lg:px-5 rounded-2xl shadow-sm text-[15px] leading-relaxed
+            relative px-3.5 py-2 rounded-2xl text-[15px] leading-snug
             ${isMyMessage
-                            ? "bg-primary text-primary-content rounded-tr-none"
-                            : "bg-base-100 text-base-content border border-base-300 rounded-tl-none"
+                            ? `bg-primary text-primary-content ${isSequential ? "" : "rounded-tr-md"}`
+                            : `bg-base-100 text-base-content border border-base-300 ${isSequential ? "" : "rounded-tl-md"}`
                         }
-            ${(message.isDeleted || message.deletedForEveryone) ? "italic opacity-80" : ""}
+            ${isDeleted ? "italic opacity-70" : ""}
             ${message.status === "sending" ? "opacity-70" : ""}
           `}>
                         {/* Reply block */}
@@ -240,10 +274,10 @@ const MessageBubble = ({
                         )}
 
                         {/* Metadata Row */}
-                        <div className={`flex items-center justify-end gap-1 mt-1 ${isMyMessage ? "text-primary-content/70" : "text-base-content/40"}`}>
+                        <div className={`flex items-center justify-end gap-1 mt-0.5 -mb-0.5 ${isMyMessage ? "text-primary-content/75" : "text-base-content/45"}`}>
                             {isStarred && <Star size={10} className="fill-current" />}
                             {message.isEdited && !(message.isDeleted || message.deletedForEveryone) && <span className="text-[10px] italic">edited</span>}
-                            <time className="text-[10px] min-w-[35px] text-right">{formatMessageTime(message.createdAt)}</time>
+                            <time className="text-[11px] whitespace-nowrap">{formatMessageTime(message.createdAt)}</time>
                             {isMyMessage && (
                                 <div className={message.text ? "" : "translate-y-0.5"}>
                                     <MessageStatus status={message.status} />
@@ -253,14 +287,14 @@ const MessageBubble = ({
 
                         {/* Reactions */}
                         {message.reactions && message.reactions.length > 0 && (
-                            <div className={`absolute -bottom-2 ${isMyMessage ? "left-0" : "right-0"} flex bg-base-100 rounded-full px-1.5 py-0.5 shadow border border-base-300 text-xs z-10`}>
+                            <div className={`absolute -bottom-3 ${isMyMessage ? "right-2" : "left-2"} flex items-center bg-base-100 text-base-content rounded-full px-1.5 py-0.5 shadow-sm border border-base-300 text-xs z-10`}>
                                 {Object.entries(
                                     message.reactions.reduce((acc, curr) => {
                                         acc[curr.emoji] = (acc[curr.emoji] || 0) + 1;
                                         return acc;
                                     }, {})
                                 ).map(([emoji, count]) => (
-                                    <span key={emoji} className="ml-0.5">{emoji}{count > 1 && count}</span>
+                                    <span key={emoji} className="ml-0.5 first:ml-0">{emoji}{count > 1 && <span className="ml-0.5 text-[11px] text-base-content/60">{count}</span>}</span>
                                 ))}
                             </div>
                         )}
@@ -268,39 +302,55 @@ const MessageBubble = ({
 
                     {/* Hover Actions */}
                     {!(message.isDeleted || message.deletedForEveryone) && !isEditing && (
-                        <div className={`flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity self-center px-2`}>
+                        <div
+                            className={`absolute z-20 flex items-center gap-0.5 rounded-full border border-base-300 bg-base-100 p-0.5 shadow-md transition-opacity
+                                bottom-full mb-1 ${isMyMessage ? "right-0" : "left-0"}
+                                lg:bottom-auto lg:mb-0 lg:top-1/2 lg:-translate-y-1/2 ${isMyMessage ? "lg:right-full lg:mr-2" : "lg:left-full lg:ml-2"}
+                                ${actionsOpen
+                                    ? "opacity-100"
+                                    : "opacity-0 pointer-events-none lg:group-hover/message:opacity-100 lg:group-hover/message:pointer-events-auto"}`}
+                        >
                             {/* React Button */}
-                            <div className="dropdown dropdown-top dropdown-end">
-                                <div tabIndex={0} role="button" className="p-1.5 text-base-content/40 hover:text-base-content/60 hover:bg-base-200 rounded-full transition-colors cursor-pointer"><Smile size={16} /></div>
-                                <ul tabIndex={0} className="dropdown-content z-[50] menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-xl w-52 flex-row flex-wrap gap-1 justify-center">
+                            <div className={`dropdown dropdown-top ${isMyMessage ? "dropdown-end" : ""}`}>
+                                <div tabIndex={0} role="button" aria-label="React" title="React" className="p-1.5 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded-full transition-colors cursor-pointer"><Smile size={16} /></div>
+                                <ul tabIndex={0} className="dropdown-content z-[50] menu p-1 shadow-lg bg-base-100 border border-base-300 rounded-full flex-row flex-nowrap gap-0 mb-1">
                                     {["👍", "❤️", "😂", "😮", "😢", "😡"].map(emoji => (
                                         <li key={emoji}>
-                                            <button onClick={() => reactToMessage(message._id, emoji)} className="text-xl p-2 hover:bg-base-200 rounded-lg">{emoji}</button>
+                                            <button
+                                                onClick={() => {
+                                                    reactToMessage(message._id, emoji);
+                                                    setActionsOpen(false);
+                                                    document.activeElement?.blur?.();
+                                                }}
+                                                className="text-xl p-2 hover:bg-base-200 rounded-lg"
+                                                aria-label={`React with ${emoji}`}
+                                            >{emoji}</button>
                                         </li>
                                     ))}
                                 </ul>
                             </div>
 
                             {/* Reply Button */}
-                            <button onClick={(e) => { e.stopPropagation(); setReplyToMessage(message); }} className="p-1.5 text-base-content/40 hover:text-primary hover:bg-base-200 rounded-full transition-colors" title="Reply">
+                            <button onClick={(e) => { e.stopPropagation(); setReplyToMessage(message); setActionsOpen(false); }} className="p-1.5 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded-full transition-colors" title="Reply" aria-label="Reply">
                                 <Reply size={16} />
                             </button>
 
                             {/* Star Button */}
                             <button
-                                onClick={(e) => { e.stopPropagation(); toggleStarMessage(message._id); }}
-                                className={`p-1.5 rounded-full transition-colors ${isStarred ? "text-amber-500 hover:bg-amber-50" : "text-base-content/40 hover:text-amber-500 hover:bg-amber-50"}`}
+                                onClick={(e) => { e.stopPropagation(); toggleStarMessage(message._id); setActionsOpen(false); }}
+                                className={`p-1.5 rounded-full transition-colors hover:bg-base-200 ${isStarred ? "text-amber-500" : "text-base-content/50 hover:text-base-content"}`}
                                 title={isStarred ? "Unstar" : "Star"}
+                                aria-label={isStarred ? "Unstar" : "Star"}
                             >
                                 <Star size={16} className={isStarred ? "fill-current" : ""} />
                             </button>
 
                             {isMyMessage && message.status !== "sending" && (
                                 <>
-                                    <button onClick={() => handleEditStart(message)} className="p-1.5 text-base-content/40 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors" title="Edit">
+                                    <button onClick={() => { handleEditStart(message); setActionsOpen(false); }} className="p-1.5 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded-full transition-colors" title="Edit" aria-label="Edit">
                                         <Edit2 size={16} />
                                     </button>
-                                    <button onClick={() => setMessageToDelete(message)} className="p-1.5 text-base-content/40 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Delete">
+                                    <button onClick={() => { setMessageToDelete(message); setActionsOpen(false); }} className="p-1.5 text-base-content/50 hover:text-error hover:bg-base-200 rounded-full transition-colors" title="Delete" aria-label="Delete">
                                         <Trash2 size={16} />
                                     </button>
                                 </>
@@ -314,17 +364,15 @@ const MessageBubble = ({
     );
 };
 
-export default memo(MessageBubble, (prev, next) => {
-    // Custom comparison to heavily optimize re-renders
-    if (prev.message._id !== next.message._id) return false;
-    if (prev.message.status !== next.message.status) return false;
-    if (prev.message.text !== next.message.text) return false;
-    if (prev.message.isDeleted !== next.message.isDeleted) return false;
-    if (prev.message.deletedForEveryone !== next.message.deletedForEveryone) return false;
-    if (prev.message.starredBy?.length !== next.message.starredBy?.length) return false;
-    if (prev.isSequential !== next.isSequential) return false;
-    // Also re-render if it transitions between normal and editing state
-    if (prev.isEditing !== next.isEditing) return false;
-    if (prev.editText !== next.editText) return false;
-    return true;
-});
+// Store updates replace message objects immutably, so identity tells us
+// whether anything about the message (text, reactions, poll votes, status,
+// stars, edits...) changed. The handler props are stable or only matter while
+// editing, which is covered by isEditing/editText.
+export default memo(MessageBubble, (prev, next) =>
+    prev.message === next.message &&
+    prev.isSequential === next.isSequential &&
+    prev.isMyMessage === next.isMyMessage &&
+    prev.isGroup === next.isGroup &&
+    prev.isEditing === next.isEditing &&
+    (!next.isEditing || prev.editText === next.editText)
+);

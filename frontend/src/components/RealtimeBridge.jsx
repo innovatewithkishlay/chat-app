@@ -29,6 +29,19 @@ const CHAT_SESSION_DEFAULTS = {
   showMessageSearch: false,
 };
 
+const PRODUCTIVITY_SESSION_DEFAULTS = {
+  activeTab: "chat",
+  currentConversationId: null,
+  board: null,
+  tasks: [],
+  notes: [],
+  activeNote: null,
+  polls: [],
+  boardConversationId: null,
+  notesConversationId: null,
+  pollsConversationId: null,
+};
+
 const STATUS_SESSION_DEFAULTS = {
   statuses: [],
   myStatus: null,
@@ -49,6 +62,7 @@ const RealtimeBridge = () => {
     return () => {
       useChatStore.setState(CHAT_SESSION_DEFAULTS);
       useStatusStore.setState(STATUS_SESSION_DEFAULTS);
+      useProductivityStore.setState(PRODUCTIVITY_SESSION_DEFAULTS);
     };
   }, [authUserId]);
 

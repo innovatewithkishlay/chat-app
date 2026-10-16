@@ -11,9 +11,8 @@ import CallHistory from "./CallHistory";
 import StatusList from "./status/StatusList";
 import ProModal from "./ProModal";
 import Avatar from "./Avatar";
+import { animate, formatConversationTime } from "../lib/util";
 import ConfirmModal from "./ConfirmModal";
-import gsap from "gsap";
-import { motion, AnimatePresence } from "framer-motion";
 
 const Sidebar = () => {
   const {
@@ -175,15 +174,17 @@ const Sidebar = () => {
     }
   }, [activeTab, fetchStatuses, statuses.length]);
 
-  // GSAP Animation for list items mapping (only on tab or search change)
+  // Subtle staggered fade when switching tabs or entering search
   useEffect(() => {
-    if (listRef.current) {
-      gsap.fromTo(
-        listRef.current.children,
-        { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 0.2, stagger: 0.03, ease: "power2.out" }
-      );
-    }
+    if (!listRef.current) return;
+    Array.from(listRef.current.children).slice(0, 12).forEach((el, i) =>
+      animate(el, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], {
+        duration: 180,
+        delay: i * 25,
+        easing: "ease-out",
+        fill: "backwards",
+      })
+    );
   }, [activeTab, isSearching]);
 
   // Helper to get the other user from conversation participants
@@ -197,6 +198,30 @@ const Sidebar = () => {
       return onlineUsers.includes(otherUser?._id);
     })
     : conversations;
+
+  const activityTime = (lastMessage, fallback) => new Date(lastMessage?.createdAt || fallback || 0).getTime();
+  const chatList = [
+    ...groups.map((group) => ({
+      key: `g-${group._id}`,
+      kind: "group",
+      entity: group,
+      lastMessage: group.lastMessage,
+      unread: 0,
+      time: activityTime(group.lastMessage, group.updatedAt),
+    })),
+    ...filteredConversations
+      .map((c) => ({ c, otherUser: getOtherUser(c) }))
+      .filter(({ otherUser }) => otherUser)
+      .map(({ c, otherUser }) => ({
+        key: `c-${c._id}`,
+        kind: "dm",
+        entity: otherUser,
+        conversation: c,
+        lastMessage: c.lastMessage,
+        unread: c.unreadCount?.[authUser._id] || 0,
+        time: activityTime(c.lastMessage, c.updatedAt),
+      })),
+  ].sort((a, b) => b.time - a.time);
 
   if (isConversationsLoading && conversations.length === 0) return <SidebarSkeleton />;
 
@@ -265,20 +290,22 @@ const Sidebar = () => {
             { id: 'friends', Icon: Users, label: 'Friends' },
             { id: 'status', Icon: CircleDashed, label: 'Status', alert: hasUnseen },
             { id: 'calls', Icon: Phone, label: 'Calls' },
-            { id: 'requests', Icon: Inbox, label: 'Reqs', count: talkRequests.length }
+            { id: 'requests', Icon: Inbox, label: 'Requests', count: talkRequests.length }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                 relative flex-1 py-2 flex justify-center items-center rounded-lg transition-all
-                 ${activeTab === tab.id ? 'text-primary bg-primary/5' : 'text-base-content/40 hover:text-base-content/60 hover:bg-base-200'}
+                 relative flex-1 pt-1.5 pb-1 flex flex-col justify-center items-center gap-0.5 rounded-md transition-colors
+                 ${activeTab === tab.id ? 'text-base-content bg-base-200' : 'text-base-content/45 hover:text-base-content/75 hover:bg-base-200/60'}
                `}
               title={tab.label}
+              aria-pressed={activeTab === tab.id}
             >
-              <tab.Icon size={18} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-              {tab.alert && <span className="absolute top-2 right-3 w-1.5 h-1.5 bg-primary rounded-full" />}
-              {tab.count > 0 && <span className="absolute -top-0 right-1 bg-red-500 text-white text-[9px] px-1 rounded-full">{tab.count}</span>}
+              <tab.Icon size={17} strokeWidth={2} />
+              <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+              {tab.alert && <span className="absolute top-1.5 right-[30%] w-1.5 h-1.5 bg-primary rounded-full" />}
+              {tab.count > 0 && <span className="absolute top-0.5 right-1 bg-primary text-primary-content text-[9px] font-semibold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full">{tab.count}</span>}
             </button>
           ))}
         </div>
@@ -362,85 +389,63 @@ const Sidebar = () => {
           </div>
         ) : (
           <div className="space-y-0.5 mt-1">
-            {/* Groups */}
-            <AnimatePresence initial={false}>
-              {groups.length > 0 && (
-                groups.map(group => (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                    key={group._id}
-                    onClick={() => setSelectedUser(group)}
-                    className={`
-                             p-2 flex items-center gap-3 rounded-lg cursor-pointer transition-colors
-                             ${selectedUser?._id === group._id ? 'bg-primary/5' : 'hover:bg-base-200'}
-                           `}
-                  >
-                    <Avatar user={group} size="size-10" rounded="rounded-2xl" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-base-content/70 truncate">{group.name}</div>
-                      <div className="text-xs text-base-content/40 flex items-center gap-1">
-                        <Users size={12} />
-                        {group.members.length} members
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </AnimatePresence>
+            {/* Groups and direct chats in one list, most recent activity first */}
+            {chatList.map((item) => {
+              const { kind, entity, lastMessage, unread } = item;
+              const isSelected = selectedUser?._id === entity._id;
+              const isMine = (lastMessage?.senderId?._id || lastMessage?.senderId) === authUser._id;
+              const senderLabel = isMine
+                ? "You: "
+                : kind === "group" && lastMessage?.senderId?.fullname
+                  ? `${lastMessage.senderId.fullname.split(" ")[0]}: `
+                  : "";
+              const preview = !lastMessage
+                ? (kind === "group" ? `${entity.members.length} members` : "Start a chat")
+                : lastMessage.isDeleted || lastMessage.deletedForEveryone
+                  ? "Message deleted"
+                  : lastMessage.type === "poll"
+                    ? "Poll"
+                    : lastMessage.text || (lastMessage.image ? "Photo" : "");
 
-            {/* DM Conversations */}
-            <AnimatePresence initial={false}>
-              {filteredConversations.map(c => {
-                const otherUser = getOtherUser(c);
-                if (!otherUser) return null;
-                const unread = c.unreadCount?.[authUser._id] || 0;
-                const isSelected = selectedUser?._id === otherUser._id;
+              return (
+                <div
+                  key={item.key}
+                  onClick={() => setSelectedUser(entity)}
+                  onContextMenu={kind === "dm" ? (e) => handleContextMenu(e, item.conversation, entity) : undefined}
+                  className={`px-2 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-colors ${isSelected ? "bg-base-200" : "hover:bg-base-200/60"}`}
+                >
+                  {kind === "group" ? (
+                    <Avatar user={entity} size="size-11" rounded="rounded-xl" />
+                  ) : (
+                    <Avatar user={entity} size="size-11" rounded="rounded-full" showOnline={true} onlineUsers={onlineUsers} />
+                  )}
 
-                return (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                    key={c._id}
-                    onClick={() => setSelectedUser(otherUser)}
-                    onContextMenu={(e) => handleContextMenu(e, c, otherUser)}
-                    className={`
-                             p-2 flex items-center gap-3 rounded-[10px] cursor-pointer transition-colors mb-0.5
-                             ${isSelected ? 'bg-primary/10' : 'hover:bg-base-200'}
-                           `}
-                  >
-                    <Avatar user={otherUser} size="size-11" rounded="rounded-full" showOnline={true} onlineUsers={onlineUsers} />
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline">
-                        <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-primary' : 'text-base-content/70'}`}>
-                          {otherUser.fullname}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline gap-2">
+                      <span className={`text-[14px] truncate text-base-content ${unread > 0 ? "font-semibold" : "font-medium"}`}>
+                        {kind === "group" ? entity.name : entity.fullname}
+                      </span>
+                      {lastMessage && (
+                        <span className={`text-[11px] whitespace-nowrap ${unread > 0 ? "text-primary font-medium" : "text-base-content/45"}`}>
+                          {formatConversationTime(lastMessage.createdAt)}
                         </span>
-                        {c.lastMessage && (
-                          <span className="text-[10px] text-base-content/40 whitespace-nowrap ml-1">
-                            {new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between items-center mt-0.5">
-                        <span className={`text-[12px] truncate max-w-[140px] ${unread > 0 ? 'text-base-content font-medium' : 'text-base-content/60'}`}>
-                          {c.lastMessage?.text || (c.lastMessage?.image ? "📷 Photo" : "Start a chat")}
-                        </span>
-                        {unread > 0 && (
-                          <span className="bg-primary text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full">
-                            {unread}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                    <div className="flex justify-between items-center gap-2 mt-0.5">
+                      <span className={`text-[13px] truncate ${unread > 0 ? "text-base-content font-medium" : "text-base-content/55"}`}>
+                        {lastMessage && senderLabel}
+                        {preview}
+                      </span>
+                      {unread > 0 && (
+                        <span className="shrink-0 bg-primary text-primary-content text-[10px] font-semibold px-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full">
+                          {unread}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
 
             {filteredConversations.length === 0 && groups.length === 0 && (
               <div className="text-center text-base-content/40 py-10 flex flex-col items-center px-6">

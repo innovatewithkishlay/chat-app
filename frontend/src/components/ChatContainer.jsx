@@ -6,10 +6,15 @@ import MessageBubble from "./MessageBubble";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import Avatar from "./Avatar";
 import { useAuthStore } from "../store/useAuthStore";
-import gsap from "gsap";
 import { useProductivityStore } from "../store/useProductivityStore";
 import { NotesSkeleton, PollsSkeleton, KanbanSkeleton } from "./skeletons/ProductivitySkeletons";
 import TimelineScrubber from "./TimelineScrubber";
+import { ChevronDown } from "lucide-react";
+import { animate, formatDayLabel, isSameDay } from "../lib/util";
+
+// Consecutive messages from the same sender are visually grouped only if
+// they are close together in time.
+const GROUPING_WINDOW_MS = 5 * 60 * 1000;
 
 import GroupSettingsModal from "./GroupSettingsModal";
 import UserInfoModal from "./UserInfoModal";
@@ -143,7 +148,7 @@ const ChatContainer = ({ onOpenMemory }) => {
     const element = document.getElementById(`msg-${messageId}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
-      gsap.fromTo(element, { backgroundColor: "rgba(59, 130, 246, 0.1)" }, { backgroundColor: "transparent", duration: 2 });
+      animate(element, [{ backgroundColor: "rgba(59, 130, 246, 0.14)" }, { backgroundColor: "transparent" }], { duration: 1800, easing: "ease-out" });
     }
   };
 
@@ -243,12 +248,24 @@ const ChatContainer = ({ onOpenMemory }) => {
 
               const prevMessage = index > 0 ? messages[index - 1] : null;
               const prevSenderId = prevMessage ? (prevMessage.senderId?._id || prevMessage.senderId) : null;
-              const isSequential = prevSenderId === senderId;
+              const startsNewDay = !prevMessage || !isSameDay(prevMessage.createdAt, message.createdAt);
+              const isSequential =
+                !startsNewDay &&
+                prevSenderId === senderId &&
+                prevMessage.type !== "system" &&
+                new Date(message.createdAt) - new Date(prevMessage.createdAt) < GROUPING_WINDOW_MS;
 
-              const marginTopClass = index === 0 ? "mt-2" : (isSequential ? "mt-[2px]" : "mt-4");
+              const marginTopClass = index === 0 || startsNewDay ? "" : (isSequential ? "mt-0.5" : "mt-3");
 
               return (
                 <div key={message._id} className={marginTopClass}>
+                  {startsNewDay && (
+                    <div className="flex justify-center py-3" role="separator">
+                      <span className="rounded-full border border-base-300 bg-base-100/95 px-3 py-1 text-[11px] font-medium text-base-content/60 shadow-sm backdrop-blur">
+                        {formatDayLabel(message.createdAt)}
+                      </span>
+                    </div>
+                  )}
                   <MessageBubble
                     message={message}
                     isMyMessage={isMyMessage}
@@ -271,12 +288,14 @@ const ChatContainer = ({ onOpenMemory }) => {
             })}
 
             {currentTypingUsers && currentTypingUsers.length > 0 && (
-              <div className="flex gap-3 mt-4">
-                <Avatar
-                  user={isGroup && currentTypingUsers.length === 1 ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId) : selectedUser}
-                  size="size-8"
-                />
-                <div className="bg-base-100 border border-base-300 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+              <div className="flex gap-2 mt-3">
+                {isGroup && (
+                  <Avatar
+                    user={currentTypingUsers.length === 1 ? selectedUser.members.find(m => m._id === currentTypingUsers[0].senderId) : selectedUser}
+                    size="size-8"
+                  />
+                )}
+                <div className="bg-base-100 border border-base-300 px-3.5 py-2 rounded-2xl rounded-tl-md flex items-center gap-2">
                   <span className="loading loading-dots loading-xs text-base-content/40"></span>
                   <span className="text-xs text-base-content/40 italic">{getTypingText()}</span>
                 </div>
@@ -289,9 +308,15 @@ const ChatContainer = ({ onOpenMemory }) => {
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 overflow-hidden px-4 py-1.5 bg-primary text-primary-content rounded-full shadow-xl animate-bounce z-20 text-sm font-bold flex items-center justify-center border border-primary-content/20 max-w-[90%] whitespace-nowrap"
+              aria-label={unreadInActiveChat > 0 ? `${unreadInActiveChat} new messages, jump to latest` : "Jump to latest"}
+              className="absolute bottom-20 right-5 z-20 flex size-10 items-center justify-center rounded-full border border-base-300 bg-base-100 text-base-content/70 shadow-md transition hover:text-base-content"
             >
-              {unreadInActiveChat > 0 ? `New Messages (${unreadInActiveChat}) ↓` : "New Messages ↓"}
+              <ChevronDown className="size-5" />
+              {unreadInActiveChat > 0 && (
+                <span className="absolute -top-1.5 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-content text-[10px] font-semibold flex items-center justify-center">
+                  {unreadInActiveChat}
+                </span>
+              )}
             </button>
           )}
 

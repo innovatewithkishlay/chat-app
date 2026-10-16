@@ -1,4 +1,5 @@
 import daisyui from "daisyui";
+import daisyThemes from "daisyui/src/theming/themes.js";
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
@@ -28,8 +29,54 @@ export default {
   plugins: [daisyui],
   daisyui: {
     themes: [
-      "light",
-      "dark",
+      // The default light/dark themes ship with an electric purple + hot pink
+      // palette; replace them with neutral surfaces and a single blue accent.
+      {
+        light: {
+          ...daisyThemes.light,
+          primary: "#2563EB",
+          "primary-content": "#FFFFFF",
+          secondary: "#3F3F46",
+          "secondary-content": "#FFFFFF",
+          accent: "#0F766E",
+          "accent-content": "#FFFFFF",
+          neutral: "#18181B",
+          "neutral-content": "#FAFAFA",
+          "base-100": "#FFFFFF",
+          "base-200": "#F4F4F5",
+          "base-300": "#E4E4E7",
+          "base-content": "#18181B",
+          info: "#0284C7",
+          success: "#16A34A",
+          warning: "#D97706",
+          error: "#DC2626",
+          "--rounded-btn": "0.5rem",
+          "--rounded-box": "0.75rem",
+        },
+      },
+      {
+        dark: {
+          ...daisyThemes.dark,
+          primary: "#3B82F6",
+          "primary-content": "#FFFFFF",
+          secondary: "#A1A1AA",
+          "secondary-content": "#18181B",
+          accent: "#2DD4BF",
+          "accent-content": "#042F2E",
+          neutral: "#27272A",
+          "neutral-content": "#F4F4F5",
+          "base-100": "#18181B",
+          "base-200": "#111113",
+          "base-300": "#2E2E33",
+          "base-content": "#E4E4E7",
+          info: "#38BDF8",
+          success: "#22C55E",
+          warning: "#F59E0B",
+          error: "#F87171",
+          "--rounded-btn": "0.5rem",
+          "--rounded-box": "0.75rem",
+        },
+      },
       "cupcake",
       "bumblebee",
       "emerald",

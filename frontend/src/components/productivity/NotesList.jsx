@@ -94,7 +94,7 @@ const NotesList = () => {
         <div className="w-full flex flex-col h-full">
             <div className="p-4 border-b border-base-200/50 flex items-center justify-between">
                 <h3 className="font-bold text-sm tracking-tight">Notes</h3>
-                <button onClick={handleCreateNote} className="btn btn-xs btn-circle btn-primary shadow-sm hover:shadow-md transition-shadow">
+                <button onClick={handleCreateNote} aria-label="New note" title="New note" className="btn btn-xs btn-circle btn-primary shadow-sm hover:shadow-md transition-shadow">
                     <Plus size={14} />
                 </button>
             </div>
